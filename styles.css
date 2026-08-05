@@ -74,9 +74,28 @@
     display: block;
 }
 
+/*
+ * Status bar. See docs/fork/01-design-principles.md.
+ *
+ * A healthy, current sync shows nothing: the item is removed from the layout
+ * entirely rather than rendered empty, so it claims no space and no attention.
+ * Colour is reserved for states that need a decision, and is always paired with
+ * text so the meaning survives monochrome themes and colour blindness.
+ */
 .syncstatusbar {
-    -webkit-filter: grayscale(100%);
-    filter: grayscale(100%);
+    font-variant-numeric: tabular-nums;
+}
+
+.syncstatusbar.livesync-status--hidden {
+    display: none;
+}
+
+.syncstatusbar.livesync-status--activity {
+    color: var(--text-muted);
+}
+
+.syncstatusbar.livesync-status--attention {
+    color: var(--text-warning);
 }
 
 .tcenter {

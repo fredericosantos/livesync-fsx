@@ -5,7 +5,6 @@ import { CURRENT_SETTING_VERSION } from "@vrtmrz/livesync-commonlib/compat/commo
 import { type ObsidianLiveSyncSettings, VER } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { upsertRemoteConfigurationInPlace } from "@vrtmrz/livesync-commonlib/remote-configurations";
 import type { CouchDbConfig } from "./couchdb.ts";
-import type { ObjectStorageConfig } from "./objectStorage.ts";
 import { captureObsidianDialogue, withObsidianPage } from "./ui.ts";
 
 export type ConfiguredSettings = {
@@ -292,59 +291,7 @@ export async function configureCouchDb(
     );
 }
 
-export async function configureObjectStorage(
-    cliBinary: string,
-    env: NodeJS.ProcessEnv,
-    settings: ObjectStorageConfig & { bucketPrefix: string },
-    overrides: Record<string, unknown> = {}
-): Promise<ConfiguredSettings> {
-    const nextSettings = createE2eObjectStoragePluginData(settings, overrides);
-    return await evalObsidianJson<ConfiguredSettings>(
-        cliBinary,
-        [
-            "(async()=>{",
-            "const plugin=app.plugins.plugins['obsidian-livesync'];",
-            "const core=plugin.core;",
-            `const nextSettings=${JSON.stringify(nextSettings)};`,
-            "await core.services.setting.applyExternalSettings(nextSettings,true);",
-            "await core.services.control.applySettings();",
-            "const current=core.services.setting.currentSettings();",
-            "return JSON.stringify({",
-            "isConfigured:current.isConfigured,",
-            "liveSync:current.liveSync,",
-            "syncOnStart:current.syncOnStart,",
-            "syncOnSave:current.syncOnSave,",
-            "remoteType:current.remoteType,",
-            "couchDB_URI:current.couchDB_URI,",
-            "couchDB_DBNAME:current.couchDB_DBNAME,",
-            "endpoint:current.endpoint,",
-            "bucket:current.bucket,",
-            "bucketPrefix:current.bucketPrefix,",
-            "});",
-            "})()",
-        ].join(""),
-        env
-    );
-}
 
-export function createE2eObjectStoragePluginData(
-    settings: ObjectStorageConfig & { bucketPrefix: string },
-    overrides: Record<string, unknown> = {}
-): Record<string, unknown> {
-    return {
-        remoteType: "MINIO",
-        endpoint: settings.endpoint,
-        accessKey: settings.accessKey,
-        secretKey: settings.secretKey,
-        bucket: settings.bucket,
-        region: settings.region,
-        forcePathStyle: settings.forcePathStyle,
-        bucketPrefix: settings.bucketPrefix,
-        bucketCustomHeaders: "",
-        ...E2E_PREFERRED_SETTINGS,
-        ...overrides,
-    };
-}
 
 export async function waitForLiveSyncCoreReady(
     cliBinary: string,

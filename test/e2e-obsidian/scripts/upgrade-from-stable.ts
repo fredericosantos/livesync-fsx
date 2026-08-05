@@ -17,23 +17,12 @@ import {
 import { discoverObsidianCli, requireObsidianBinary } from "../runner/environment.ts";
 import {
     configureCouchDb,
-    configureObjectStorage,
     createE2eCouchDbPluginData,
-    createE2eObjectStoragePluginData,
     createE2eObsidianDeviceLocalState,
     prepareRemote,
     pushLocalChanges,
     waitForLiveSyncCoreReady,
 } from "../runner/liveSyncWorkflow.ts";
-import {
-    deleteObjectStoragePrefix,
-    ensureObjectStorageBucket,
-    listObjectStorageObjects,
-    loadObjectStorageConfig,
-    makeUniqueBucketPrefix,
-    readObjectStorageJson,
-    type ObjectStorageConfig,
-} from "../runner/objectStorage.ts";
 import { ensurePinnedReleaseArtifact, UPGRADE_SOURCE_RELEASE } from "../runner/releaseArtifact.ts";
 import { startObsidianLiveSyncSession, type ObsidianLiveSyncSession } from "../runner/session.ts";
 import {
@@ -100,11 +89,6 @@ type CouchDbRemoteSnapshot = {
     preferredTweaks: Record<string, unknown>;
 };
 
-type ObjectStorageRemoteSnapshot = {
-    journalObjects: RemoteObjectSnapshot[];
-    milestone: MilestoneIdentity;
-    preferredTweaks: Record<string, unknown>;
-};
 
 type RunnerContext = {
     binary: string;
@@ -381,30 +365,6 @@ async function readCouchDbRemoteSnapshot(config: CouchDbConfig, databaseName: st
     };
 }
 
-async function readObjectStorageRemoteSnapshot(
-    config: ObjectStorageConfig,
-    prefix: string
-): Promise<ObjectStorageRemoteSnapshot> {
-    const [objects, milestone] = await Promise.all([
-        listObjectStorageObjects(config, prefix),
-        readObjectStorageJson<RemoteMilestone>(config, `${prefix}${JOURNAL_MILESTONE_NAME}`),
-    ]);
-    const journalObjects = objects.flatMap((object) => {
-        if (!object.Key || basename(object.Key).startsWith("_")) return [];
-        return [
-            {
-                key: object.Key,
-                size: object.Size ?? 0,
-                etag: object.ETag ?? "",
-            },
-        ];
-    });
-    return {
-        journalObjects,
-        milestone: milestoneIdentity(milestone),
-        preferredTweaks: preferredTweaks(milestone),
-    };
-}
 
 function assertNoOpCouchDbObservation(observation: CouchDbReplicationObservation): void {
     assert(observation.succeeded, "The first post-upgrade CouchDB synchronisation failed.");
@@ -451,17 +411,6 @@ async function configureFreshCouchDbVerifier(
     await prepareRemote(context.cliBinary, session.cliEnv);
 }
 
-async function configureFreshObjectStorageVerifier(
-    context: RunnerContext,
-    session: ObsidianLiveSyncSession,
-    config: ObjectStorageConfig,
-    prefix: string,
-    tweaks: Record<string, unknown>
-): Promise<void> {
-    await configureObjectStorage(context.cliBinary, session.cliEnv, { ...config, bucketPrefix: prefix }, tweaks);
-    await waitForLiveSyncCoreReady(context.cliBinary, session.cliEnv);
-    await prepareRemote(context.cliBinary, session.cliEnv);
-}
 
 async function runCouchDbUpgrade(context: RunnerContext, ports: readonly [number, number]): Promise<void> {
     console.log(`\n# Upgrade from ${STABLE_RELEASE_VERSION}: CouchDB`);
@@ -579,117 +528,6 @@ async function runCouchDbUpgrade(context: RunnerContext, ports: readonly [number
     }
 }
 
-async function runObjectStorageUpgrade(context: RunnerContext, ports: readonly [number, number]): Promise<void> {
-    console.log(`\n# Upgrade from ${STABLE_RELEASE_VERSION}: Object Storage`);
-    const config = await loadObjectStorageConfig();
-    const prefix = makeUniqueBucketPrefix("upgrade-from-stable");
-    const remote: UpgradeTransportConfiguration = { kind: "object-storage", config, bucketPrefix: prefix };
-    const paths = createUpgradeScenarioPaths("object-storage");
-    const upgradeVault = await createTemporaryVault("obsidian-livesync-upgrade-object-storage-");
-    const verifierVault = await createTemporaryVault("obsidian-livesync-upgrade-object-storage-verifier-");
-    let upgradedSession: ObsidianLiveSyncSession | undefined;
-
-    try {
-        await ensureObjectStorageBucket(config);
-
-        let session = await startSession(context, upgradeVault, ports[0], context.sourceArtifactRoot);
-        assertStableReleaseDefaults(await readRuntimeUpgradeState(context.cliBinary, session.cliEnv), false);
-        await configureStableRelease(context.cliBinary, session.cliEnv, remote);
-        const configuredStable = await readRuntimeUpgradeState(context.cliBinary, session.cliEnv);
-        assertStableReleaseDefaults(configuredStable, true);
-        assertStableRemoteSelection(configuredStable, remote);
-        await stopSession(context, session);
-
-        session = await startSession(context, upgradeVault, ports[0], context.sourceArtifactRoot);
-        const restartedStable = await readRuntimeUpgradeState(context.cliBinary, session.cliEnv);
-        assertStableReleaseDefaults(restartedStable, true);
-        assertStableRemoteSelection(restartedStable, remote);
-        await waitForPersistentNodeIdentity(context.cliBinary, session.cliEnv);
-        await prepareStableRemote(context.cliBinary, session.cliEnv);
-        await runStableFileHistory(context.cliBinary, session.cliEnv, paths, async () => {
-            const result = await runJournalReplicationObserved(context.cliBinary, session.cliEnv);
-            assert(
-                result.succeeded,
-                `The stable Object Storage synchronisation failed.\nObservation: ${JSON.stringify(result)}`
-            );
-        });
-        await verifyPreUpgradeHistory(upgradeVault, paths);
-
-        const stableState = await readRuntimeUpgradeState(context.cliBinary, session.cliEnv);
-        const stableCheckpoint = await readJournalCheckpoint(context.cliBinary, session.cliEnv);
-        const stableRemote = await readObjectStorageRemoteSnapshot(config, prefix);
-        await stopSession(context, session);
-
-        session = await startSession(context, upgradeVault, ports[0], context.targetArtifactRoot);
-        upgradedSession = session;
-        await dismissConfigDoctorIfShown(session.remoteDebuggingPort);
-        const upgradedState = await readRuntimeUpgradeState(context.cliBinary, session.cliEnv);
-        assertUpgradeCompatibilityReady(stableState, upgradedState, context.targetVersion, remote);
-        await verifyPreUpgradeHistory(upgradeVault, paths);
-
-        const loadedCheckpoint = await readJournalCheckpoint(context.cliBinary, session.cliEnv);
-        assertJournalCheckpointLoaded(stableCheckpoint, loadedCheckpoint);
-        const noOpObservation = await runJournalReplicationObserved(context.cliBinary, session.cliEnv);
-        assert(noOpObservation.succeeded, "The first post-upgrade Object Storage synchronisation failed.");
-        const noOpCheckpoint = await readJournalCheckpoint(context.cliBinary, session.cliEnv);
-        const noOpRemote = await readObjectStorageRemoteSnapshot(config, prefix);
-        assertNoJournalReplay(
-            stableCheckpoint,
-            noOpCheckpoint,
-            stableRemote.journalObjects,
-            noOpRemote.journalObjects,
-            noOpObservation
-        );
-        assertMilestoneContinuity(stableRemote.milestone, noOpRemote.milestone);
-
-        await createPostUpgradeDelta(context.cliBinary, session.cliEnv, paths);
-        const deltaObservation = await runJournalReplicationObserved(context.cliBinary, session.cliEnv);
-        assert(deltaObservation.succeeded, "The post-upgrade Object Storage delta failed.");
-        const deltaCheckpoint = await readJournalCheckpoint(context.cliBinary, session.cliEnv);
-        assertJournalCheckpointAdvanced(noOpCheckpoint, deltaCheckpoint, deltaObservation);
-        const deltaRemote = await readObjectStorageRemoteSnapshot(config, prefix);
-        assertMilestoneContinuity(noOpRemote.milestone, deltaRemote.milestone);
-
-        const verifierSettings = { ...config, bucketPrefix: prefix };
-        const verifier = await startSession(context, verifierVault, ports[1], context.targetArtifactRoot, {
-            pluginData: createE2eObjectStoragePluginData(verifierSettings, deltaRemote.preferredTweaks),
-            localStorageEntries: createE2eObsidianDeviceLocalState(verifierVault.name),
-        });
-        await configureFreshObjectStorageVerifier(context, verifier, config, prefix, deltaRemote.preferredTweaks);
-        await pushLocalChanges(context.cliBinary, verifier.cliEnv);
-        await verifyPostUpgradeHistory(verifierVault, paths);
-        await createVerifierReturnDelta(context.cliBinary, verifier.cliEnv, paths);
-        await pushLocalChanges(context.cliBinary, verifier.cliEnv);
-
-        const returnObservation = await runJournalReplicationObserved(context.cliBinary, session.cliEnv);
-        assert(returnObservation.succeeded, "The upgraded Object Storage device could not receive the verifier delta.");
-        assert(returnObservation.downloadedJournalKeys.length > 0, "The verifier Object Storage delta did not arrive.");
-        await verifyReturnDelta(upgradeVault, paths);
-        await stopSession(context, verifier);
-        await stopSession(context, session);
-        upgradedSession = undefined;
-
-        const restarted = await startSession(context, upgradeVault, ports[0], context.targetArtifactRoot);
-        const restartedState = await readRuntimeUpgradeState(context.cliBinary, restarted.cliEnv);
-        assertUpgradeRemainsReady(restartedState, context.targetVersion);
-        assertRestartContinuity(upgradedState, restartedState);
-        await verifyReturnDelta(upgradeVault, paths);
-        await stopSession(context, restarted);
-
-        console.log(
-            `PASS Object Storage: ${STABLE_RELEASE_VERSION} -> ${context.targetVersion}; checkpoint lineage, no replay, delta sync, fresh-device round-trip, and restart continuity verified.`
-        );
-    } finally {
-        if (upgradedSession) await stopSession(context, upgradedSession).catch(() => undefined);
-        await stopSessions(context);
-        await Promise.all([upgradeVault.dispose(), verifierVault.dispose()]);
-        if (process.env.E2E_OBSIDIAN_KEEP_OBJECT_STORAGE !== "true") {
-            await deleteObjectStoragePrefix(config, prefix).catch((error: unknown) => {
-                console.warn(error instanceof Error ? error.message : error);
-            });
-        }
-    }
-}
 
 async function startManagedServices(transports: readonly Transport[]): Promise<void> {
     if (transports.includes("couchdb")) {
@@ -740,7 +578,6 @@ async function main(): Promise<void> {
         }
         for (const transport of arguments_.transports) {
             if (transport === "couchdb") await runCouchDbUpgrade(context, ports);
-            else await runObjectStorageUpgrade(context, ports);
         }
     } finally {
         await stopSessions(context);

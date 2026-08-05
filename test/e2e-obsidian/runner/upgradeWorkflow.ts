@@ -2,7 +2,6 @@ import { mkdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { evalObsidianJson } from "./cli.ts";
 import type { CouchDbConfig } from "./couchdb.ts";
-import type { ObjectStorageConfig } from "./objectStorage.ts";
 import { withObsidianPage } from "./ui.ts";
 import type {
     CouchDbCheckpointSnapshot,
@@ -14,17 +13,11 @@ import type { TemporaryVault } from "./vault.ts";
 
 export const STABLE_RELEASE_VERSION = "0.25.83";
 
-export type UpgradeTransportConfiguration =
-    | {
-          kind: "couchdb";
-          config: CouchDbConfig;
-          databaseName: string;
-      }
-    | {
-          kind: "object-storage";
-          config: ObjectStorageConfig;
-          bucketPrefix: string;
-      };
+export type UpgradeTransportConfiguration = {
+    kind: "couchdb";
+    config: CouchDbConfig;
+    databaseName: string;
+};
 
 export type UpgradeScenarioPaths = {
     original: string;
@@ -136,26 +129,12 @@ export function createUpgradeScenarioPaths(label: string): UpgradeScenarioPaths 
 }
 
 function remoteSettings(configuration: UpgradeTransportConfiguration): Record<string, unknown> {
-    if (configuration.kind === "couchdb") {
-        return {
-            remoteType: "",
-            couchDB_URI: configuration.config.uri,
-            couchDB_USER: configuration.config.username,
-            couchDB_PASSWORD: configuration.config.password,
-            couchDB_DBNAME: configuration.databaseName,
-            isConfigured: true,
-        };
-    }
     return {
-        remoteType: "MINIO",
-        endpoint: configuration.config.endpoint,
-        accessKey: configuration.config.accessKey,
-        secretKey: configuration.config.secretKey,
-        bucket: configuration.config.bucket,
-        region: configuration.config.region,
-        forcePathStyle: configuration.config.forcePathStyle,
-        bucketPrefix: configuration.bucketPrefix,
-        bucketCustomHeaders: "",
+        remoteType: "",
+        couchDB_URI: configuration.config.uri,
+        couchDB_USER: configuration.config.username,
+        couchDB_PASSWORD: configuration.config.password,
+        couchDB_DBNAME: configuration.databaseName,
         isConfigured: true,
     };
 }
@@ -467,19 +446,12 @@ export function assertStableRemoteSelection(
     if (!state.settings.remoteConfigurationIds.includes(state.settings.activeConfigurationId)) {
         throw new Error("The stable release active remote profile was not persisted.");
     }
-    if (configuration.kind === "couchdb") {
-        assertEqual(state.settings.remoteType, "", "The stable release did not select CouchDB.");
-        assertEqual(
-            state.settings.couchDB_DBNAME,
-            configuration.databaseName,
-            "The stable release CouchDB database changed."
-        );
-    } else {
-        assertEqual(state.settings.remoteType, "MINIO", "The stable release did not select Object Storage.");
-        assertEqual(state.settings.endpoint, configuration.config.endpoint, "The Object Storage endpoint changed.");
-        assertEqual(state.settings.bucket, configuration.config.bucket, "The Object Storage bucket changed.");
-        assertEqual(state.settings.bucketPrefix, configuration.bucketPrefix, "The Object Storage prefix changed.");
-    }
+    assertEqual(state.settings.remoteType, "", "The stable release did not select CouchDB.");
+    assertEqual(
+        state.settings.couchDB_DBNAME,
+        configuration.databaseName,
+        "The stable release CouchDB database changed."
+    );
 }
 
 export function assertUpgradeCompatibilityReady(

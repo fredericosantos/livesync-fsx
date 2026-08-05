@@ -37,6 +37,7 @@ import {
     getTrackedRequestCount,
 } from "./RemoteActivityStatus.ts";
 import { createMinimumVisibleActivityCount, createPaddedCounterLabel } from "./StatusBarDisplay.ts";
+import { STATUS_ACTIVITY, STATUS_ATTENTION, presentStatus, type StatusLevel } from "./StatusPresentation.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
 import { isValidPath } from "@/common/utils.ts";
@@ -116,7 +117,7 @@ export class ModuleLog extends AbstractObsidianModule {
     logHistory?: HTMLDivElement;
     messageArea?: HTMLDivElement;
 
-    statusBarLabels!: ReactiveValue<{ message: string; status: string }>;
+    statusBarLabels!: ReactiveValue<{ message: string; status: string; level: StatusLevel; detail: string }>;
     statusLog = reactiveSource("");
     activeFileStatus = reactiveSource("");
     notifies: { [key: string]: { notice: Notice; count: number } } = {};
@@ -215,34 +216,47 @@ export class ModuleLog extends AbstractObsidianModule {
             }
             return { w, sent, pushLast, arrived, pullLast };
         });
-        const labelProc = registerDisplay(createPaddedCounterLabel(this.services.fileProcessing.processing, `⏳`));
-        const labelPend = registerDisplay(createPaddedCounterLabel(this.services.fileProcessing.totalQueued, `🛫`));
-        const labelInBatchDelay = registerDisplay(createPaddedCounterLabel(this.services.fileProcessing.batched, `📬`));
-        const waitingLabel = computed(() => {
-            return `${labelProc.value}${labelPend.value}${labelInBatchDelay.value}`;
-        });
-        const statusLineLabel = computed(() => {
-            const { w, sent, pushLast, arrived, pullLast } = replicationStatLabel();
-            const queued = queueCountLabel();
-            const waiting = waitingLabel();
-            const networkActivity = requestingStatLabel();
-            const p2p = this.p2pLogCollector.p2pReplicationLine.value;
-            return {
-                message: `${networkActivity}Sync: ${w} ↑ ${sent}${pushLast} ↓ ${arrived}${pullLast}${waiting}${queued}${p2p == "" ? "" : "\n" + p2p}`,
-            };
+        // Tracks how long the current burst of work has been in flight, so that
+        // brief activity is never surfaced. See docs/fork/01-design-principles.md.
+        let busySince: number | undefined;
+        const activeForMs = (busy: boolean): number => {
+            if (!busy) {
+                busySince = undefined;
+                return 0;
+            }
+            busySince ??= Date.now();
+            return Date.now() - busySince;
+        };
+
+        const statusPresentation = computed(() => {
+            const stats = this.services.replicator.replicationStatics.value;
+            const syncStatus = stats.syncStatus;
+            const pendingUpload = Math.max(0, stats.maxPushSeq - stats.lastSyncPushSeq);
+            const pendingDownload = Math.max(0, stats.maxPullSeq - stats.lastSyncPullSeq);
+            const processing = this.services.fileProcessing.processing.value;
+            const queued = this.services.fileProcessing.totalQueued.value;
+            const busy = pendingUpload + pendingDownload + processing + queued > 0;
+            return presentStatus({
+                connected: syncStatus !== "NOT_CONNECTED" && syncStatus !== "CLOSED",
+                paused: syncStatus === "PAUSED",
+                errored: syncStatus === "ERRORED",
+                pendingUpload,
+                pendingDownload,
+                processing,
+                queued,
+                conflicts: this.services.conflict.conflictProcessQueueCount.value,
+                restartRequired: this.services.appLifecycle.isReloadingScheduled(),
+                activeForMs: activeForMs(busy),
+            });
         });
 
         const statusBarLabels = reactive(() => {
-            const scheduleMessage = this.services.appLifecycle.isReloadingScheduled()
-                ? `WARNING! RESTARTING OBSIDIAN IS SCHEDULED!\n`
-                : "";
-            const { message } = statusLineLabel();
-            const fileStatus = this.activeFileStatus.value;
-            const status = scheduleMessage + this.statusLog.value;
-            const fileStatusIcon = `${fileStatus && this.settings.hideFileWarningNotice ? " ⛔ SKIP" : ""}`;
+            const { level, text, detail } = statusPresentation();
             return {
-                message: `${message}${fileStatusIcon}`,
-                status,
+                message: text,
+                status: this.statusLog.value,
+                level,
+                detail: detail ?? "",
             };
         });
         this.statusBarLabels = statusBarLabels;
@@ -366,7 +380,7 @@ export class ModuleLog extends AbstractObsidianModule {
         }
         this.nextFrameQueue = compatGlobal.requestAnimationFrame(() => {
             this.nextFrameQueue = undefined;
-            const { message, status } = this.statusBarLabels.value;
+            const { message, status, level, detail } = this.statusBarLabels.value;
             // const recent = logMessages.value;
             const newMsg = message;
             let newLog = this.settings?.showOnlyIconsOnEditor ? "" : status;
@@ -375,7 +389,15 @@ export class ModuleLog extends AbstractObsidianModule {
                 newLog = newLog.substring(moduleTagEnd + MARK_LOG_SEPARATOR.length + 1);
             }
 
-            this.statusBar?.setText(newMsg.split("\n")[0]);
+            // Silence is the default state: an idle, healthy sync renders nothing at all.
+            const headline = newMsg.split("\n")[0];
+            this.statusBar?.setText(headline);
+            if (this.statusBar) {
+                this.statusBar.toggleClass("livesync-status--hidden", headline === "");
+                this.statusBar.toggleClass("livesync-status--attention", level === STATUS_ATTENTION);
+                this.statusBar.toggleClass("livesync-status--activity", level === STATUS_ACTIVITY);
+                this.statusBar.ariaLabel = detail || null;
+            }
             if (this.statusDiv) {
                 this.statusDiv.setCssStyles({ display: this.settings?.showStatusOnEditor ? "" : "none" });
             }
