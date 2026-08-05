@@ -23,6 +23,38 @@ Consequences:
   The type stays whole; the UI shrinks. Migration and commonlib upgrades keep
   working untouched.
 
+### Update: commonlib is forked too
+
+`fredericosantos/livesync-commonlib`, cloned beside this repository,
+branch `fsx-main` at `6aa42da` (0.1.2) — the exact commit this plugin pinned, so
+the baseline is reproducible. Upstream `main` is already at 0.1.4.
+
+This repo now consumes it locally:
+
+```
+"@vrtmrz/livesync-commonlib": "file:../livesync-commonlib/.package"
+```
+
+Note the `.package` suffix. `npm run build:package` generates the publishable
+package — with its 117-entry `exports` map — into `.package/`, not the repo root.
+Pointing `file:` at the repo root resolves nothing. `.package` is gitignored, so
+**commonlib must be built before this repo will install.**
+
+Baseline verification, all on the 0.1.2 branch:
+
+- commonlib `npm test` — 69 files, 1216 tests, green
+- plugin `npm run build` — 3.7M `main.js`
+- plugin `npm run test:unit` — 86 files, 604 tests, green
+- plugin `npm run tsc-check` — **20 errors, all pre-existing upstream**
+  (`ObsidianServiceHub.ts` ×10, `createLiveSyncBrowserServiceHub.ts` ×8,
+  `ObsidianAPIService.ts`, `LiveSyncBrowserAPIService.ts`). Verified identical
+  against the published 0.1.2 package: the local link introduces none of them.
+  Do not treat `tsc-check` as a clean gate until these are fixed upstream or by us.
+
+Owning commonlib means owning sync correctness. Policy: **track, do not diverge.**
+Merge `upstream/main` regularly, keep patches thin and on top. The 1216-test suite
+is the safety net; run it before every merge.
+
 ## Settings surface
 
 167 keys in `SETTINGS_SCHEMA_DEFAULTS`.
