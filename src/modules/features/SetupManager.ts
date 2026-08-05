@@ -1,11 +1,9 @@
 import {
-    type BucketSyncSetting,
     type EncryptionSettings,
     type ObsidianLiveSyncSettings,
     LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
     REMOTE_COUCHDB,
-    REMOTE_MINIO,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { createNewVaultSettings } from "@vrtmrz/livesync-commonlib/settings";
 import { upsertRemoteConfigurationInPlace } from "@vrtmrz/livesync-commonlib/remote-configurations";
@@ -18,9 +16,7 @@ import UseSetupURI from "./SetupWizard/dialogs/UseSetupURI.svelte";
 import OutroNewUser from "./SetupWizard/dialogs/OutroNewUser.svelte";
 import OutroExistingUser from "./SetupWizard/dialogs/OutroExistingUser.svelte";
 import OutroAskUserMode from "./SetupWizard/dialogs/OutroAskUserMode.svelte";
-import SetupRemote from "./SetupWizard/dialogs/SetupRemote.svelte";
 import SetupRemoteCouchDB from "./SetupWizard/dialogs/SetupRemoteCouchDB.svelte";
-import SetupRemoteBucket from "./SetupWizard/dialogs/SetupRemoteBucket.svelte";
 import SetupRemoteE2EE from "./SetupWizard/dialogs/SetupRemoteE2EE.svelte";
 import { decodeSettingsFromQRCodeData } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
@@ -29,11 +25,9 @@ import type {
     OutroExistingUserResultType,
     OutroNewUserResultType,
     ScanQRCodeResultType,
-    SetupRemoteBucketResultType,
     SetupRemoteCouchDBResultType,
     SetupRemoteCouchDBInitialData,
     SetupRemoteE2EEResultType,
-    SetupRemoteResultType,
     UseSetupURIResultType,
 } from "./SetupWizard/dialogs/setupDialogTypes.ts";
 import {
@@ -192,36 +186,6 @@ export class SetupManager extends AbstractModule {
         return await this.onConfirmApplySettingsFromWizard(newSetting, userMode, activate);
     }
 
-    /**
-     * Handles manual setup for S3-compatible bucket
-     * @param userMode
-     * @param currentSetting
-     * @param activate Whether to activate the Bucket as remote type
-     * @returns Promise that resolves to true if setup completed successfully, false otherwise
-     */
-    async onBucketManualSetup(
-        userMode: UserMode,
-        currentSetting: ObsidianLiveSyncSettings,
-        activate = true
-    ): Promise<boolean> {
-        const bucketConf = await this.dialogManager.openWithExplicitCancel<
-            SetupRemoteBucketResultType,
-            BucketSyncSetting
-        >(SetupRemoteBucket, currentSetting);
-        if (bucketConf === "cancelled") {
-            this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
-            return await this.onOnboard(userMode);
-        }
-        const newSetting = {
-            ...copySettingsForRemoteProfileUpdate(currentSetting),
-            ...bucketConf,
-        } as ObsidianLiveSyncSettings;
-        if (activate) {
-            newSetting.remoteType = REMOTE_MINIO;
-        }
-        upsertRemoteConfigurationInPlace(newSetting, "s3", { activate });
-        return await this.onConfirmApplySettingsFromWizard(newSetting, userMode, activate);
-    }
 
 
     /**
@@ -275,19 +239,8 @@ export class SetupManager extends AbstractModule {
      * @returns
      */
     async onSelectServer(currentSetting: ObsidianLiveSyncSettings, userMode: UserMode): Promise<boolean> {
-        const method = await this.dialogManager.openWithExplicitCancel<SetupRemoteResultType>(SetupRemote);
-        if (method === "couchdb") {
-            return await this.onCouchDBManualSetup(userMode, currentSetting, true);
-        } else if (method === "bucket") {
-            return await this.onBucketManualSetup(userMode, currentSetting, true);
-        } else if (method === "cancelled") {
-            this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
-            if (userMode !== UserMode.Unknown) {
-                return await this.onOnboard(userMode);
-            }
-        }
-        // Should not reach here.
-        return false;
+        // CouchDB is the only supported remote, so there is nothing to choose.
+        return await this.onCouchDBManualSetup(userMode, currentSetting, true);
     }
     /**
      * Confirms and applies settings obtained from the wizard

@@ -81,7 +81,7 @@ export function paneMaintenance(
                         await this.services.replication.markLocked();
                     })
             )
-            .addOnUpdate(this.onlyOnCouchDBOrMinIO);
+            .addOnUpdate(this.onlyOnCouchDB);
 
         new Setting(paneEl)
             .setName("Emergency restart")
@@ -127,7 +127,7 @@ export function paneMaintenance(
             );
     });
 
-    void addPanel(paneEl, "Syncing", () => {}, this.onlyOnCouchDBOrMinIO).then((paneEl) => {
+    void addPanel(paneEl, "Syncing", () => {}, this.onlyOnCouchDB).then((paneEl) => {
         new Setting(paneEl)
             .setName("Resend")
             .setDesc("Resend all chunks to the remote.")
@@ -144,48 +144,7 @@ export function paneMaintenance(
             )
             .addOnUpdate(this.onlyOnCouchDB);
 
-        new Setting(paneEl)
-            .setName("Reset journal received history")
-            .setDesc(
-                "Initialise journal received history. On the next sync, every item except this device sent will be downloaded again."
-            )
-            .addButton((button) =>
-                button
-                    .setButtonText("Reset received")
-                    .setWarning()
-                    .setDisabled(false)
-                    .onClick(async () => {
-                        await this.getMinioJournalSyncClient().updateCheckPointInfo((info) => ({
-                            ...info,
-                            receivedFiles: new Set(),
-                            knownIDs: new Set(),
-                        }));
-                        Logger(`Journal received history has been cleared.`, LOG_LEVEL_NOTICE);
-                    })
-            )
-            .addOnUpdate(this.onlyOnMinIO);
 
-        new Setting(paneEl)
-            .setName("Reset journal sent history")
-            .setDesc(
-                "Initialise journal sent history. On the next sync, every item except this device received will be sent again."
-            )
-            .addButton((button) =>
-                button
-                    .setButtonText("Reset sent history")
-                    .setWarning()
-                    .setDisabled(false)
-                    .onClick(async () => {
-                        await this.getMinioJournalSyncClient().updateCheckPointInfo((info) => ({
-                            ...info,
-                            lastLocalSeq: 0,
-                            sentIDs: new Set(),
-                            sentFiles: new Set(),
-                        }));
-                        Logger(`Journal sent history has been cleared.`, LOG_LEVEL_NOTICE);
-                    })
-            )
-            .addOnUpdate(this.onlyOnMinIO);
     });
     void addPanel(paneEl, "Garbage Collection V3 (Beta)", (e) => e, this.onlyOnCouchDB).then((paneEl) => {
         new Setting(paneEl)
@@ -288,7 +247,7 @@ export function paneMaintenance(
     //     }
     // );
 
-    void addPanel(paneEl, "Rebuilding Operations (Remote Only)", () => {}, this.onlyOnCouchDBOrMinIO).then((paneEl) => {
+    void addPanel(paneEl, "Rebuilding Operations (Remote Only)", () => {}, this.onlyOnCouchDB).then((paneEl) => {
         new Setting(paneEl)
             .setName("Perform cleanup")
             .setDesc(
@@ -323,58 +282,8 @@ export function paneMaintenance(
                     })
             );
 
-        new Setting(paneEl)
-            .setName("Reset all journal counter")
-            .setDesc("Initialise all journal history, On the next sync, every item will be received and sent.")
-            .addButton((button) =>
-                button
-                    .setButtonText("Reset all")
-                    .setWarning()
-                    .setDisabled(false)
-                    .onClick(async () => {
-                        await this.getMinioJournalSyncClient().resetCheckpointInfo();
-                        Logger(`Journal exchange history has been cleared.`, LOG_LEVEL_NOTICE);
-                    })
-            )
-            .addOnUpdate(this.onlyOnMinIO);
 
-        new Setting(paneEl)
-            .setName("Purge all journal counter")
-            .setDesc("Purge all download/upload cache.")
-            .addButton((button) =>
-                button
-                    .setButtonText("Reset all")
-                    .setWarning()
-                    .setDisabled(false)
-                    .onClick(() => {
-                        this.getMinioJournalSyncClient().resetAllCaches();
-                        Logger(`Journal download/upload cache has been cleared.`, LOG_LEVEL_NOTICE);
-                    })
-            )
-            .addOnUpdate(this.onlyOnMinIO);
 
-        new Setting(paneEl)
-            .setName("Fresh Start Wipe")
-            .setDesc("Delete all data on the remote server.")
-            .addButton((button) =>
-                button
-                    .setButtonText("Delete")
-                    .setWarning()
-                    .setDisabled(false)
-                    .onClick(async () => {
-                        await this.getMinioJournalSyncClient().updateCheckPointInfo((info) => ({
-                            ...info,
-                            receivedFiles: new Set(),
-                            knownIDs: new Set(),
-                            lastLocalSeq: 0,
-                            sentIDs: new Set(),
-                            sentFiles: new Set(),
-                        }));
-                        await this.resetRemoteBucket();
-                        Logger(`Deleted all data on remote server`, LOG_LEVEL_NOTICE);
-                    })
-            )
-            .addOnUpdate(this.onlyOnMinIO);
     });
 
     void addPanel(paneEl, "Reset").then((paneEl) => {

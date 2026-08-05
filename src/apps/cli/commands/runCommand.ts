@@ -6,7 +6,6 @@ import {
     type FilePathWithPrefix,
     type ObsidianLiveSyncSettings,
     REMOTE_COUCHDB,
-    REMOTE_MINIO,
     type EntryMilestoneInfo,
     type EntryDoc,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
@@ -23,7 +22,6 @@ import { UnresolvedErrorManager } from "@vrtmrz/livesync-commonlib/compat/servic
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 import { fsPromises as fs, path } from "@vrtmrz/livesync-commonlib/node";
 import type { LiveSyncCouchDBReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/couchdb/LiveSyncReplicator";
-import type { LiveSyncJournalReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/journal/LiveSyncJournalReplicator";
 import { writeStderrLine, writeStdoutLine } from "@/apps/cli/cliOutput";
 
 function redactConnectionString(uri: string): string {
@@ -58,8 +56,6 @@ async function verifyRemoteState(
                 return false;
             }
             milestone = await dbRet.db.get(MILESTONE_DOCID);
-        } else if (settings.remoteType === REMOTE_MINIO) {
-            milestone = await (replicator as LiveSyncJournalReplicator).client.downloadJson("_00000000-milestone.json");
         }
 
         if (milestone) {

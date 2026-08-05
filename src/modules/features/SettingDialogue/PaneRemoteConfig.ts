@@ -1,6 +1,5 @@
 import {
     REMOTE_COUCHDB,
-    REMOTE_MINIO,
     DEFAULT_SETTINGS,
     LOG_LEVEL_NOTICE,
     type ObsidianLiveSyncSettings,
@@ -24,9 +23,7 @@ import {
 } from "@vrtmrz/livesync-commonlib/remote-configurations";
 import { ConnectionStringParser } from "@vrtmrz/livesync-commonlib/compat/common/ConnectionString";
 import type { RemoteConfigurationResult } from "@vrtmrz/livesync-commonlib/compat/common/ConnectionString";
-import SetupRemote from "@/modules/features/SetupWizard/dialogs/SetupRemote.svelte";
 import SetupRemoteCouchDB from "@/modules/features/SetupWizard/dialogs/SetupRemoteCouchDB.svelte";
-import SetupRemoteBucket from "@/modules/features/SetupWizard/dialogs/SetupRemoteBucket.svelte";
 import type {
     SetupRemoteCouchDBInitialData,
     SetupRemoteCouchDBResultType,
@@ -52,9 +49,6 @@ function cloneRemoteConfigurations(
 }
 
 function serializeRemoteConfiguration(settings: ObsidianLiveSyncSettings): string {
-    if (settings.remoteType === REMOTE_MINIO) {
-        return ConnectionStringParser.serialize({ type: "s3", settings });
-    }
     return ConnectionStringParser.serialize({ type: "couchdb", settings });
 }
 
@@ -74,9 +68,6 @@ function suggestRemoteConfigurationName(parsed: RemoteConfigurationResult): stri
         } catch {
             return "Imported CouchDB";
         }
-    }
-    if (parsed.type === "s3") {
-        return `S3 ${parsed.settings.bucket || parsed.settings.endpoint}`;
     }
     return "Unsupported remote";
 }
@@ -183,29 +174,10 @@ export function paneRemoteConfig(
                 this.requestUpdate();
             };
             const runRemoteSetup = async (
-                baseSettings: ObsidianLiveSyncSettings,
-                remoteType?: typeof REMOTE_COUCHDB | typeof REMOTE_MINIO
+                baseSettings: ObsidianLiveSyncSettings
             ): Promise<ObsidianLiveSyncSettings | false> => {
                 const setupManager = this.core.getModule(SetupManager);
                 const dialogManager = setupManager.dialogManager;
-                let targetRemoteType = remoteType;
-
-                if (targetRemoteType === undefined) {
-                    const method = await dialogManager.openWithExplicitCancel(SetupRemote);
-                    if (method === "cancelled") {
-                        return false;
-                    }
-                    targetRemoteType =
-                        method === "bucket" ? REMOTE_MINIO : REMOTE_COUCHDB;
-                }
-
-                if (targetRemoteType === REMOTE_MINIO) {
-                    const bucketConf = await dialogManager.openWithExplicitCancel(SetupRemoteBucket, baseSettings);
-                    if (bucketConf === "cancelled" || typeof bucketConf !== "object") {
-                        return false;
-                    }
-                    return { ...baseSettings, ...bucketConf, remoteType: REMOTE_MINIO };
-                }
 
                 const couchConf = await dialogManager.openWithExplicitCancel<
                     SetupRemoteCouchDBResultType,
@@ -338,8 +310,6 @@ export function paneRemoteConfig(
                             const workSettings = createBaseRemoteSettings();
                             if (parsed.type === "couchdb") {
                                 workSettings.remoteType = REMOTE_COUCHDB;
-                            } else if (parsed.type === "s3") {
-                                workSettings.remoteType = REMOTE_MINIO;
                             } else {
                                 this.services.API.addLog(
                                     `Remote configuration '${config.id}' uses an unsupported remote type.`,
@@ -349,7 +319,7 @@ export function paneRemoteConfig(
                             }
                             Object.assign(workSettings, parsed.settings);
 
-                            const nextSettings = await runRemoteSetup(workSettings, workSettings.remoteType);
+                            const nextSettings = await runRemoteSetup(workSettings);
                             if (!nextSettings) {
                                 return;
                             }
@@ -452,8 +422,6 @@ export function paneRemoteConfig(
                                         const workSettings = createBaseRemoteSettings();
                                         if (parsed.type === "couchdb") {
                                             workSettings.remoteType = REMOTE_COUCHDB;
-                                        } else if (parsed.type === "s3") {
-                                            workSettings.remoteType = REMOTE_MINIO;
                                         } else {
                                             this.services.API.addLog(
                                                 "This remote configuration uses an unsupported remote type.",

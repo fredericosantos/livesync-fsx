@@ -17,9 +17,7 @@ vi.mock("./SetupWizard/dialogs/UseSetupURI.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/OutroNewUser.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/OutroExistingUser.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/OutroAskUserMode.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SetupRemote.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/SetupRemoteCouchDB.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SetupRemoteBucket.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/SetupRemoteP2P.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/SetupRemoteE2EE.svelte", () => ({ default: {} }));
 
@@ -351,82 +349,8 @@ describe("SetupManager", () => {
         }
     );
 
-    it("adds and activates a manually configured Object Storage profile without replacing existing profiles", async () => {
-        const { manager, setting, dialogManager } = createSetupManager();
-        setting.settings = {
-            ...setting.currentSettings(),
-            isConfigured: true,
-            remoteConfigurations: {
-                existing: {
-                    id: "existing",
-                    name: "Existing remote",
-                    uri: "sls+http://old:secret@old.example/?db=old",
-                    isEncrypted: false,
-                },
-            },
-            activeConfigurationId: "existing",
-        };
-        dialogManager.openWithExplicitCancel
-            .mockResolvedValueOnce({
-                endpoint: "https://storage.example",
-                accessKey: "key",
-                secretKey: "secret",
-                bucket: "notes",
-                region: "auto",
-                bucketPrefix: "",
-                useCustomRequestHandler: false,
-                bucketCustomHeaders: "",
-                forcePathStyle: true,
-            })
-            .mockResolvedValueOnce(true);
-
-        await manager.onBucketManualSetup(UserMode.ExistingUser, setting.currentSettings());
-
-        const current = setting.currentSettings();
-        expect(current.remoteConfigurations.existing).toBeDefined();
-        expect(Object.keys(current.remoteConfigurations)).toHaveLength(2);
-        expect(current.activeConfigurationId).not.toBe("existing");
-        const activeProfile = current.remoteConfigurations[current.activeConfigurationId];
-        expect(activeProfile?.name).toBe("S3 notes");
-        expect(activeProfile?.uri).toContain("sls+s3://key:secret@storage.example");
-    });
 
 
 
-    it("does not register Object Storage when final confirmation is cancelled", async () => {
-        const { manager, setting, dialogManager } = createSetupManager();
-        setting.settings = {
-            ...setting.currentSettings(),
-            isConfigured: true,
-            remoteConfigurations: {
-                existing: {
-                    id: "existing",
-                    name: "Existing remote",
-                    uri: "sls+http://old:secret@old.example/?db=old",
-                    isEncrypted: false,
-                },
-            },
-            activeConfigurationId: "existing",
-        };
-        const before = structuredClone(setting.currentSettings().remoteConfigurations);
-        dialogManager.openWithExplicitCancel
-            .mockResolvedValueOnce({
-                endpoint: "https://storage.example",
-                accessKey: "key",
-                secretKey: "secret",
-                bucket: "notes",
-                region: "auto",
-                bucketPrefix: "",
-                useCustomRequestHandler: false,
-                bucketCustomHeaders: "",
-                forcePathStyle: true,
-            })
-            .mockResolvedValueOnce("cancelled");
-
-        await manager.onBucketManualSetup(UserMode.ExistingUser, setting.currentSettings());
-
-        expect(setting.currentSettings().remoteConfigurations).toEqual(before);
-        expect(setting.currentSettings().activeConfigurationId).toBe("existing");
-    });
 
 });

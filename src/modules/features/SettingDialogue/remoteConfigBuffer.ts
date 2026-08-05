@@ -1,4 +1,4 @@
-import { pickBucketSyncSettings, pickCouchDBSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/utils";
+import { pickCouchDBSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import type { ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 
 // Keep the setting dialogue buffer aligned with the current core settings before persisting other dirty keys.
@@ -10,7 +10,6 @@ export function syncActivatedRemoteSettings(
     Object.assign(target, {
         remoteType: source.remoteType,
         activeConfigurationId: source.activeConfigurationId,
-        ...pickBucketSyncSettings(source),
         ...pickCouchDBSyncSettings(source),
     });
 }

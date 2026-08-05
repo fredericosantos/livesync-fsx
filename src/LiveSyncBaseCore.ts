@@ -21,7 +21,6 @@ import { AbstractModule } from "./modules/AbstractModule";
 import { ModulePeriodicProcess } from "./modules/core/ModulePeriodicProcess";
 import { ModuleReplicator } from "./modules/core/ModuleReplicator";
 import { ModuleReplicatorCouchDB } from "./modules/core/ModuleReplicatorCouchDB";
-import { ModuleReplicatorMinIO } from "./modules/core/ModuleReplicatorMinIO";
 import { ModuleConflictChecker } from "./modules/coreFeatures/ModuleConflictChecker";
 import { ModuleConflictResolver } from "./modules/coreFeatures/ModuleConflictResolver";
 import { ModuleResolvingMismatchedTweaks } from "./modules/coreFeatures/ModuleResolveMismatchedTweaks";
@@ -139,7 +138,6 @@ export class LiveSyncBaseCore<
     public registerModules(extraModules: AbstractModule[] = []) {
         this._registerModule(new ModuleLiveSyncMain(this));
         this._registerModule(new ModuleConflictChecker(this));
-        this._registerModule(new ModuleReplicatorMinIO(this));
         this._registerModule(new ModuleReplicatorCouchDB(this));
         this._registerModule(new ModuleReplicator(this));
         this._registerModule(new ModuleConflictResolver(this));

@@ -8,7 +8,6 @@ import {
 import FetchEverything from "@/modules/features/SetupWizard/dialogs/FetchEverything.svelte";
 import RebuildEverything from "@/modules/features/SetupWizard/dialogs/RebuildEverything.svelte";
 import { extractObject } from "octagonal-wheels/object";
-import { REMOTE_MINIO, REMOTE_P2P } from "@vrtmrz/livesync-commonlib/compat/common/models/setting.const";
 import type { ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/settings";
 import { TweakValuesShouldMatchedTemplate } from "@vrtmrz/livesync-commonlib/compat/common/models/tweak.definition";
 import type {
@@ -18,7 +17,6 @@ import type {
 import { askAndPerformFastSetupOnScheduledFetchAll } from "./redFlag.simpleFetch";
 import { ConnectionStringParser } from "@vrtmrz/livesync-commonlib/compat/common/ConnectionString";
 import { activateRemoteConfiguration } from "@vrtmrz/livesync-commonlib/remote-configurations";
-import { isP2PMainRemote } from "@/common/remoteConfiguration";
 
 /**
  * Flag file handler interface, similar to target filter pattern.
@@ -163,9 +161,9 @@ export function createFetchAllFlagHandler(
             return false;
         }
         const { vault, extra } = method;
-        const settings = await Promise.resolve(host.services.setting.currentSettings());
-        // If remote is MinIO, makeLocalChunkBeforeSync is not available. (because no-deduplication on sending).
-        const makeLocalChunkBeforeSyncAvailable = settings.remoteType !== REMOTE_MINIO;
+        await Promise.resolve(host.services.setting.currentSettings());
+        // CouchDB deduplicates on send, so local chunking before sync is always available.
+        const makeLocalChunkBeforeSyncAvailable = true;
         const mapVaultStateToAction = {
             identical: {
                 makeLocalChunkBeforeSync: makeLocalChunkBeforeSyncAvailable,
@@ -290,13 +288,6 @@ export async function adjustSettingToRemoteIfNeeded(
         return;
     }
 
-    // P2P has no centralised remote configuration; skip to avoid a spurious
-    // "Failed to connect to the remote server" error dialog.
-    if (config.remoteType === REMOTE_P2P) {
-        log("Remote configuration fetch skipped (P2P mode).", LOG_LEVEL_INFO);
-        return;
-    }
-
     // Remote configuration fetched and applied.
     if (await adjustSettingToRemote(host, log, config)) {
         config = host.services.setting.currentSettings();
@@ -390,7 +381,7 @@ export function createRebuildFlagHandler(
         const method = await host.services.UI.dialogManager.openWithExplicitCancel<
             RebuildEverythingResult,
             { isP2P: boolean }
-        >(RebuildEverything, { isP2P: isP2PMainRemote(settings) });
+        >(RebuildEverything, { isP2P: false });
         if (method === "cancelled") {
             log("Rebuild everything cancelled by user.", LOG_LEVEL_NOTICE);
             await cleanupFlag();

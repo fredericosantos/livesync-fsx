@@ -2,7 +2,6 @@ import { escapeStringToHTML } from "octagonal-wheels/string";
 import { E2EEAlgorithmNames, MILESTONE_DOCID, NODEINFO_DOCID, type ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import {
     pickCouchDBSyncSettings,
-    pickBucketSyncSettings,
     pickEncryptionSettings,
 } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { getConfig, type AllSettingItemKey } from "./settingConstants";
@@ -11,16 +10,6 @@ import { isNotFoundError } from "@vrtmrz/livesync-commonlib/compat/common/utils.
 import type PouchDB from "pouchdb-core";
 import type {} from "pouchdb-replication";
 
-/**
- * Generates a summary of Object Storage configuration settings
- * @param setting Settings object
- * @param showAdvanced Whether to include advanced settings
- * @returns Summary object
- */
-export function getBucketConfigSummary(setting: ObsidianLiveSyncSettings, showAdvanced = false) {
-    const settingTable: Partial<ObsidianLiveSyncSettings> = pickBucketSyncSettings(setting);
-    return getSummaryFromPartialSettings(settingTable, showAdvanced);
-}
 /**
  * Generates a summary of CouchDB configuration settings
  * @param setting Settings object

@@ -6,12 +6,10 @@ import {
     FLAGMD_REDFLAG2_HR,
     FLAGMD_REDFLAG3_HR,
     REMOTE_COUCHDB,
-    REMOTE_MINIO,
     type ConfigLevel,
     LEVEL_POWER_USER,
     LEVEL_ADVANCED,
     LEVEL_EDGE_CASE,
-    REMOTE_P2P,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { delay, isObjectDifferent, sizeToHumanReadable } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { Logger } from "@vrtmrz/livesync-commonlib/compat/common/logger";
@@ -61,8 +59,6 @@ import { panePowerUsers } from "./PanePowerUsers.ts";
 import { panePatches } from "./PanePatches.ts";
 import { paneMaintenance } from "./PaneMaintenance.ts";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
-import { JournalSyncCore } from "@vrtmrz/livesync-commonlib/compat/replication/journal/JournalSyncCore";
-import { MinioStorageAdapter } from "@vrtmrz/livesync-commonlib/compat/replication/journal/objectstore/MinioStorageAdapter";
 import { closeObsidianSettings } from "@/common/obsidianSettings.ts";
 
 // For creating a document
@@ -506,33 +502,12 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
     enableOnlySyncDisabled = enableOnly(() => !this.isAnySyncEnabled());
 
-    onlyOnP2POrCouchDB = () =>
-        ({
-            visibility:
-                this.isConfiguredAs("remoteType", REMOTE_P2P) || this.isConfiguredAs("remoteType", REMOTE_COUCHDB),
-        }) as OnUpdateResult;
-
     onlyOnCouchDB = () =>
         ({
             visibility: this.isConfiguredAs("remoteType", REMOTE_COUCHDB),
         }) as OnUpdateResult;
-    onlyOnMinIO = () =>
-        ({
-            visibility: this.isConfiguredAs("remoteType", REMOTE_MINIO),
-        }) as OnUpdateResult;
-    onlyOnOnlyP2P = () =>
-        ({
-            visibility: this.isConfiguredAs("remoteType", REMOTE_P2P),
-        }) as OnUpdateResult;
-    onlyOnCouchDBOrMinIO = () =>
-        ({
-            visibility:
-                this.isConfiguredAs("remoteType", REMOTE_COUCHDB) || this.isConfiguredAs("remoteType", REMOTE_MINIO),
-        }) as OnUpdateResult;
     // E2EE Function
     checkWorkingPassphrase = async (): Promise<boolean> => {
-        if (this.editingSettings.remoteType == REMOTE_MINIO) return true;
-
         const settingForCheck: RemoteDBSettings = {
             ...this.editingSettings,
         };
@@ -831,18 +806,4 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         });
     }
 
-    getMinioJournalSyncClient() {
-        // return new JournalSyncMinio(this.core.settings, this.core.simpleStore, this.core);
-        // const settings = this.editingSettings as ObsidianLiveSyncSettings;
-        return new JournalSyncCore(
-            this.core.settings,
-            this.core.simpleStore,
-            this.core,
-            new MinioStorageAdapter(this.core.settings, this.core)
-        );
-    }
-    async resetRemoteBucket() {
-        const minioJournal = this.getMinioJournalSyncClient();
-        await minioJournal.resetBucket();
-    }
 }

@@ -1,5 +1,4 @@
 import type {
-    BucketSyncSetting,
     CouchDBConnection,
     EncryptionSettings,
     ObsidianLiveSyncSettings,
@@ -38,7 +37,6 @@ export const TYPE_CLOSE = "close";
 
 // SetupRemote
 export const TYPE_COUCHDB = "couchdb";
-export const TYPE_BUCKET = "bucket";
 export const TYPE_P2P = "p2p";
 
 export type ResultTypeVault =
@@ -93,13 +91,12 @@ export type SelectMethodExistingResultType =
     | typeof TYPE_CONFIGURE_MANUALLY
     | typeof TYPE_CANCELLED;
 
-export type SetupRemoteResultType = typeof TYPE_COUCHDB | typeof TYPE_BUCKET | typeof TYPE_P2P | typeof TYPE_CANCELLED;
+export type SetupRemoteResultType = typeof TYPE_COUCHDB | typeof TYPE_CANCELLED;
 
 export type UseSetupURIResultType = typeof TYPE_CANCELLED | ObsidianLiveSyncSettings;
 
 export type SetupRemoteE2EEResultType = typeof TYPE_CANCELLED | EncryptionSettings;
 
-export type SetupRemoteBucketResultType = typeof TYPE_CANCELLED | BucketSyncSetting;
 
 export type SetupRemoteCouchDBResultType = typeof TYPE_CANCELLED | CouchDBConnection;
 export type CouchDBSetupMode = "create-or-connect" | "connect-existing" | "settings";
