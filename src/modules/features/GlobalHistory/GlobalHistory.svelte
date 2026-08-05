@@ -111,7 +111,7 @@
                         }
                         const isDeleted = doc._deleted || (doc as any)?.deleted || false;
                         if (isDeleted) {
-                            diffDetail += " 🗑️";
+                            diffDetail += " (deleted)";
                         }
                         if (rev == docA._rev) {
                             if (checkStorageDiff) {
@@ -125,9 +125,9 @@
                                     const d = readAsBlob(doc);
                                     const result = await isDocContentSame(data, d);
                                     if (result) {
-                                        diffDetail += " ⚖️";
+                                        diffDetail += " (conflicted)";
                                     } else {
-                                        diffDetail += " ⚠️";
+                                        diffDetail += " (differs)";
                                     }
                                 }
                             }
@@ -142,9 +142,9 @@
                             const totalCount = loadedChunks.rows.length;
                             const errorCount = loadedChunks.rows.filter((e) => "error" in e).length;
                             if (errorCount == 0) {
-                                chunksStatus = `✅ ${totalCount}`;
+                                chunksStatus = `${totalCount} chunks`;
                             } else {
-                                chunksStatus = `🔎 ${errorCount} ✅ ${totalCount}`;
+                                chunksStatus = `${errorCount} missing of ${totalCount} chunks`;
                             }
                         }
 

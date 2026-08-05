@@ -502,7 +502,7 @@ export class HiddenFileSync extends LiveSyncCommands {
         includeDeleted = true
     ) {
         const logLevel = getLogLevel(showNotice);
-        const p = this._progress(`[⚙ Storage -> DB ]\n`, logLevel);
+        const p = this._progress(`[Storage -> DB ]\n`, logLevel);
         const notifyProgress = onlyInNTimes(100, (progress) => p.log(`${progress}/${processFiles.length}`));
         const processes = processFiles.map(async (file, i) => {
             try {
@@ -524,7 +524,7 @@ export class HiddenFileSync extends LiveSyncCommands {
     ) {
         return await skipIfDuplicated("scanAllStorageChanges", async () => {
             const logLevel = getLogLevel(showNotice);
-            const p = this._progress(`[⚙ Scanning Storage -> DB ]\n`, logLevel);
+            const p = this._progress(`[Scanning Storage -> DB ]\n`, logLevel);
             p.log(`Scanning storage files...`);
             const knownNames = [...this._fileInfoLastProcessed.keys()] as FilePath[];
             const existNames = await this.scanInternalFileNames();
@@ -1028,12 +1028,12 @@ Offline Changed files: ${processFiles.length}`;
             this.isTargetFileInPatterns(path) &&
             this.isNotIgnoredByCustomisationSync(path) &&
             this.isHiddenFileSyncHandlingPath(path);
-        // console.warn(`Assertion: isTargetFile(${path}) : ${result ? "✔️" : "❌"}`);
+        // console.warn(`Assertion: isTargetFile(${path}) : ${result ? "yes" : "no"}`);
         if (!result) {
             return false;
         }
         const resultByFile = await this.services.vault.isIgnoredByIgnoreFile(path);
-        // console.warn(`${path}  -> isIgnoredByIgnoreFile: ${resultByFile ? "❌" : "✔️"}`);
+        // console.warn(`${path}  -> isIgnoredByIgnoreFile: ${resultByFile ? "no" : "yes"}`);
         return !resultByFile;
     }
 
@@ -1045,7 +1045,7 @@ Offline Changed files: ${processFiles.length}`;
         includeDeletion = true
     ) {
         const logLevel = getLogLevel(showNotice);
-        const p = this._progress(`[⚙ DB -> Storage ]\n`, logLevel);
+        const p = this._progress(`[DB -> Storage ]\n`, logLevel);
         const notifyProgress = onlyInNTimes(100, (progress) => p.log(`${progress}/${processFiles.length}`));
         const processes = processFiles.map(async (file) => {
             try {
@@ -1078,7 +1078,7 @@ Offline Changed files: ${processFiles.length}`;
     async applyOfflineChanges(showNotice: boolean) {
         const logLevel = getLogLevel(showNotice);
         return await serialized("applyOfflineChanges", async () => {
-            const p = this._progress("[⚙ Apply untracked changes ]\n", logLevel);
+            const p = this._progress("[Apply untracked changes ]\n", logLevel);
             this._log(`Track changes.`, logLevel);
             p.log("Enumerating local files...");
             const currentStorageFiles = await this.scanInternalFileNames();
@@ -1170,7 +1170,7 @@ Offline Changed files: ${files.length}`;
 
     async useDatabaseFiles(files: MetaEntry[], showNotice = false, onlyNew = false) {
         const logLevel = getLogLevel(showNotice);
-        const p = this._progress(`[⚙ Scanning DB -> Storage ]\n`, logLevel);
+        const p = this._progress(`[Scanning DB -> Storage ]\n`, logLevel);
         p.log("Scanning database files...");
         const notifyProgress = onlyInNTimes(25, (progress) => p.log(`${progress}/${files.length}`));
         const processFiles = files.map(async (file) => {
@@ -1326,7 +1326,7 @@ Offline Changed files: ${files.length}`;
 
     async rebuildMerging(showNotice: boolean, targetFiles: FilePath[] | false = false) {
         const logLevel = getLogLevel(showNotice);
-        const p = this._progress("[⚙ Rebuild by Merge ]\n", logLevel);
+        const p = this._progress("[Rebuild by Merge ]\n", logLevel);
         this._log(`Rebuilding hidden files from the storage and the local database.`, logLevel);
         p.log("Enumerating local files...");
         const currentStorageFilesAll = await this.scanInternalFileNames();
@@ -1384,7 +1384,7 @@ Offline Changed files: ${files.length}`;
         const logLevel = getLogLevel(showNotice);
         this._verbose(`Rebuilding hidden files from the storage.`);
         this._log(`Rebuilding hidden files from the storage.`, logLevel);
-        const p = this._progress("[⚙ Rebuild by Storage ]\n", logLevel);
+        const p = this._progress("[Rebuild by Storage ]\n", logLevel);
         p.log("Enumerating local files...");
         const currentFilesAll = await this.scanInternalFileNames();
         const currentFiles = targetFiles
@@ -1416,7 +1416,7 @@ Offline Changed files: ${files.length}`;
     async rebuildFromDatabase(showNotice: boolean, targetFiles: FilePath[] | false = false, onlyNew = false) {
         const logLevel = getLogLevel(showNotice);
         this._verbose(`Rebuilding hidden files from the local database.`);
-        const p = this._progress("[⚙ Rebuild by Database ]\n", logLevel);
+        const p = this._progress("[Rebuild by Database ]\n", logLevel);
         p.log("Enumerating database files...");
         const allFiles = await this.getAllDatabaseFiles();
 
@@ -1444,7 +1444,7 @@ Offline Changed files: ${files.length}`;
         initialisationProgress?: HiddenFileInitialisationProgress
     ) {
         const logLevel = showMessage ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO;
-        const p = initialisationProgress ?? this._progress("[⚙ Initialise]\n", logLevel);
+        const p = initialisationProgress ?? this._progress("[Initialise]\n", logLevel);
         // p.log("Resolving conflicts before starting...");
         // await this.resolveConflictOnInternalFiles();
         p.log("Initialising hidden files sync...");
@@ -1943,7 +1943,7 @@ Offline Changed files: ${files.length}`;
                     // Open the one user-visible progress Notice before saving
                     // the setting. Large Vaults can otherwise appear idle
                     // before the initial file enumeration begins.
-                    initialisationProgress = this._progress("[⚙ Initialise]\n", LOG_LEVEL_NOTICE);
+                    initialisationProgress = this._progress("[Initialise]\n", LOG_LEVEL_NOTICE);
                     initialisationProgress.log("Preparing Hidden File Sync...");
                     await this.core.services.setting.applyPartial(
                         {

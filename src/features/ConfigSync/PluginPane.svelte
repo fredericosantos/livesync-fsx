@@ -192,16 +192,16 @@
         isMaintenanceMode,
     };
 
-    const ICON_EMOJI_PAUSED = `⛔`;
-    const ICON_EMOJI_AUTOMATIC = `✨`;
-    const ICON_EMOJI_SELECTIVE = `🔀`;
-    const ICON_EMOJI_FLAGGED = `🚩`;
+    const ICON_LABEL_PAUSED = `paused`;
+    const ICON_LABEL_AUTOMATIC = `automatic`;
+    const ICON_LABEL_SELECTIVE = `selective`;
+    const ICON_LABEL_FLAGGED = `flagged`;
 
     const ICONS: { [key: number]: string } = {
-        [MODE_SELECTIVE]: ICON_EMOJI_SELECTIVE,
-        [MODE_PAUSED]: ICON_EMOJI_PAUSED,
-        [MODE_AUTOMATIC]: ICON_EMOJI_AUTOMATIC,
-        [MODE_SHINY]: ICON_EMOJI_FLAGGED,
+        [MODE_SELECTIVE]: ICON_LABEL_SELECTIVE,
+        [MODE_PAUSED]: ICON_LABEL_PAUSED,
+        [MODE_AUTOMATIC]: ICON_LABEL_AUTOMATIC,
+        [MODE_SHINY]: ICON_LABEL_FLAGGED,
     };
     const TITLES: { [key: number]: string } = {
         [MODE_SELECTIVE]: translateMessage("Selective"),
@@ -342,7 +342,7 @@
     <div class="buttons">
         <button on:click={() => selectAllNewest(true)}>{translateMessage("Select All Shiny")}</button>
         <button on:click={() => selectAllNewest(false)}
-            >{ICON_EMOJI_FLAGGED} {translateMessage("Select Flagged Shiny")}</button
+            >{ICON_LABEL_FLAGGED} {translateMessage("Select Flagged Shiny")}</button
         >
         <button on:click={() => resetSelectNewest()}>{translateMessage("Deselect all")}</button>
         <button on:click={() => applyAll()} class="mod-cta">{translateMessage("Apply All Selected")}</button>
@@ -511,7 +511,7 @@
                         deleteAllItems(deleteTerm);
                     }}
                 >
-                    🗑️
+                    Delete
                 </button>
             </div>
         </div>

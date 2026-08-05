@@ -4,19 +4,11 @@ import {
     LOG_LEVEL_INFO,
     LOG_LEVEL_VERBOSE,
     PREFIXMD_LOGFILE,
-    type DatabaseConnectingStatus,
     type LOG_LEVEL,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
+import { type LogEntry, logMessages } from "@vrtmrz/livesync-commonlib/compat/mock_and_interop/stores";
 import { cancelTask, scheduleTask } from "octagonal-wheels/concurrency/task";
 import { fireAndForget, isDirty, throttle } from "@vrtmrz/livesync-commonlib/compat/common/utils";
-import {
-    collectingChunks,
-    pluginScanningCount,
-    hiddenFilesEventCount,
-    hiddenFilesProcessingCount,
-    type LogEntry,
-    logMessages,
-} from "@vrtmrz/livesync-commonlib/compat/mock_and_interop/stores";
 import {
     EVENT_FILE_RENAMED,
     EVENT_LAYOUT_READY,
@@ -31,12 +23,6 @@ import { LogPaneView, VIEW_TYPE_LOG } from "./Log/LogPaneView.ts";
 import { serialized } from "octagonal-wheels/concurrency/lock";
 import { $msg } from "@/common/translation";
 import { P2PLogCollector } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/P2PLogCollector";
-import {
-    REMOTE_REQUEST_ACTIVITY_MINIMUM_VISIBLE_MS,
-    formatRemoteActivityStatusLabel,
-    getTrackedRequestCount,
-} from "./RemoteActivityStatus.ts";
-import { createMinimumVisibleActivityCount, createPaddedCounterLabel } from "./StatusBarDisplay.ts";
 import { STATUS_ACTIVITY, STATUS_ATTENTION, presentStatus, type StatusLevel } from "./StatusPresentation.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
@@ -124,98 +110,6 @@ export class ModuleLog extends AbstractObsidianModule {
     p2pLogCollector = new P2PLogCollector(this.services.context.events);
 
     observeForLogs() {
-        const registerDisplay = <T extends { dispose(): void }>(display: T): T => {
-            this.plugin.register(() => display.dispose());
-            return display;
-        };
-        const labelReplication = registerDisplay(
-            createPaddedCounterLabel(this.services.replication.replicationResultCount, `📥`)
-        );
-        const labelDBCount = registerDisplay(
-            createPaddedCounterLabel(this.services.replication.databaseQueueCount, `📄`)
-        );
-        const labelStorageCount = registerDisplay(
-            createPaddedCounterLabel(this.services.replication.storageApplyingCount, `💾`)
-        );
-        const labelChunkCount = registerDisplay(createPaddedCounterLabel(collectingChunks, `🧩`));
-        const labelPluginScanCount = registerDisplay(createPaddedCounterLabel(pluginScanningCount, `🔌`));
-        const labelConflictProcessCount = registerDisplay(
-            createPaddedCounterLabel(this.services.conflict.conflictProcessQueueCount, `🔩`)
-        );
-        const hiddenFilesCount = reactive(() => hiddenFilesEventCount.value - hiddenFilesProcessingCount.value);
-        const labelHiddenFilesCount = registerDisplay(createPaddedCounterLabel(hiddenFilesCount, `⚙️`));
-        const queueCountLabelX = reactive(() => {
-            return `${labelReplication.value}${labelDBCount.value}${labelStorageCount.value}${labelChunkCount.value}${labelPluginScanCount.value}${labelHiddenFilesCount.value}${labelConflictProcessCount.value}`;
-        });
-        const queueCountLabel = () => queueCountLabelX.value;
-
-        const trackedRequestCount = reactive(() => {
-            return getTrackedRequestCount(this.services.API.requestCount.value, this.services.API.responseCount.value);
-        });
-        const displayedTrackedRequestCount = registerDisplay(
-            createMinimumVisibleActivityCount(trackedRequestCount, REMOTE_REQUEST_ACTIVITY_MINIMUM_VISIBLE_MS)
-        );
-
-        const requestingStatLabel = computed(() => {
-            return formatRemoteActivityStatusLabel({
-                remoteOperationCount: Math.max(0, this.services.replicator.boundedRemoteActivityCount.value),
-                trackedRequestCount: displayedTrackedRequestCount.value,
-            });
-        });
-
-        const replicationStatLabel = computed(() => {
-            const e = this.services.replicator.replicationStatics.value;
-            const sent = e.sent;
-            const arrived = e.arrived;
-            const maxPullSeq = e.maxPullSeq;
-            const maxPushSeq = e.maxPushSeq;
-            const lastSyncPullSeq = e.lastSyncPullSeq;
-            const lastSyncPushSeq = e.lastSyncPushSeq;
-            let pushLast = "";
-            let pullLast = "";
-            let w = "";
-            const labels: Partial<Record<DatabaseConnectingStatus, string>> = {
-                CONNECTED: "⚡",
-                JOURNAL_SEND: "📦↑",
-                JOURNAL_RECEIVE: "📦↓",
-            };
-            switch (e.syncStatus) {
-                case "CLOSED":
-                case "COMPLETED":
-                case "NOT_CONNECTED":
-                    w = "⏹";
-                    break;
-                case "STARTED":
-                    w = "🌀";
-                    break;
-                case "PAUSED":
-                    w = "💤";
-                    break;
-                case "CONNECTED":
-                case "JOURNAL_SEND":
-                case "JOURNAL_RECEIVE":
-                    w = labels[e.syncStatus] || "⚡";
-                    pushLast =
-                        lastSyncPushSeq == 0
-                            ? ""
-                            : lastSyncPushSeq >= maxPushSeq
-                              ? " (LIVE)"
-                              : ` (${maxPushSeq - lastSyncPushSeq})`;
-                    pullLast =
-                        lastSyncPullSeq == 0
-                            ? ""
-                            : lastSyncPullSeq >= maxPullSeq
-                              ? " (LIVE)"
-                              : ` (${maxPullSeq - lastSyncPullSeq})`;
-                    break;
-                case "ERRORED":
-                    w = "⚠";
-                    break;
-                default:
-                    w = "?";
-            }
-            return { w, sent, pushLast, arrived, pullLast };
-        });
         // Tracks how long the current burst of work has been in flight, so that
         // brief activity is never surfaced. See docs/fork/01-design-principles.md.
         let busySince: number | undefined;
@@ -299,12 +193,14 @@ export class ModuleLog extends AbstractObsidianModule {
             const validOnWindows = isValidFilenameInWidows(thisFile.name);
             const validOnDarwin = isValidFilenameInDarwin(thisFile.name);
             const validOnAndroid = isValidFilenameInAndroid(thisFile.name);
+            // Name the platforms in words. Flag-style emoji are ambiguous at a
+            // glance and render inconsistently across the very platforms named.
             const labels = [];
-            if (!validOnWindows) labels.push("🪟");
-            if (!validOnDarwin) labels.push("🍎");
-            if (!validOnAndroid) labels.push("🤖");
+            if (!validOnWindows) labels.push("Windows");
+            if (!validOnDarwin) labels.push("macOS");
+            if (!validOnAndroid) labels.push("Android");
             if (labels.length > 0) {
-                reasonWarn.push("Some platforms may be unable to process this file correctly: " + labels.join(" "));
+                reasonWarn.push("This file name is not valid on " + labels.join(", ") + ".");
             }
         }
         // Case Sensitivity
@@ -359,9 +255,9 @@ export class ModuleLog extends AbstractObsidianModule {
         ) {
             messageLines.push(...networkMessages);
         } else if (this.settings.networkWarningStyle === NetworkWarningStyles.ICON) {
-            if (networkMessages.length > 0) messageLines.push("🔗❌");
+            if (networkMessages.length > 0) messageLines.push("Network unreachable");
         }
-        this.messageArea.innerText = messageLines.map((e) => `⚠️ ${e}`).join("\n");
+        this.messageArea.innerText = messageLines.join("\n");
     }
 
     onActiveLeafChange() {

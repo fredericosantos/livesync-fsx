@@ -10,9 +10,9 @@
     function revert() {
         patterns = [...originals];
     }
-    const CHECK_OK = "✔";
-    const CHECK_NG = "⚠";
-    const MARK_MODIFIED = "✏ ";
+    const CHECK_OK = "valid";
+    const CHECK_NG = "invalid";
+    const MARK_MODIFIED = "edited ";
     function checkRegExp(pattern: CustomRegExpSource) {
         return isValidRegExp(pattern) ? CHECK_OK : CHECK_NG;
     }
@@ -34,7 +34,7 @@
             <label>{modified[idx]}{statusName[idx]}</label>
             <span class="chip">{isInvertedExp[idx] ? translateMessage("INVERTED") : ""}</span>
             <input type="text" bind:value={pattern} class={modified[idx]} />
-            <button class="iconbutton" on:click={() => remove(idx)}>🗑</button>
+            <button class="iconbutton" title="Remove this pattern" on:click={() => remove(idx)}>Remove</button>
         </li>
     {/each}
     <li>

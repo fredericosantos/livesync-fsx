@@ -55,7 +55,7 @@
         "This will rebuild the local database on this device using the most recent data from the server. This action is designed to resolve synchronisation inconsistencies and restore correct functionality."
     )}</Guidance
 >
-<Guidance important title={translateMessage("⚠️ Important Notice")}>
+<Guidance important title={translateMessage("Important notice")}>
     <strong
         >{translateMessage(
             "If you have unsynchronised changes in your Vault on this device, they will likely diverge from the server's versions after the reset. This may result in a large number of file conflicts."

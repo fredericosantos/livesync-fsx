@@ -69,7 +69,7 @@
             "You should perform this operation only in exceptional circumstances, such as when the server data is completely corrupted, when changes on all other devices are no longer needed, or when the database size has become unusually large in comparison to the Vault size."
         )}
     </InfoNote>
-    <Guidance important title={msg("⚠️ Please Confirm the Following")}>
+    <Guidance important title={msg("Please confirm the following")}>
         <Check
             title={msg("I understand that all changes made on other smartphones or computers possibly could be lost.")}
             bind:value={confirmationCheck1}

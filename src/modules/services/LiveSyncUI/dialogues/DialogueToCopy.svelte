@@ -42,7 +42,7 @@
     <InputRow label={title || translateMessage("Data to Copy")}>
         <textarea readonly rows="4">{dataToCopy}</textarea>
         <button onclick={() => copyToClipboard()}
-            >{#if !copied}📋{:else}✔️{/if}
+            >{#if !copied}Copy{:else}Copied{/if}
         </button>
     </InputRow>
 </Instruction>

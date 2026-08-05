@@ -70,12 +70,10 @@
             const dtDiff = (local?.mtime ?? 0) - (remote?.mtime ?? 0);
             const diff = timeDeltaToHumanReadable(Math.abs(dtDiff));
             if (dtDiff / 1000 < -10) {
-                // freshness = "✓ Newer";
                 freshness = translateMessage("Newer (${diff})", { diff });
                 canApply = true;
                 contentCheck = true;
             } else if (dtDiff / 1000 > 10) {
-                // freshness = "⚠ Older";
                 freshness = translateMessage("Older (${diff})", { diff });
                 canApply = true;
                 contentCheck = true;
@@ -376,16 +374,15 @@
         {#if canApply || (isMaintenanceMode && selected != "")}
             {#if canCompare}
                 {#if pickToCompare}
-                    <button on:click={pickCompareItem}>🗃️</button>
+                    <button on:click={pickCompareItem} title="Choose an item to compare against">Pick</button>
                 {:else}
-                    <!--🔍  -->
-                    <button on:click={compareSelected}>⮂</button>
+                    <button on:click={compareSelected} title="Compare with the stored version">Compare</button>
                 {/if}
             {:else}
                 <!-- svelte-ignore a11y_consider_explicit_label -->
                 <button disabled></button>
             {/if}
-            <button on:click={applySelected}>✓</button>
+            <button on:click={applySelected} title="Apply the selected version">Apply</button>
         {:else}
             <!-- svelte-ignore a11y_consider_explicit_label -->
             <button disabled></button>
@@ -394,9 +391,9 @@
         {/if}
         {#if isMaintenanceMode}
             {#if selected != ""}
-                <button on:click={deleteSelected}>🗑️</button>
+                <button on:click={deleteSelected} title="Delete the stored version">Delete</button>
             {:else}
-                <button on:click={duplicateItem}>📑</button>
+                <button on:click={duplicateItem} title="Duplicate this entry">Duplicate</button>
             {/if}
         {/if}
     {/if}
@@ -471,12 +468,12 @@
         display: inline-block;
     }
     .chip.content:not(:empty)::before {
-        content: "📄: ";
+        content: "files: ";
     }
     .chip.version:not(:empty)::before {
-        content: "🏷️: ";
+        content: "version: ";
     }
     .chip.modified:not(:empty)::before {
-        content: "📅: ";
+        content: "modified: ";
     }
 </style>

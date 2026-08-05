@@ -302,7 +302,7 @@ describe("HiddenFileSync configuration-change notices", () => {
 
         await hiddenFileSync.configureHiddenFileSync("MERGE");
 
-        expect(createProgress).toHaveBeenCalledWith("[⚙ Initialise]\n", LOG_LEVEL_NOTICE);
+        expect(createProgress).toHaveBeenCalledWith("[Initialise]\n", LOG_LEVEL_NOTICE);
         expect(events[0]).toBe("progress:Preparing Hidden File Sync...");
         expect(initialiseInternalFileSync).toHaveBeenCalledWith("safe", true, false, progress);
         expect(log).not.toHaveBeenCalledWith("Gathering files for enabling Hidden File Sync", LOG_LEVEL_NOTICE);

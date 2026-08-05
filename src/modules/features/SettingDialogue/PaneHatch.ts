@@ -381,7 +381,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
             const fileMenuHost = this.createEl(fileHeader, "div");
             if (information.storage.exists) {
                 this.createEl(card, "div", {
-                    text: $msg("📁 Vault: ${SIZE} B · ${TIME}", {
+                    text: $msg("Vault: ${SIZE} B · ${TIME}", {
                         TIME: new Date(information.storage.mtime ?? 0).toLocaleString(),
                         SIZE: `${information.storage.size ?? 0}`,
                     }),
@@ -389,13 +389,13 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                 });
             } else {
                 this.createEl(card, "div", {
-                    text: $msg("📁 Vault: missing"),
+                    text: $msg("Vault: missing"),
                     cls: "sls-repair-metric",
                 });
             }
             if (!information.database.exists) {
                 this.createEl(card, "div", {
-                    text: $msg("🗄️ Local DB: missing"),
+                    text: $msg("Local DB: missing"),
                     cls: "sls-repair-metric",
                 });
             }
@@ -410,12 +410,12 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                 const status = this.createEl(card, "div", { cls: "sls-repair-status" });
                 if (vaultMatchesWinner) {
                     this.createEl(status, "span", {
-                        text: $msg("✅ Vault matches winner"),
+                        text: $msg("Vault matches winner"),
                         cls: "sls-repair-status-ok",
                     });
                 }
                 this.createEl(status, "span", {
-                    text: $msg("⚠️ Conflicts: ${COUNT}", {
+                    text: $msg("Conflicts: ${COUNT}", {
                         COUNT: `${information.database.conflictCount}`,
                     }),
                     cls: "sls-repair-status-warning",
@@ -439,13 +439,13 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                 const comparison = getFileRepairRevisionComparison(inspection, revision);
                 if (metadata.deleted) {
                     this.createEl(revisionEl, "div", {
-                        text: $msg("🗑️ Logical deletion"),
+                        text: $msg("Logical deletion"),
                         cls: "sls-repair-metric",
                     });
                 } else if (revision.contentReadable) {
                     this.createEl(revisionEl, "div", {
                         text: $msg(
-                            "📦 DB: recorded ${RECORDED} B · decoded ${DECODED} B · Δsize ${DIFFERENCE} B",
+                            "DB: recorded ${RECORDED} B · decoded ${DECODED} B · Δsize ${DIFFERENCE} B",
                             {
                                 RECORDED: `${comparison.recordedSize}`,
                                 DECODED: `${comparison.decodedSize ?? 0}`,
@@ -462,13 +462,13 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                             !embedded && localDatabaseState !== "available"
                     );
                     this.createEl(revisionEl, "div", {
-                        text: $msg("🧩 Missing chunks: ${COUNT}", {
+                        text: $msg("Missing chunks: ${COUNT}", {
                             COUNT: `${missing.length}`,
                         }),
                         cls: "sls-repair-metric mod-warning",
                     });
                     this.createEl(revisionEl, "div", {
-                        text: $msg("📦 DB: recorded ${RECORDED} B · decoded unavailable", {
+                        text: $msg("DB: recorded ${RECORDED} B · decoded unavailable", {
                             RECORDED: `${comparison.recordedSize}`,
                         }),
                         cls: "sls-repair-metric",
@@ -487,7 +487,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                     comparison.databaseToVaultSizeDifference !== null
                 ) {
                     this.createEl(revisionEl, "div", {
-                        text: $msg("📁 Vault: ${VAULT} B · Δsize vs DB ${DIFFERENCE} B", {
+                        text: $msg("Vault: ${VAULT} B · Δsize vs DB ${DIFFERENCE} B", {
                             VAULT: `${comparison.vaultSize}`,
                             DIFFERENCE: formatSigned(
                                 comparison.databaseToVaultSizeDifference
@@ -502,7 +502,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                 ) {
                     this.createEl(revisionEl, "div", {
                         text: $msg(
-                            "🕒 DB ${DATABASE_TIME} · Vault ${VAULT_TIME} · Δtime ${DIFFERENCE} ms (${RELATION})",
+                            "DB ${DATABASE_TIME} · Vault ${VAULT_TIME} · Δtime ${DIFFERENCE} ms (${RELATION})",
                             {
                                 DATABASE_TIME: new Date(
                                     comparison.databaseMtime
@@ -523,12 +523,12 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                 }
                 if (revision.contentMatchesStorage === true) {
                     this.createEl(revisionEl, "div", {
-                        text: $msg("✅ Matches Vault"),
+                        text: $msg("Matches vault"),
                         cls: "sls-repair-metric",
                     });
                 } else if (revision.contentMatchesStorage === false) {
                     this.createEl(revisionEl, "div", {
-                        text: $msg("⚠️ Differs from Vault"),
+                        text: $msg("Differs from vault"),
                         cls: "sls-repair-metric mod-warning",
                     });
                 }

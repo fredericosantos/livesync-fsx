@@ -1,4 +1,4 @@
-import { App, Component, PluginSettingTab } from "@/deps.ts";
+import { App, Component, PluginSettingTab, setIcon } from "@/deps.ts";
 import {
     type ObsidianLiveSyncSettings,
     type RemoteDBSettings,
@@ -701,11 +701,10 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
                             value: `${order}`,
                             cls: "sls-setting-tab",
                         } as DomElementInfo);
-                        el.createDiv({
-                            cls: "sls-setting-menu-btn",
-                            text: icon,
-                            title: title,
-                        });
+                        // Lucide icons inherit theme colour and font weight; emoji do not.
+                        // See docs/fork/01-design-principles.md (principle 3).
+                        const iconEl = el.createDiv({ cls: "sls-setting-menu-btn", title });
+                        setIcon(iconEl, icon);
                         inputEl.addEventListener("change", (evt) => this.selectPane(evt));
                         inputEl.addEventListener("click", (evt) => this.selectPane(evt));
                     }
@@ -764,33 +763,33 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         // Add panes
 
         // TODO: Refactor to new API style.
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelChangeLog"), "💬", 100, false).then(
+        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelChangeLog"), "history", 100, false).then(
             bindPane(paneChangeLog)
         );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelSetup"), "🧙‍♂️", 110, false).then(
+        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelSetup"), "wand", 110, false).then(
             bindPane(paneSetup)
         );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelGeneralSettings"), "⚙️", 20, false).then(
+        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelGeneralSettings"), "settings", 20, false).then(
             bindPane(paneGeneral)
         );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelRemoteConfiguration"), "🛰️", 0, false).then(
+        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelRemoteConfiguration"), "server", 0, false).then(
             bindPane(paneRemoteConfig)
         );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.titleSyncSettings"), "🔄", 30, false).then(
+        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.titleSyncSettings"), "refresh-cw", 30, false).then(
             bindPane(paneSyncSettings)
         );
-        void addPane(containerEl, "Selector", "🚦", 33, false, LEVEL_ADVANCED).then(bindPane(paneSelector));
-        void addPane(containerEl, "Customization sync", "🔌", 60, false, LEVEL_ADVANCED).then(
+        void addPane(containerEl, "Selector", "filter", 33, false, LEVEL_ADVANCED).then(bindPane(paneSelector));
+        void addPane(containerEl, "Customization sync", "blocks", 60, false, LEVEL_ADVANCED).then(
             bindPane(paneCustomisationSync)
         );
 
-        void addPane(containerEl, "Hatch", "🧰", 50, true).then(bindPane(paneHatch));
-        void addPane(containerEl, "Advanced", "🔧", 46, false, LEVEL_ADVANCED).then(bindPane(paneAdvanced));
-        void addPane(containerEl, "Power users", "💪", 47, true, LEVEL_POWER_USER).then(bindPane(panePowerUsers));
+        void addPane(containerEl, "Hatch", "wrench", 50, true).then(bindPane(paneHatch));
+        void addPane(containerEl, "Advanced", "sliders-horizontal", 46, false, LEVEL_ADVANCED).then(bindPane(paneAdvanced));
+        void addPane(containerEl, "Power users", "zap", 47, true, LEVEL_POWER_USER).then(bindPane(panePowerUsers));
 
-        void addPane(containerEl, "Patches", "🩹", 51, false, LEVEL_EDGE_CASE).then(bindPane(panePatches));
+        void addPane(containerEl, "Patches", "bandage", 51, false, LEVEL_EDGE_CASE).then(bindPane(panePatches));
 
-        void addPane(containerEl, "Maintenance", "🎛️", 70, true).then(bindPane(paneMaintenance));
+        void addPane(containerEl, "Maintenance", "hard-drive", 70, true).then(bindPane(paneMaintenance));
 
         void yieldNextAnimationFrame().then(() => {
             if (this.selectedScreen == "") {
