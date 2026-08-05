@@ -3,7 +3,6 @@ import { E2EEAlgorithmNames, MILESTONE_DOCID, NODEINFO_DOCID, type ObsidianLiveS
 import {
     pickCouchDBSyncSettings,
     pickBucketSyncSettings,
-    pickP2PSyncSettings,
     pickEncryptionSettings,
 } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { getConfig, type AllSettingItemKey } from "./settingConstants";
@@ -12,21 +11,6 @@ import { isNotFoundError } from "@vrtmrz/livesync-commonlib/compat/common/utils.
 import type PouchDB from "pouchdb-core";
 import type {} from "pouchdb-replication";
 
-/**
- * Generates a summary of P2P configuration settings
- * @param setting Settings object
- * @param additional Additional summary information to include
- * @param showAdvanced Whether to include advanced settings
- * @returns Summary object
- */
-export function getP2PConfigSummary(
-    setting: ObsidianLiveSyncSettings,
-    additional: Record<string, string> = {},
-    showAdvanced = false
-) {
-    const settingTable: Partial<ObsidianLiveSyncSettings> = pickP2PSyncSettings(setting);
-    return { ...getSummaryFromPartialSettings({ ...settingTable }, showAdvanced), ...additional };
-}
 /**
  * Generates a summary of Object Storage configuration settings
  * @param setting Settings object

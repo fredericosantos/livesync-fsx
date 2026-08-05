@@ -71,32 +71,6 @@ describe("CLI parseArgs", () => {
         expect(combined).toContain("livesync-cli <database-path> [options] <command> [command-args]");
     });
 
-    it("parses p2p-peers command and timeout", () => {
-        process.argv = ["node", "livesync-cli", "./databasePath", "p2p-peers", "5"];
-        const parsed = parseArgs();
-
-        expect(parsed.databasePath).toBe("./databasePath");
-        expect(parsed.command).toBe("p2p-peers");
-        expect(parsed.commandArgs).toEqual(["5"]);
-    });
-
-    it("parses p2p-sync command with peer and timeout", () => {
-        process.argv = ["node", "livesync-cli", "./databasePath", "p2p-sync", "peer-1", "12"];
-        const parsed = parseArgs();
-
-        expect(parsed.databasePath).toBe("./databasePath");
-        expect(parsed.command).toBe("p2p-sync");
-        expect(parsed.commandArgs).toEqual(["peer-1", "12"]);
-    });
-
-    it("parses p2p-host command", () => {
-        process.argv = ["node", "livesync-cli", "./databasePath", "p2p-host"];
-        const parsed = parseArgs();
-
-        expect(parsed.databasePath).toBe("./databasePath");
-        expect(parsed.command).toBe("p2p-host");
-        expect(parsed.commandArgs).toEqual([]);
-    });
 
     it("parses remote-add command", () => {
         process.argv = [
@@ -139,13 +113,13 @@ describe("CLI parseArgs", () => {
             "./databasePath",
             "remote-set",
             "remote-abc",
-            "sls+p2p://room-1?passphrase=abc",
+            "sls+couchdb://example:5984/db?passphrase=abc",
         ];
         const parsed = parseArgs();
 
         expect(parsed.databasePath).toBe("./databasePath");
         expect(parsed.command).toBe("remote-set");
-        expect(parsed.commandArgs).toEqual(["remote-abc", "sls+p2p://room-1?passphrase=abc"]);
+        expect(parsed.commandArgs).toEqual(["remote-abc", "sls+couchdb://example:5984/db?passphrase=abc"]);
     });
 
     it("parses --interval flag with valid integer", () => {

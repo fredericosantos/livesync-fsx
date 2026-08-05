@@ -195,36 +195,6 @@ describe("SetupManager", () => {
         expect(setting.currentSettings().isConfigured).toBe(true);
     });
 
-    it("identifies P2P when opening the new-user initialisation confirmation", async () => {
-        const { manager, setting, dialogManager } = createSetupManager();
-        setting.settings = { ...setting.currentSettings(), isConfigured: false };
-        dialogManager.openWithExplicitCancel.mockResolvedValueOnce(true);
-        const p2pProfileId = "p2p-profile";
-
-        await manager.onConfirmApplySettingsFromWizard(
-            {
-                ...setting.currentSettings(),
-                isConfigured: true,
-                // Imported profile settings can still carry the previous compatibility field
-                // until the selected profile is projected by the setting lifecycle.
-                remoteType: REMOTE_COUCHDB,
-                activeConfigurationId: p2pProfileId,
-                remoteConfigurations: {
-                    [p2pProfileId]: {
-                        id: p2pProfileId,
-                        name: "P2P room",
-                        uri: "sls+p2p://:secret@team-room?relays=wss%3A%2F%2Frelay.example",
-                        isEncrypted: false,
-                    },
-                },
-            },
-            UserMode.NewUser
-        );
-
-        expect(dialogManager.openWithExplicitCancel).toHaveBeenCalledWith(expect.anything(), {
-            isP2P: true,
-        });
-    });
 
     it("reserves Fetch when compatible imported settings activate an unconfigured device", async () => {
         const { manager, setting, dialogManager, core } = createSetupManager();
@@ -421,79 +391,7 @@ describe("SetupManager", () => {
         expect(activeProfile?.uri).toContain("sls+s3://key:secret@storage.example");
     });
 
-    it("creates and selects a P2P profile during fresh manual onboarding", async () => {
-        const { manager, setting, dialogManager } = createSetupManager();
-        setting.settings = {
-            ...setting.currentSettings(),
-            isConfigured: false,
-            remoteConfigurations: {},
-            activeConfigurationId: "",
-            P2P_ActiveRemoteConfigurationId: "",
-        };
-        dialogManager.openWithExplicitCancel
-            .mockResolvedValueOnce({
-                P2P_Enabled: true,
-                P2P_roomID: "team-room",
-                P2P_passphrase: "secret",
-                P2P_relays: "wss://relay.example",
-                P2P_AppID: "self-hosted-livesync",
-                P2P_AutoStart: true,
-                P2P_AutoBroadcast: false,
-                P2P_turnServers: "",
-                P2P_turnUsername: "",
-                P2P_turnCredential: "",
-            })
-            .mockResolvedValueOnce(true);
 
-        await manager.onP2PManualSetup(UserMode.NewUser, setting.currentSettings());
-
-        const current = setting.currentSettings();
-        expect(Object.keys(current.remoteConfigurations)).toHaveLength(1);
-        expect(current.activeConfigurationId).not.toBe("");
-        expect(current.P2P_ActiveRemoteConfigurationId).toBe(current.activeConfigurationId);
-        const activeProfile = current.remoteConfigurations[current.activeConfigurationId];
-        expect(activeProfile?.name).toBe("P2P team-room");
-        expect(activeProfile?.uri).toContain("sls+p2p://");
-    });
-
-    it("selects a configured P2P profile without replacing the active main remote", async () => {
-        const { manager, setting, dialogManager } = createSetupManager();
-        setting.settings = {
-            ...setting.currentSettings(),
-            isConfigured: true,
-            remoteConfigurations: {
-                main: {
-                    id: "main",
-                    name: "Main CouchDB",
-                    uri: "sls+http://old:secret@old.example/?db=old",
-                    isEncrypted: false,
-                },
-            },
-            activeConfigurationId: "main",
-            P2P_ActiveRemoteConfigurationId: "",
-        };
-        dialogManager.openWithExplicitCancel.mockResolvedValueOnce({
-            P2P_Enabled: true,
-            P2P_roomID: "team-room",
-            P2P_passphrase: "secret",
-            P2P_relays: "wss://relay.example",
-            P2P_AppID: "self-hosted-livesync",
-            P2P_AutoStart: true,
-            P2P_AutoBroadcast: false,
-            P2P_turnServers: "",
-            P2P_turnUsername: "",
-            P2P_turnCredential: "",
-        });
-
-        await manager.onP2PManualSetup(UserMode.Unknown, setting.currentSettings(), false);
-
-        const current = setting.currentSettings();
-        expect(Object.keys(current.remoteConfigurations)).toHaveLength(2);
-        expect(current.activeConfigurationId).toBe("main");
-        expect(current.P2P_ActiveRemoteConfigurationId).not.toBe("");
-        expect(current.P2P_ActiveRemoteConfigurationId).not.toBe("main");
-        expect(current.remoteConfigurations[current.P2P_ActiveRemoteConfigurationId]?.name).toBe("P2P team-room");
-    });
 
     it("does not register Object Storage when final confirmation is cancelled", async () => {
         const { manager, setting, dialogManager } = createSetupManager();
@@ -531,42 +429,4 @@ describe("SetupManager", () => {
         expect(setting.currentSettings().activeConfigurationId).toBe("existing");
     });
 
-    it("does not mutate an existing P2P profile when final confirmation is cancelled", async () => {
-        const { manager, setting, dialogManager } = createSetupManager();
-        setting.settings = {
-            ...setting.currentSettings(),
-            isConfigured: true,
-            remoteConfigurations: {
-                existing: {
-                    id: "existing",
-                    name: "Existing P2P remote",
-                    uri: "sls+p2p://old-room?passphrase=old-secret",
-                    isEncrypted: false,
-                },
-            },
-            activeConfigurationId: "existing",
-            P2P_ActiveRemoteConfigurationId: "existing",
-        };
-        const before = structuredClone(setting.currentSettings().remoteConfigurations);
-        dialogManager.openWithExplicitCancel
-            .mockResolvedValueOnce({
-                P2P_Enabled: true,
-                P2P_roomID: "new-room",
-                P2P_passphrase: "new-secret",
-                P2P_relays: "wss://relay.example",
-                P2P_AppID: "self-hosted-livesync",
-                P2P_AutoStart: true,
-                P2P_AutoBroadcast: false,
-                P2P_turnServers: "",
-                P2P_turnUsername: "",
-                P2P_turnCredential: "",
-            })
-            .mockResolvedValueOnce("cancelled");
-
-        await manager.onP2PManualSetup(UserMode.ExistingUser, setting.currentSettings());
-
-        expect(setting.currentSettings().remoteConfigurations).toEqual(before);
-        expect(setting.currentSettings().activeConfigurationId).toBe("existing");
-        expect(setting.currentSettings().P2P_ActiveRemoteConfigurationId).toBe("existing");
-    });
 });

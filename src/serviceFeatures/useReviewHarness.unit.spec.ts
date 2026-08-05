@@ -101,7 +101,7 @@ function createFixture(options: { enableDebugTools?: boolean; continuation?: str
         },
     };
 
-    const controller = useReviewHarness(core as never, plugin as never, { replicator } as never, compatibilityReview as never);
+    const controller = useReviewHarness(core as never, plugin as never, compatibilityReview as never);
     return {
         controller,
         api,

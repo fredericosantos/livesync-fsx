@@ -1,14 +1,10 @@
 import { LiveSyncBaseCore } from "@/LiveSyncBaseCore";
 import type { ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import type { NodeServiceContext } from "@/apps/cli/services/NodeServiceContext";
-import type { UseP2PReplicatorResult } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/UseP2PReplicatorResult";
 
 export type CLICommand =
     | "daemon"
     | "sync"
-    | "p2p-peers"
-    | "p2p-sync"
-    | "p2p-host"
     | "push"
     | "pull"
     | "pull-rev"
@@ -49,8 +45,6 @@ export interface CLICommandContext {
     databasePath: string;
     vaultPath: string;
     core: LiveSyncBaseCore<NodeServiceContext, never>;
-    /** Current-result contract owned by the P2P service feature. */
-    p2pReplicator?: UseP2PReplicatorResult;
     settingsPath: string;
     originalSyncSettings: Pick<
         ObsidianLiveSyncSettings,
@@ -67,9 +61,6 @@ export interface CLICommandContext {
 export const VALID_COMMANDS = new Set([
     "daemon",
     "sync",
-    "p2p-peers",
-    "p2p-sync",
-    "p2p-host",
     "push",
     "pull",
     "pull-rev",

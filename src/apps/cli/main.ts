@@ -23,8 +23,6 @@ import type { CLICommand, CLICommandContext, CLIOptions } from "./commands/types
 import { getPathFromUXFileInfo } from "@vrtmrz/livesync-commonlib/compat/common/typeUtils";
 import { stripAllPrefixes } from "@vrtmrz/livesync-commonlib/compat/string_and_binary/path";
 import { IgnoreRules } from "./serviceModules/IgnoreRules";
-import { useP2PReplicatorFeature } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/useP2PReplicatorFeature";
-import type { UseP2PReplicatorResult } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/UseP2PReplicatorResult";
 import { createNodeStandardIo, fsPromises as fs, path, fs as fsSync } from "@vrtmrz/livesync-commonlib/node";
 import type { StandardIo } from "@vrtmrz/livesync-commonlib/context";
 import { writeStderrLine, writeStdoutLine } from "./cliOutput";
@@ -53,10 +51,6 @@ Arguments:
 Commands:
     daemon                  (default) Run mirror scan then continuously sync CouchDB <-> local filesystem
     sync                    Run one replication cycle and exit
-    p2p-peers <timeout>     Show discovered peers as [peer]\t<peer-id>\t<peer-name>
-    p2p-sync <peer> <timeout>
-                            Sync with the specified peer-id or peer-name
-    p2p-host                Start P2P host mode and wait until interrupted
     push <src> <dst>        Push local file <src> into local database path <dst>
     pull <src> <dst>        Pull file <src> from local database into local file <dst>
     pull-rev <src> <dst> <rev>   Pull file <src> at specific revision <rev> into local file <dst>
@@ -97,9 +91,6 @@ Examples:
     livesync-cli ./my-database                        Run daemon (LiveSync mode)
     livesync-cli ./my-database --interval 30          Run daemon (polling every 30s)
     livesync-cli ./my-database sync
-    livesync-cli ./my-database p2p-peers 5
-    livesync-cli ./my-database p2p-sync my-peer-name 15
-    livesync-cli ./my-database p2p-host
     livesync-cli ./my-database --settings ./custom-settings.json push ./note.md folder/note.md
     livesync-cli ./my-database pull folder/note.md ./exports/note.md
     livesync-cli ./my-database pull-rev folder/note.md ./exports/note.old.md 3-abcdef
@@ -283,7 +274,6 @@ export async function main(
         options.command === "remote-add" ||
         options.command === "remote-ls" ||
         options.command === "remote-export" ||
-        options.command === "p2p-peers" ||
         options.command === "info" ||
         options.command === "rm" ||
         options.command === "resolve" ||
@@ -445,7 +435,6 @@ export async function main(
     );
 
     // Create LiveSync core
-    let p2pReplicator: UseP2PReplicatorResult | undefined;
     const core = new LiveSyncBaseCore(
         serviceHubInstance,
         (core: LiveSyncBaseCore<NodeServiceContext, never>, serviceHub: InjectableServiceHub<NodeServiceContext>) => {
@@ -454,8 +443,6 @@ export async function main(
         (core) => [],
         () => [], // No add-ons
         (core) => {
-            // Register P2P replicator feature.
-            p2pReplicator = useP2PReplicatorFeature(core);
             // Add target filter to prevent internal files are handled
             core.services.vault.isTargetFile.addHandler(async (target) => {
                 const targetPath = stripAllPrefixes(getPathFromUXFileInfo(target));
@@ -572,7 +559,6 @@ export async function main(
             databasePath,
             vaultPath,
             core,
-            p2pReplicator,
             settingsPath,
             originalSyncSettings,
         });

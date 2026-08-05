@@ -1,11 +1,9 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import {
-    EVENT_REQUEST_OPEN_P2P_SETTINGS,
     EVENT_REQUEST_OPEN_SETUP_URI,
 } from "@vrtmrz/livesync-commonlib/compat/events/coreEvents";
 import {
     openOnboarding,
-    openP2PSettings,
     openSetupURI,
     showOnboardingInvitation,
     useSetupManagerHandlersFeature,
@@ -35,22 +33,6 @@ describe("setupObsidian/setupManagerHandlers", () => {
         expect(setupManager.onUseSetupURI).toHaveBeenCalledWith("unknown");
     });
 
-    it("openP2PSettings should delegate to SetupManager.onP2PManualSetup", async () => {
-        const settings = { x: 1 };
-        const host = {
-            services: {
-                setting: {
-                    currentSettings: vi.fn(() => settings),
-                },
-            },
-        } as any;
-        const setupManager = {
-            onP2PManualSetup: vi.fn(async () => await Promise.resolve(true)),
-        } as any;
-
-        await openP2PSettings(host, setupManager);
-        expect(setupManager.onP2PManualSetup).toHaveBeenCalledWith("unknown", settings, false);
-    });
 
     it("openOnboarding should delegate to SetupManager.startOnBoarding", async () => {
         const setupManager = {
@@ -159,6 +141,5 @@ describe("setupObsidian/setupManagerHandlers", () => {
             })
         );
         expect(events.onEvent).toHaveBeenCalledWith(EVENT_REQUEST_OPEN_SETUP_URI, expect.any(Function));
-        expect(events.onEvent).toHaveBeenCalledWith(EVENT_REQUEST_OPEN_P2P_SETTINGS, expect.any(Function));
     });
 });

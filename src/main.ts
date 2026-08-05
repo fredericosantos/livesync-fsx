@@ -39,11 +39,7 @@ import { useSetupProtocolFeature } from "./serviceFeatures/setupObsidian/setupPr
 import { useSetupQRCodeFeature } from "@/serviceFeatures/setupObsidian/qrCode";
 import { useSetupURIFeature } from "@/serviceFeatures/setupObsidian/setupUri";
 import { useSetupManagerHandlersFeature } from "./serviceFeatures/setupObsidian/setupManagerHandlers.ts";
-import { useP2PReplicatorFeature } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/useP2PReplicatorFeature";
-import { useP2PReplicatorCommands } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/useP2PReplicatorCommands";
-import { useP2PReplicatorUI } from "./serviceFeatures/useP2PReplicatorUI.ts";
 import { useReviewHarness } from "./serviceFeatures/useReviewHarness.ts";
-import { createOpenReplicationUI, createOpenRebuildUI } from "./features/P2PSync/P2PReplicator/P2PReplicationUI.ts";
 import { useCompatibilityReview } from "./serviceFeatures/compatibilityReview.ts";
 import { createObsidianCompatibilityReviewUi } from "./serviceFeatures/compatibilityReviewObsidian.ts";
 import { createFileReflectionProvenance } from "./serviceModules/FileReflectionProvenance.ts";
@@ -182,13 +178,6 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                 const curriedFeature = () => featuresInitialiser(core);
                 core.services.appLifecycle.onLayoutReady.addHandler(curriedFeature);
                 const setupManager = core.getModule(SetupManager);
-                const replicator = useP2PReplicatorFeature(
-                    core,
-                    createOpenReplicationUI(this.app),
-                    createOpenRebuildUI(this.app)
-                );
-                useP2PReplicatorCommands(core, replicator);
-                useP2PReplicatorUI(core, core, replicator);
                 useRemoteConfiguration(core);
 
                 useSetupProtocolFeature(core, setupManager);
@@ -203,11 +192,7 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                     createObsidianCompatibilityReviewUi(core.confirm)
                 );
                 waitForCompatibilityReview = () => compatibilityReview.openReview();
-                useReviewHarness(core, this, replicator, compatibilityReview);
-                // p2pReplicatorResult = useP2PReplicator(core, [
-                //     VIEW_TYPE_P2P,
-                //     (leaf: any) => new P2PReplicatorPaneView(leaf, core, p2pReplicatorResult!),
-                // ]);
+                useReviewHarness(core, this, compatibilityReview);
             }
         );
     }

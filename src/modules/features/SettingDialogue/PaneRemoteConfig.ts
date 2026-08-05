@@ -1,7 +1,6 @@
 import {
     REMOTE_COUCHDB,
     REMOTE_MINIO,
-    REMOTE_P2P,
     DEFAULT_SETTINGS,
     LOG_LEVEL_NOTICE,
     type ObsidianLiveSyncSettings,
@@ -28,7 +27,6 @@ import type { RemoteConfigurationResult } from "@vrtmrz/livesync-commonlib/compa
 import SetupRemote from "@/modules/features/SetupWizard/dialogs/SetupRemote.svelte";
 import SetupRemoteCouchDB from "@/modules/features/SetupWizard/dialogs/SetupRemoteCouchDB.svelte";
 import SetupRemoteBucket from "@/modules/features/SetupWizard/dialogs/SetupRemoteBucket.svelte";
-import SetupRemoteP2P from "@/modules/features/SetupWizard/dialogs/SetupRemoteP2P.svelte";
 import type {
     SetupRemoteCouchDBInitialData,
     SetupRemoteCouchDBResultType,
@@ -57,9 +55,6 @@ function serializeRemoteConfiguration(settings: ObsidianLiveSyncSettings): strin
     if (settings.remoteType === REMOTE_MINIO) {
         return ConnectionStringParser.serialize({ type: "s3", settings });
     }
-    if (settings.remoteType === REMOTE_P2P) {
-        return ConnectionStringParser.serialize({ type: "p2p", settings });
-    }
     return ConnectionStringParser.serialize({ type: "couchdb", settings });
 }
 
@@ -83,7 +78,7 @@ function suggestRemoteConfigurationName(parsed: RemoteConfigurationResult): stri
     if (parsed.type === "s3") {
         return `S3 ${parsed.settings.bucket || parsed.settings.endpoint}`;
     }
-    return `P2P ${parsed.settings.P2P_roomID || "Remote"}`;
+    return "Unsupported remote";
 }
 
 export function paneRemoteConfig(
@@ -189,7 +184,7 @@ export function paneRemoteConfig(
             };
             const runRemoteSetup = async (
                 baseSettings: ObsidianLiveSyncSettings,
-                remoteType?: typeof REMOTE_COUCHDB | typeof REMOTE_MINIO | typeof REMOTE_P2P
+                remoteType?: typeof REMOTE_COUCHDB | typeof REMOTE_MINIO
             ): Promise<ObsidianLiveSyncSettings | false> => {
                 const setupManager = this.core.getModule(SetupManager);
                 const dialogManager = setupManager.dialogManager;
@@ -201,7 +196,7 @@ export function paneRemoteConfig(
                         return false;
                     }
                     targetRemoteType =
-                        method === "bucket" ? REMOTE_MINIO : method === "p2p" ? REMOTE_P2P : REMOTE_COUCHDB;
+                        method === "bucket" ? REMOTE_MINIO : REMOTE_COUCHDB;
                 }
 
                 if (targetRemoteType === REMOTE_MINIO) {
@@ -210,14 +205,6 @@ export function paneRemoteConfig(
                         return false;
                     }
                     return { ...baseSettings, ...bucketConf, remoteType: REMOTE_MINIO };
-                }
-
-                if (targetRemoteType === REMOTE_P2P) {
-                    const p2pConf = await dialogManager.openWithExplicitCancel(SetupRemoteP2P, baseSettings);
-                    if (p2pConf === "cancelled" || typeof p2pConf !== "object") {
-                        return false;
-                    }
-                    return { ...baseSettings, ...p2pConf, remoteType: REMOTE_P2P };
                 }
 
                 const couchConf = await dialogManager.openWithExplicitCancel<
@@ -354,7 +341,11 @@ export function paneRemoteConfig(
                             } else if (parsed.type === "s3") {
                                 workSettings.remoteType = REMOTE_MINIO;
                             } else {
-                                workSettings.remoteType = REMOTE_P2P;
+                                this.services.API.addLog(
+                                    `Remote configuration '${config.id}' uses an unsupported remote type.`,
+                                    LOG_LEVEL_NOTICE
+                                );
+                                return;
                             }
                             Object.assign(workSettings, parsed.settings);
 
@@ -464,7 +455,11 @@ export function paneRemoteConfig(
                                         } else if (parsed.type === "s3") {
                                             workSettings.remoteType = REMOTE_MINIO;
                                         } else {
-                                            workSettings.remoteType = REMOTE_P2P;
+                                            this.services.API.addLog(
+                                                "This remote configuration uses an unsupported remote type.",
+                                                LOG_LEVEL_NOTICE
+                                            );
+                                            return;
                                         }
                                         Object.assign(workSettings, parsed.settings);
                                         const newTweaks =

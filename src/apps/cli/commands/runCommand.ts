@@ -18,7 +18,6 @@ import {
 import { stripAllPrefixes } from "@vrtmrz/livesync-commonlib/compat/string_and_binary/path";
 import type { CLICommandContext, CLIOptions } from "./types";
 import { toArrayBuffer, toDatabaseRelativePath } from "./utils";
-import { collectPeers, openP2PHost, parseTimeoutSeconds, syncWithPeer } from "./p2p";
 import { performFullScan } from "@vrtmrz/livesync-commonlib/compat/serviceFeatures/offlineScanner";
 import { UnresolvedErrorManager } from "@vrtmrz/livesync-commonlib/compat/services/base/UnresolvedErrorManager";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
@@ -215,42 +214,6 @@ export async function runCommand(options: CLIOptions, context: CLICommandContext
             }
         }
         return !!result;
-    }
-
-    if (options.command === "p2p-peers") {
-        if (options.commandArgs.length < 1) {
-            throw new Error("p2p-peers requires one argument: <timeout>");
-        }
-        const timeoutSec = parseTimeoutSeconds(options.commandArgs[0], "p2p-peers");
-        writeStderrLine(standardIo, `[Command] p2p-peers timeout=${timeoutSec}s`);
-        const peers = await collectPeers(core, timeoutSec);
-        if (peers.length > 0) {
-            standardIo.writeStdout(peers.map((peer) => `[peer]\t${peer.peerId}\t${peer.name}`).join("\n") + "\n");
-        }
-        return true;
-    }
-
-    if (options.command === "p2p-sync") {
-        if (options.commandArgs.length < 2) {
-            throw new Error("p2p-sync requires two arguments: <peer> <timeout>");
-        }
-        const peerToken = options.commandArgs[0].trim();
-        if (!peerToken) {
-            throw new Error("p2p-sync requires a non-empty <peer>");
-        }
-        const timeoutSec = parseTimeoutSeconds(options.commandArgs[1], "p2p-sync");
-        writeStderrLine(standardIo, `[Command] p2p-sync peer=${peerToken} timeout=${timeoutSec}s`);
-        const peer = await syncWithPeer(core, peerToken, timeoutSec);
-        writeStderrLine(standardIo, `[Done] P2P sync completed with ${peer.name} (${peer.peerId})`);
-        return true;
-    }
-
-    if (options.command === "p2p-host") {
-        writeStderrLine(standardIo, "[Command] p2p-host");
-        await openP2PHost(core);
-        writeStderrLine(standardIo, "[Ready] P2P host is running. Press Ctrl+C to stop.");
-        await new Promise(() => {});
-        return true;
     }
 
     if (options.command === "push") {

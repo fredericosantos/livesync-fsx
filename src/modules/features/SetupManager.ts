@@ -2,7 +2,6 @@ import {
     type BucketSyncSetting,
     type EncryptionSettings,
     type ObsidianLiveSyncSettings,
-    type P2PSyncSetting,
     LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
     REMOTE_COUCHDB,
@@ -22,7 +21,6 @@ import OutroAskUserMode from "./SetupWizard/dialogs/OutroAskUserMode.svelte";
 import SetupRemote from "./SetupWizard/dialogs/SetupRemote.svelte";
 import SetupRemoteCouchDB from "./SetupWizard/dialogs/SetupRemoteCouchDB.svelte";
 import SetupRemoteBucket from "./SetupWizard/dialogs/SetupRemoteBucket.svelte";
-import SetupRemoteP2P from "./SetupWizard/dialogs/SetupRemoteP2P.svelte";
 import SetupRemoteE2EE from "./SetupWizard/dialogs/SetupRemoteE2EE.svelte";
 import { decodeSettingsFromQRCodeData } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
@@ -35,7 +33,6 @@ import type {
     SetupRemoteCouchDBResultType,
     SetupRemoteCouchDBInitialData,
     SetupRemoteE2EEResultType,
-    SetupRemoteP2PResultType,
     SetupRemoteResultType,
     UseSetupURIResultType,
 } from "./SetupWizard/dialogs/setupDialogTypes.ts";
@@ -43,7 +40,6 @@ import {
     applySettingsAndFetchOnActivation,
     applySettingsWithScheduledInitialisation,
 } from "@/serviceFeatures/setupObsidian/setupActivationLifecycle.ts";
-import { isP2PMainRemote } from "@/common/remoteConfiguration.ts";
 
 function copySettingsForRemoteProfileUpdate(settings: ObsidianLiveSyncSettings): ObsidianLiveSyncSettings {
     return {
@@ -227,37 +223,6 @@ export class SetupManager extends AbstractModule {
         return await this.onConfirmApplySettingsFromWizard(newSetting, userMode, activate);
     }
 
-    /**
-     * Handles manual setup for P2P
-     * @param userMode
-     * @param currentSetting
-     * @param activate Whether to activate the P2P as remote type (as P2P Only setup)
-     * @returns Promise that resolves to true if setup completed successfully, false otherwise
-     */
-    async onP2PManualSetup(
-        userMode: UserMode,
-        currentSetting: ObsidianLiveSyncSettings,
-        activate = true
-    ): Promise<boolean> {
-        const p2pConf = await this.dialogManager.openWithExplicitCancel<SetupRemoteP2PResultType, P2PSyncSetting>(
-            SetupRemoteP2P,
-            currentSetting
-        );
-        if (p2pConf === "cancelled") {
-            this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
-            return await this.onOnboard(userMode);
-        }
-        const newSetting = {
-            ...copySettingsForRemoteProfileUpdate(currentSetting),
-            ...p2pConf,
-        } as ObsidianLiveSyncSettings;
-        upsertRemoteConfigurationInPlace(newSetting, "p2p", {
-            id: newSetting.P2P_ActiveRemoteConfigurationId || undefined,
-            activate,
-            activateForP2P: true,
-        });
-        return await this.onConfirmApplySettingsFromWizard(newSetting, userMode, activate);
-    }
 
     /**
      * Handles only E2EE configuration
@@ -315,8 +280,6 @@ export class SetupManager extends AbstractModule {
             return await this.onCouchDBManualSetup(userMode, currentSetting, true);
         } else if (method === "bucket") {
             return await this.onBucketManualSetup(userMode, currentSetting, true);
-        } else if (method === "p2p") {
-            return await this.onP2PManualSetup(userMode, currentSetting, true);
         } else if (method === "cancelled") {
             this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
             if (userMode !== UserMode.Unknown) {
@@ -360,8 +323,8 @@ export class SetupManager extends AbstractModule {
                 return applied;
             }
             // Check virtual changes
-            const original = { ...this.settings, P2P_DevicePeerName: "" } as ObsidianLiveSyncSettings;
-            const modified = { ...newConf, P2P_DevicePeerName: "" } as ObsidianLiveSyncSettings;
+            const original = { ...this.settings } as ObsidianLiveSyncSettings;
+            const modified = { ...newConf } as ObsidianLiveSyncSettings;
             const isOnlyVirtualChange = isObjectDifferent(original, modified, true) === false;
             if (isOnlyVirtualChange) {
                 extra();
@@ -390,7 +353,7 @@ export class SetupManager extends AbstractModule {
         const confirm = await this.dialogManager.openWithExplicitCancel<
             OutroNewUserResultType | OutroExistingUserResultType,
             { isP2P: boolean }
-        >(component, { isP2P: isP2PMainRemote(newConf) });
+        >(component, { isP2P: false });
         if (confirm === "cancelled") {
             this._log("User cancelled applying settings from wizard..", LOG_LEVEL_NOTICE);
             return false;
