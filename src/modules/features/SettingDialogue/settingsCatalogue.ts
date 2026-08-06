@@ -157,29 +157,21 @@ const BASIC_SECTIONS: readonly SettingSection[] = [
         keys: ["deviceAndVaultName" as SettingKey],
     },
     {
-        id: "when",
-        pane: "sync",
-        title: "When to sync",
-        summary: "How eagerly changes are exchanged with the server.",
-        tier: TIER_BASIC,
-        // `preset` is upstream's existing pseudo-setting that writes all eight
-        // trigger booleans at once. Promoting it, and leaving the booleans at
-        // expert, makes one control the answer instead of eight.
-        keys: ["preset" as SettingKey, "syncMinimumInterval"],
-    },
-    {
         id: "what",
         pane: "sync",
         title: "What to sync",
-        summary: "Which files are included, and which are left alone.",
+        summary: "Which files are left out. Everything else is included.",
         tier: TIER_BASIC,
-        keys: ["syncMaxSizeInMB", "useIgnoreFiles", "ignoreFiles", "syncInternalFiles", "usePluginSync"],
+        keys: ["useIgnoreFiles", "ignoreFiles", "syncInternalFiles", "usePluginSync"],
     },
     {
         id: "privacy",
         pane: "sync",
-        title: "Privacy",
-        summary: "End-to-end encryption of vault contents at rest on the server.",
+        title: "End-to-end encryption",
+        // "At rest on the server" is how a security engineer says it, not how
+        // anyone else does. What the user needs to know is who can read the
+        // files if the server is taken.
+        summary: "Scrambles your notes before they leave this device, so nobody who reaches the server can read them.",
         tier: TIER_BASIC,
         keys: ["encrypt", "passphrase"],
     },
@@ -199,6 +191,18 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
             "disableMarkdownAutoMerge",
             "writeDocumentsIfConflicted",
         ],
+    },
+    {
+        id: "when",
+        pane: "sync",
+        title: "When to sync",
+        summary: "New vaults sync continuously. Change this only if that is a problem.",
+        tier: TIER_ADVANCED,
+        // `preset` is upstream's existing pseudo-setting that writes all eight
+        // trigger booleans at once. `syncMaxSizeInMB` lives here rather than in
+        // "What to sync" because it silently skips files; it is a performance
+        // valve, not a selection rule, and it defaults to off.
+        keys: ["preset" as SettingKey, "syncMinimumInterval", "syncMaxSizeInMB"],
     },
     {
         id: "triggers",

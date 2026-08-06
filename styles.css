@@ -834,3 +834,99 @@ body.is-mobile .livesync-compatibility-review-notice {
     outline-offset: 1px;
     border-radius: 2px;
 }
+
+/*
+ * Inline validation. The message replaces nothing and moves nothing — it
+ * appears under the field it belongs to, in the colour reserved for problems.
+ * See docs/fork/01-design-principles.md (principles 5 and 8).
+ */
+.sls-setting-problem {
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.5;
+    padding: 0 0 0.5em;
+    max-width: 60ch;
+}
+
+.sls-setting--invalid input[type="text"] {
+    border-color: var(--text-error);
+}
+
+.sls-setting-crossref .setting-item-name {
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+/*
+ * A list of short values is a list, not prose. Editing two or three tokens
+ * inside one comma-separated textarea hid both the count and the boundaries.
+ */
+.sls-list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    margin: 0 0 0.75em;
+    overflow: hidden;
+}
+
+.sls-list__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    padding: 0.45em 0.75em;
+    background: var(--background-secondary);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+}
+
+.sls-list__count {
+    font-variant-numeric: tabular-nums;
+}
+
+.sls-list__empty {
+    padding: 0.7em 0.75em;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+}
+
+.sls-list__row {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.4em 0.75em;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.sls-list__name {
+    flex: 1;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+}
+
+.sls-list__remove {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0.15em;
+    cursor: pointer;
+    color: var(--text-faint);
+    display: inline-flex;
+}
+
+.sls-list__remove:hover {
+    color: var(--text-error);
+}
+
+.sls-list__add {
+    display: flex;
+    gap: 0.5em;
+    padding: 0.5em 0.75em;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.sls-list__input {
+    flex: 1;
+    min-width: 0;
+}

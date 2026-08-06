@@ -58,7 +58,7 @@ import {
 import { paneGeneral } from "./PaneGeneral.ts";
 import { paneRemoteConfig } from "./PaneRemoteConfig.ts";
 import { paneSelector } from "./PaneSelector.ts";
-import { paneSyncSettings } from "./PaneSyncSettings.ts";
+import { paneSync } from "./PaneSync.ts";
 import { paneCustomisationSync } from "./PaneCustomisationSync.ts";
 import { paneHatch } from "./PaneHatch.ts";
 import { panePatches } from "./PanePatches.ts";
@@ -775,7 +775,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             (this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, funcs: PageFunctions) => void
         > = {
             setup: paneSetup,
-            sync: paneSyncSettings,
+            sync: paneSync,
             server: paneRemoteConfig,
             files: paneSelector,
             plugins: paneCustomisationSync,
