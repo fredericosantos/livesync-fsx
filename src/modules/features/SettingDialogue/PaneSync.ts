@@ -33,8 +33,8 @@ export function paneSync(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, 
     const tier = this.viewingTier;
 
     for (const section of sectionsForPane("sync", tier)) {
-        void funcs.addPanel(paneEl, section.title).then((el) => {
-            el.createDiv({ cls: "sls-setting-note", text: section.summary });
+        void funcs.addPanel(paneEl, "").then((el) => {
+            new Setting(el).setName(section.title).setDesc(section.summary).setHeading();
             const custom = CUSTOM_SECTIONS[section.id];
             if (custom) {
                 void custom(this, el, funcs);

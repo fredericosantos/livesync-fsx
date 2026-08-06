@@ -43,7 +43,7 @@ import {
     type PageFunctions,
     type UpdateFunction,
 } from "./SettingPane.ts";
-import { paneSetup } from "./PaneSetup.ts";
+import { paneSetup, paneSetupFooter } from "./PaneSetup.ts";
 import { paneTuning } from "./PaneTuning.ts";
 import {
     panesForTier,
@@ -647,7 +647,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         ) => {
             const el = this.createEl(parentEl, "div", { text: "" });
             setLevelClass(el, level);
-            new Setting(el).setName(title).setHeading().setClass("sls-setting-pane-title");
+            new Setting(el).setName(title).setHeading();
             return Promise.resolve(el);
         };
 
@@ -658,7 +658,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         const addManifestPane = (pane: SettingPaneDefinition, isFirst: boolean) => {
             const el = this.createEl(containerEl, "div", { cls: "sls-section" });
             if (!isFirst) {
-                new Setting(el).setName(pane.title).setHeading().setClass("sls-setting-pane-title");
+                new Setting(el).setName(pane.title).setHeading();
             }
             return el;
         };
@@ -672,7 +672,10 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         ) => {
             const el = this.createEl(parentEl, "div", { text: "" }, callback, func);
             setLevelClass(el, level);
-            this.createEl(el, "h4", { text: title, cls: "sls-setting-panel-title" });
+            // Obsidian's own heading component, not a styled `h4`. Every attempt
+            // to hand-build this chrome ended up looking like a different app
+            // bolted into the settings window.
+            if (title) new Setting(el).setName(title).setHeading();
             const p = Promise.resolve(el);
             // p.finally(() => {
             //     // Recap at the end.
@@ -706,6 +709,10 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             body.call(this, addManifestPane(pane, isFirst), { addPane, addPanel });
             isFirst = false;
         }
+
+        // Page furniture, not a section: how much of the page to show, and how
+        // to discard it. Both belong after everything they act upon.
+        paneSetupFooter.call(this, this.createEl(containerEl, "div", { cls: "sls-section" }), { addPane, addPanel });
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }

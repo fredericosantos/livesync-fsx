@@ -150,18 +150,6 @@
     max-width: 100%;
 }
 
-/*
- * A quiet explanatory line under a section heading. Secondary text, never a
- * banner: it is context for the controls below, not a message to act on.
- */
-.sls-setting-note {
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
-    line-height: 1.5;
-    margin: 0 0 0.75em;
-    max-width: 60ch;
-}
-
 body {
     --sls-col-transparent: transparent;
     --sls-col-warn: rgba(var(--background-modifier-error-rgb), 0.1);
@@ -492,31 +480,6 @@ div.workspace-leaf-content[data-type="bases"] .livesync-status {
 
 .menu-setting-edgecase-disabled .sls-setting-edgecase {
     display: none;
-}
-
-.sls-setting-panel-title {
-    font-size: var(--font-ui-medium);
-    font-weight: var(--font-semibold);
-    color: var(--text-normal);
-    background: none;
-    padding: 0;
-    margin: 1.6em 0 0.15em;
-    border: none;
-}
-
-.active-pane .sls-setting-panel-title {
-    color: var(--text-accent);
-}
-
-/* The pane title has to outrank the panel titles beneath it. */
-.sls-setting-pane-title .setting-item-name {
-    font-size: var(--font-ui-larger);
-    font-weight: var(--font-bold);
-}
-
-.sls-setting-pane-title {
-    border-top: none;
-    padding-top: 0;
 }
 
 .sls-dialogue-note-wrapper {
@@ -892,7 +855,3 @@ body.is-mobile .livesync-compatibility-review-notice {
     margin-top: 2.5em;
 }
 
-.sls-section .sls-setting-pane-title {
-    border-top: 1px solid var(--background-modifier-border);
-    padding-top: 1.2em;
-}

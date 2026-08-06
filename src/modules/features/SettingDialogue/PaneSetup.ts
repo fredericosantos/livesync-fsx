@@ -15,102 +15,87 @@ import {
     createCoreSettingsAfterFullReset,
     createEditingSettingsAfterFullReset,
 } from "@/serviceFeatures/setupObsidian/settingsReset.ts";
-export function paneSetup(
+
+/** Where this vault syncs, in the form a person would say it. */
+function describeConnection(uri: string, database: string): string {
+    if (!uri) return "No server configured.";
+    try {
+        return `${database || "vault"} on ${new URL(uri).host}`;
+    } catch {
+        return database || uri;
+    }
+}
+
+export function paneSetup(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, { addPanel }: PageFunctions): void {
+    const unconfigured = visibleOnly(() => !this.isConfiguredAs("isConfigured", true));
+    const configured = visibleOnly(() => this.isConfiguredAs("isConfigured", true));
+
+    // An unconfigured vault has exactly one decision, so it gets exactly one
+    // row. The three ways of reaching that decision are three buttons on it,
+    // not three cards competing for the same attention.
+    void addPanel(paneEl, "", undefined, unconfigured).then((el) => {
+        new Setting(el)
+            .setName("This vault is not syncing")
+            .setDesc("Connect it to a CouchDB server. Nothing is uploaded or downloaded until you confirm.")
+            .addButton((button) =>
+                button.setButtonText("Paste link").onClick(() => {
+                    this.closeSetting();
+                    eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
+                })
+            )
+            .addButton((button) =>
+                button.setButtonText("Scan QR").onClick(async () => {
+                    await this.core.getModule(SetupManager).onPromptQRCodeInstruction();
+                })
+            )
+            .addButton((button) =>
+                button
+                    .setButtonText("Set up")
+                    .setCta()
+                    .onClick(async () => {
+                        await this.core.getModule(SetupManager).startOnBoarding();
+                    })
+            );
+    });
+
+    void addPanel(paneEl, "", undefined, configured).then((el) => {
+        new Setting(el)
+            .setName("Server")
+            .setDesc(describeConnection(this.editingSettings.couchDB_URI, this.editingSettings.couchDB_DBNAME))
+            .addButton((button) =>
+                button.setButtonText("Reconfigure").onClick(async () => {
+                    await this.core.getModule(SetupManager).startOnBoarding();
+                })
+            );
+
+        new Setting(el)
+            .setName("Add another device")
+            .setDesc("Send this connection to a second device instead of typing it there.")
+            .addButton((button) =>
+                button.setButtonText("Copy link").onClick(() => eventHub.emitEvent(EVENT_REQUEST_COPY_SETUP_URI))
+            )
+            .addButton((button) =>
+                button.setButtonText("Show QR").onClick(() => eventHub.emitEvent(EVENT_REQUEST_SHOW_SETUP_QR))
+            );
+    });
+}
+
+/**
+ * The end of the page: how much of it to show, and how to throw it all away.
+ * Rendered last so that a destructive action is never above something ordinary.
+ */
+export function paneSetupFooter(
     this: ObsidianLiveSyncSettingTab,
     paneEl: HTMLElement,
-    { addPanel, addPane }: PageFunctions
+    { addPanel }: PageFunctions
 ): void {
-    // An unconfigured vault has exactly one thing to do, so it is the only
-    // thing offered. Everything else on this pane is for a vault that already
-    // works, and stays out of the way until then.
-    void addPanel(paneEl, "Connect this vault", undefined, visibleOnly(() => !this.isConfiguredAs("isConfigured", true))).then(
-        (paneEl) => {
-            paneEl.createDiv({
-                cls: "sls-setting-note",
-                text: "This vault is not synchronising yet. Connecting takes three steps: where the server is, whether to encrypt, and what to do with the files already here.",
-            });
-            new Setting(paneEl)
-                .setName("Set up synchronisation")
-                .setDesc("Asks for the server address, then reports what it found there before changing anything.")
-                .addButton((text) => {
-                    text.setButtonText("Start")
-                        .setCta()
-                        .onClick(async () => {
-                            await this.core.getModule(SetupManager).startOnBoarding();
-                        });
-                });
-            new Setting(paneEl)
-                .setName("Use a setup link from another device")
-                .setDesc("Copies an existing device's connection instead of typing it again.")
-                .addButton((text) => {
-                    text.setButtonText("Paste link").onClick(() => {
-                        this.closeSetting();
-                        eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
-                    });
-                });
-            // Scanning works through the `obsidian://` protocol handler without
-            // any help from here, but only for someone who already knows the
-            // steps. This is the entry point to the instructions for someone
-            // who does not.
-            new Setting(paneEl)
-                .setName("Scan a QR code from another device")
-                .setDesc("Useful on a phone, where typing a server address and passphrase is the worst part.")
-                .addButton((text) => {
-                    text.setButtonText("Show me how").onClick(async () => {
-                        await this.core.getModule(SetupManager).onPromptQRCodeInstruction();
-                    });
-                });
-        }
-    );
-
-    void addPanel(
-        paneEl,
-        "Connection",
-        undefined,
-        visibleOnly(() => this.isConfiguredAs("isConfigured", true))
-    ).then((paneEl) => {
-        new Setting(paneEl)
-            .setName("Change the connection")
-            .setDesc("Reopens setup against this vault's current settings.")
-            .addButton((text) => {
-                text.setButtonText("Reconfigure").onClick(async () => {
-                    await this.core.getModule(SetupManager).startOnBoarding();
-                });
-            });
-    });
-
-    void addPanel(
-        paneEl,
-        $msg("obsidianLiveSyncSettingTab.titleSetupOtherDevices"),
-        undefined,
-        visibleOnly(() => this.isConfiguredAs("isConfigured", true))
-    ).then((paneEl) => {
-        new Setting(paneEl)
-            .setName($msg("obsidianLiveSyncSettingTab.nameCopySetupURI"))
-            .setDesc($msg("obsidianLiveSyncSettingTab.descCopySetupURI"))
-            .addButton((text) => {
-                text.setButtonText($msg("obsidianLiveSyncSettingTab.btnCopy")).onClick(() => {
-                    // await this.plugin.addOnSetup.command_copySetupURI();
-                    eventHub.emitEvent(EVENT_REQUEST_COPY_SETUP_URI);
-                });
-            });
-        new Setting(paneEl)
-            .setName($msg("Setup.ShowQRCode"))
-            .setDesc($msg("Setup.ShowQRCode.Desc"))
-            .addButton((text) => {
-                text.setButtonText($msg("Setup.ShowQRCode")).onClick(() => {
-                    eventHub.emitEvent(EVENT_REQUEST_SHOW_SETUP_QR);
-                });
-            });
-    });
-
-    void addPanel(paneEl, "How much to show").then((paneEl) => {
+    void addPanel(paneEl, "").then((el) => {
         // Upstream had three independent switches — Advanced, Power user, Edge
         // case — which the reader had to combine correctly to find a setting.
-        // They are one question with an ordered answer, so they are asked once.
-        // The three booleans are still what gets stored; see settingsCatalogue.
+        // One ordered question replaces them; the three booleans are still what
+        // gets stored, so nothing has to migrate.
         const current = this.viewingTier;
-        new Setting(paneEl)
+        new Setting(el)
             .setName("Settings shown")
             .setDesc(TIER_DESCRIPTIONS[current])
             .addDropdown((dropdown) => {
@@ -121,55 +106,31 @@ export function paneSetup(
                     this.display();
                 });
             });
-    });
 
-    void addPanel(
-        paneEl,
-        $msg("obsidianLiveSyncSettingTab.titleReset"),
-        undefined,
-        // The panel is gated on the same condition as its only control; without
-        // this it rendered as a heading with nothing underneath.
-        visibleOnly(() => this.isConfiguredAs("isConfigured", true))
-    ).then((paneEl) => {
-        new Setting(paneEl)
+        new Setting(el)
             .setName($msg("obsidianLiveSyncSettingTab.nameDiscardSettings"))
-            .addButton((text) => {
-                text.setButtonText($msg("obsidianLiveSyncSettingTab.btnDiscard"))
+            .setDesc("Forgets the server and deletes the local database. Your notes are not touched.")
+            .addOnUpdate(visibleOnly(() => this.isConfiguredAs("isConfigured", true)))
+            .addButton((button) =>
+                button
+                    .setButtonText($msg("obsidianLiveSyncSettingTab.btnDiscard"))
+                    .setWarning()
                     .onClick(async () => {
                         if (
                             (await this.core.confirm.askYesNoDialog(
                                 $msg("obsidianLiveSyncSettingTab.msgDiscardConfirmation"),
                                 { defaultOption: "No" }
-                            )) == "yes"
+                            )) != "yes"
                         ) {
-                            this.editingSettings = createEditingSettingsAfterFullReset(this.editingSettings);
-                            await this.saveAllDirtySettings();
-                            this.core.settings = createCoreSettingsAfterFullReset();
-                            await this.services.setting.saveSettingData();
-                            await this.services.database.resetDatabase();
-                            // await this.plugin.initializeDatabase();
-                            this.services.appLifecycle.askRestart();
+                            return;
                         }
+                        this.editingSettings = createEditingSettingsAfterFullReset(this.editingSettings);
+                        await this.saveAllDirtySettings();
+                        this.core.settings = createCoreSettingsAfterFullReset();
+                        await this.services.setting.saveSettingData();
+                        await this.services.database.resetDatabase();
+                        this.services.appLifecycle.askRestart();
                     })
-                    .setWarning();
-            })
-            .addOnUpdate(visibleOnly(() => this.isConfiguredAs("isConfigured", true)));
-    });
-
-    void addPanel(paneEl, "Help").then((paneEl) => {
-        // This panel used to fetch upstream's troubleshooting guide over the
-        // network on every open and render the whole document inline. It ran to
-        // several screens, pushed every actual control off the page, and its
-        // advice covers Object Storage and P2P — neither of which exists in this
-        // fork, so following it would send a reader looking for settings that
-        // were deliberately removed. A link is the honest size for it.
-        new Setting(paneEl)
-            .setName("Upstream troubleshooting guide")
-            .setDesc("Written for Self-hosted LiveSync. Sections on Object Storage and P2P do not apply to this fork.")
-            .addButton((button) =>
-                button.setButtonText("Open in browser").onClick(() => {
-                    window.open("https://github.com/vrtmrz/obsidian-livesync/blob/main/docs/troubleshooting.md", "_blank");
-                })
             );
     });
 }

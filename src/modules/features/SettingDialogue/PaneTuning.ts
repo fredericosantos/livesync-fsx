@@ -16,13 +16,9 @@ import { TweakValuesRecommendedTemplate } from "@vrtmrz/livesync-commonlib/compa
  */
 export function paneTuning(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, funcs: PageFunctions): void {
     void funcs.addPanel(paneEl, "Recommended values").then((el) => {
-        el.createDiv({
-            cls: "sls-setting-note",
-            text: "These settings have known good values. Nothing below needs an answer unless a specific problem calls for one.",
-        });
         new Setting(el)
             .setName("Restore the recommended values")
-            .setDesc("Overwrites every tuning value on this pane. Other devices are not affected.")
+            .setDesc("These have known good values. Nothing below needs an answer unless a problem calls for one. Other devices are not affected.")
             .addButton((button) =>
                 button.setButtonText("Restore").onClick(async () => {
                     this.editingSettings = { ...this.editingSettings, ...TweakValuesRecommendedTemplate };
