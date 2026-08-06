@@ -125,10 +125,11 @@ export interface SettingSection {
     readonly id: string;
     /** Which pane it appears in. */
     readonly pane: string;
-    /** Sentence case, per the design principles. */
+    /**
+     * Sentence case, per the design principles. Empty means no heading at all:
+     * a single obvious control does not need to be told what it is.
+     */
     readonly title: string;
-    /** One line explaining what the group is for. Shown under the title. */
-    readonly summary: string;
     readonly tier: SettingTier;
     readonly keys: readonly SettingKey[];
 }
@@ -144,18 +145,16 @@ const BASIC_SECTIONS: readonly SettingSection[] = [
     {
         id: "device",
         pane: "sync",
-        title: "This device",
-        summary: "How this device identifies itself to the others.",
+        title: "",
         tier: TIER_BASIC,
         // Required before Customisation Sync will activate at all, and the
         // single most common reason it silently does nothing.
-        keys: ["deviceAndVaultName" as SettingKey],
+        keys: ["deviceAndVaultName"],
     },
     {
         id: "what",
         pane: "sync",
         title: "What to sync",
-        summary: "Which files are left out. Everything else is included.",
         tier: TIER_BASIC,
         keys: ["syncInternalFiles", "usePluginSync"],
     },
@@ -166,7 +165,6 @@ const BASIC_SECTIONS: readonly SettingSection[] = [
         // "At rest on the server" is how a security engineer says it, not how
         // anyone else does. What the user needs to know is who can read the
         // files if the server is taken.
-        summary: "Scrambles your notes before they leave this device, so nobody who reaches the server can read them.",
         tier: TIER_BASIC,
         keys: ["encrypt", "passphrase"],
     },
@@ -177,7 +175,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "conflicts",
         pane: "sync",
         title: "Conflicts",
-        summary: "What happens when the same file changes in two places.",
         tier: TIER_ADVANCED,
         keys: [
             "resolveConflictsByNewerFile",
@@ -191,7 +188,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "when",
         pane: "sync",
         title: "When to sync",
-        summary: "New vaults sync continuously. Change this only if that is a problem.",
         tier: TIER_ADVANCED,
         // `preset` is upstream's existing pseudo-setting that writes all eight
         // trigger booleans at once. `syncMaxSizeInMB` lives here rather than in
@@ -203,7 +199,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "triggers",
         pane: "sync",
         title: "Individual sync triggers",
-        summary: "The eight switches that the mode above writes for you.",
         tier: TIER_EXPERT,
         keys: [
             "liveSync",
@@ -221,7 +216,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "ignore-rules",
         pane: "files",
         title: "Ignore rules",
-        summary: "Honour gitignore-style rule files found inside the vault.",
         tier: TIER_ADVANCED,
         keys: ["useIgnoreFiles", "ignoreFiles"],
     },
@@ -229,7 +223,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "selection",
         pane: "files",
         title: "File selection",
-        summary: "Finer control over which paths take part.",
         tier: TIER_ADVANCED,
         keys: [
             "syncOnlyRegEx",
@@ -243,7 +236,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "deletion",
         pane: "files",
         title: "Deletion",
-        summary: "How removals propagate between devices.",
         tier: TIER_ADVANCED,
         keys: ["trashInsteadDelete", "doNotDeleteFolder", "deleteMetadataOfDeletedFiles"],
     },
@@ -251,7 +243,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "visibility",
         pane: "appearance",
         title: "What you are shown",
-        summary: "The plugin stays quiet by default; these decide the exceptions.",
         tier: TIER_ADVANCED,
         keys: ["showStatusOnStatusbar", "showStatusOnEditor", "showOnlyIconsOnEditor", "hideFileWarningNotice"],
     },
@@ -259,7 +250,6 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         id: "logging",
         pane: "appearance",
         title: "Logging",
-        summary: "Detail kept for diagnosing problems.",
         tier: TIER_EXPERT,
         keys: ["lessInformationInLog", "showVerboseLog", "writeLogToTheFile"],
     },

@@ -33,8 +33,9 @@ export function paneSync(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, 
     const tier = this.viewingTier;
 
     for (const section of sectionsForPane("sync", tier)) {
-        void funcs.addPanel(paneEl, "").then((el) => {
-            new Setting(el).setName(section.title).setDesc(section.summary).setHeading();
+        // The title goes to the group, which renders it above the card. Adding
+        // a heading inside the returned list element would put it in the card.
+        void funcs.addPanel(paneEl, section.title).then((el) => {
             const custom = CUSTOM_SECTIONS[section.id];
             if (custom) {
                 void custom(this, el, funcs);
