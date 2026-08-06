@@ -149,31 +149,35 @@
     display: none;
 }
 
+/*
+ * Navigation rail. A tab names itself in words; the icon is there to make the
+ * row scannable, not to be decoded. Only the selected tab carries colour.
+ * See docs/fork/01-design-principles.md (principles 4 and 5).
+ */
 div.sls-setting-menu-btn {
-    color: var(--text-normal);
-    background-color: var(--background-secondary-alt);
-    border-radius: 8px;
-    padding: 6px 10px;
+    color: inherit;
+    display: flex;
+    align-items: center;
     cursor: pointer;
-    margin-right: 2px;
-    font-family: "Inter", sans-serif;
-    outline: none;
     user-select: none;
-    flex-grow: 1;
-    text-align: center;
-    flex-shrink: 1;
+}
+
+div.sls-setting-menu-btn > svg {
+    width: 1em;
+    height: 1em;
+}
+
+.sls-setting-menu-label {
+    white-space: nowrap;
+}
+
+.sls-setting-tab:hover ~ * {
+    color: var(--text-normal);
 }
 
 .sls-setting-label.selected {
-    /* order: 1; */
-    flex-grow: 1;
-    /* width: 100%; */
-}
-
-.sls-setting-tab:hover ~ div.sls-setting-menu-btn,
-.sls-setting-label.selected .sls-setting-tab:checked ~ div.sls-setting-menu-btn {
-    background-color: var(--interactive-accent);
     color: var(--text-on-accent);
+    background-color: var(--interactive-accent);
 }
 
 .sls-setting-menu-wrapper {
@@ -182,16 +186,29 @@ div.sls-setting-menu-btn {
     flex-grow: 1;
     position: sticky;
     top: 0;
-    backdrop-filter: blur(15px);
-    padding: 4px;
-    border-radius: 10px;
+    background-color: var(--background-primary);
+    padding: 4px 0 8px;
     z-index: 10;
 }
 
 .sls-setting-menu {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px;
     overflow-x: auto;
+}
+
+/*
+ * A quiet explanatory line under a section heading. Secondary text, never a
+ * banner: it is context for the controls below, not a message to act on.
+ */
+.sls-setting-note {
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    line-height: 1.5;
+    margin: 0 0 0.75em;
+    max-width: 60ch;
 }
 
 body {
@@ -201,52 +218,38 @@ body {
     --sls-col-warn-stripe2: var(--sls-col-warn);
 }
 
+/*
+ * Shown only when a change is staged and needs applying. It used to be a
+ * perpetually scrolling striped banner, which demanded attention continuously
+ * for a state the user had just created themselves. A left rule and a warning
+ * colour say the same thing once.
+ */
 .sls-setting-menu-buttons {
-    border: 1px solid var(--sls-col-warn);
-    /* padding: 2px; */
-    margin: 1px;
+    border-left: 3px solid var(--text-warning);
+    background-color: var(--background-secondary);
     border-radius: 4px;
-    background-image: linear-gradient(
-        -45deg,
-        var(--sls-col-warn-stripe1) 25%,
-        var(--sls-col-warn-stripe2) 25%,
-        var(--sls-col-warn-stripe2) 50%,
-        var(--sls-col-warn-stripe1) 50%,
-        var(--sls-col-warn-stripe1) 75%,
-        var(--sls-col-warn-stripe2) 75%,
-        var(--sls-col-warn-stripe2)
-    );
-    background-size: 30px 30px;
     display: flex;
     flex-direction: row;
-    /* justify-content: flex-end; */
-    padding: 0.5em 0.25em;
-    justify-content: center;
+    padding: 0.5em 0.75em;
+    gap: 0.75em;
     align-items: center;
-    /* transition: background-position 1s; */
-    animation: sls-scroll-warn 1s linear 0s infinite;
-}
-
-@keyframes sls-scroll-warn {
-    0% {
-        background-position: 0 0;
-    }
-
-    100% {
-        background-position: 30px 0;
-    }
 }
 
 .sls-setting-menu-buttons label {
     margin-right: auto;
     flex-grow: 1;
-    color: var(--text-warning);
+    color: var(--text-normal);
 }
 
 .sls-setting-label {
-    flex-grow: 1;
     display: inline-flex;
-    justify-content: center;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.35em 0.7em;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    cursor: pointer;
 }
 
 .setting-collapsed {

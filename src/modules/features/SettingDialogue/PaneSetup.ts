@@ -13,6 +13,7 @@ import type { PageFunctions } from "./SettingPane.ts";
 import { visibleOnly } from "./SettingPane.ts";
 import { request } from "@/deps.ts";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
+import { TIERS, TIER_DESCRIPTIONS, TIER_LABELS, modeFlagsForTier, type SettingTier } from "./settingsCatalogue.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
 import {
     createCoreSettingsAfterFullReset,
@@ -23,36 +24,49 @@ export function paneSetup(
     paneEl: HTMLElement,
     { addPanel, addPane }: PageFunctions
 ): void {
-    void addPanel(paneEl, $msg("obsidianLiveSyncSettingTab.titleQuickSetup")).then((paneEl) => {
-        new Setting(paneEl)
-            .setName($msg("obsidianLiveSyncSettingTab.nameConnectSetupURI"))
-            .setDesc($msg("obsidianLiveSyncSettingTab.descConnectSetupURI"))
-            .addButton((text) => {
-                text.setButtonText($msg("obsidianLiveSyncSettingTab.btnUse")).onClick(() => {
-                    this.closeSetting();
-                    eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
-                });
+    // An unconfigured vault has exactly one thing to do, so it is the only
+    // thing offered. Everything else on this pane is for a vault that already
+    // works, and stays out of the way until then.
+    void addPanel(paneEl, "Connect this vault", undefined, visibleOnly(() => !this.isConfiguredAs("isConfigured", true))).then(
+        (paneEl) => {
+            paneEl.createDiv({
+                cls: "sls-setting-note",
+                text: "This vault is not synchronising yet. Connecting takes three steps: where the server is, whether to encrypt, and what to do with the files already here.",
             });
-
-        new Setting(paneEl)
-            .setName($msg("Rerun Onboarding Wizard"))
-            .setDesc($msg("Rerun the onboarding wizard to set up Self-hosted LiveSync again."))
-            .addButton((text) => {
-                text.setButtonText($msg("Rerun Wizard")).onClick(async () => {
-                    const setupManager = this.core.getModule(SetupManager);
-                    await setupManager.startOnBoarding();
+            new Setting(paneEl)
+                .setName("Set up synchronisation")
+                .setDesc("Asks for the server address, then reports what it found there before changing anything.")
+                .addButton((text) => {
+                    text.setButtonText("Start")
+                        .setCta()
+                        .onClick(async () => {
+                            await this.core.getModule(SetupManager).startOnBoarding();
+                        });
                 });
-            });
+            new Setting(paneEl)
+                .setName("Use a setup link from another device")
+                .setDesc("Copies an existing device's connection instead of typing it again.")
+                .addButton((text) => {
+                    text.setButtonText("Paste link").onClick(() => {
+                        this.closeSetting();
+                        eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
+                    });
+                });
+        }
+    );
 
+    void addPanel(
+        paneEl,
+        "Connection",
+        undefined,
+        visibleOnly(() => this.isConfiguredAs("isConfigured", true))
+    ).then((paneEl) => {
         new Setting(paneEl)
-            .setName($msg("obsidianLiveSyncSettingTab.nameEnableLiveSync"))
-            .setDesc($msg("obsidianLiveSyncSettingTab.descEnableLiveSync"))
-            .addOnUpdate(visibleOnly(() => !this.isConfiguredAs("isConfigured", true)))
+            .setName("Change the connection")
+            .setDesc("Reopens setup against this vault's current settings.")
             .addButton((text) => {
-                text.setButtonText($msg("obsidianLiveSyncSettingTab.btnEnable")).onClick(async () => {
-                    this.editingSettings.isConfigured = true;
-                    await this.saveAllDirtySettings();
-                    this.services.appLifecycle.askRestart();
+                text.setButtonText("Reconfigure").onClick(async () => {
+                    await this.core.getModule(SetupManager).startOnBoarding();
                 });
             });
     });
@@ -108,15 +122,23 @@ export function paneSetup(
             .addOnUpdate(visibleOnly(() => this.isConfiguredAs("isConfigured", true)));
     });
 
-    void addPanel(paneEl, $msg("obsidianLiveSyncSettingTab.titleExtraFeatures")).then((paneEl) => {
-        new Setting(paneEl).autoWireToggle("useAdvancedMode");
-
-        new Setting(paneEl).autoWireToggle("usePowerUserMode");
-        new Setting(paneEl).autoWireToggle("useEdgeCaseMode");
-
-        this.addOnSaved("useAdvancedMode", () => this.display());
-        this.addOnSaved("usePowerUserMode", () => this.display());
-        this.addOnSaved("useEdgeCaseMode", () => this.display());
+    void addPanel(paneEl, "How much to show").then((paneEl) => {
+        // Upstream had three independent switches — Advanced, Power user, Edge
+        // case — which the reader had to combine correctly to find a setting.
+        // They are one question with an ordered answer, so they are asked once.
+        // The three booleans are still what gets stored; see settingsCatalogue.
+        const current = this.viewingTier;
+        new Setting(paneEl)
+            .setName("Settings shown")
+            .setDesc(TIER_DESCRIPTIONS[current])
+            .addDropdown((dropdown) => {
+                for (const tier of TIERS) dropdown.addOption(tier, TIER_LABELS[tier]);
+                dropdown.setValue(current).onChange(async (value) => {
+                    this.editingSettings = { ...this.editingSettings, ...modeFlagsForTier(value as SettingTier) };
+                    await this.saveAllDirtySettings();
+                    this.display();
+                });
+            });
     });
 
     void addPanel(paneEl, $msg("obsidianLiveSyncSettingTab.titleOnlineTips")).then((paneEl) => {

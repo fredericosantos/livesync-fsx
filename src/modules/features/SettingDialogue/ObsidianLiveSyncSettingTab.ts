@@ -32,7 +32,6 @@ import { $msg } from "@/common/translation";
 import { LiveSyncSetting as Setting } from "./LiveSyncSetting.ts";
 import { fireAndForget, yieldNextAnimationFrame } from "octagonal-wheels/promises";
 import { EVENT_REQUEST_RELOAD_SETTING_TAB, eventHub } from "@/common/events.ts";
-import { paneChangeLog } from "./PaneChangeLog.ts";
 import {
     enableOnly,
     // findAttrFromParent,
@@ -48,14 +47,20 @@ import {
     type UpdateFunction,
 } from "./SettingPane.ts";
 import { paneSetup } from "./PaneSetup.ts";
+import { paneTuning } from "./PaneTuning.ts";
+import {
+    defaultPaneId,
+    panesForTier,
+    tierFromModeFlags,
+    type SettingPaneDefinition,
+    type SettingTier,
+} from "./settingsCatalogue.ts";
 import { paneGeneral } from "./PaneGeneral.ts";
 import { paneRemoteConfig } from "./PaneRemoteConfig.ts";
 import { paneSelector } from "./PaneSelector.ts";
 import { paneSyncSettings } from "./PaneSyncSettings.ts";
 import { paneCustomisationSync } from "./PaneCustomisationSync.ts";
 import { paneHatch } from "./PaneHatch.ts";
-import { paneAdvanced } from "./PaneAdvanced.ts";
-import { panePowerUsers } from "./PanePowerUsers.ts";
 import { panePatches } from "./PanePatches.ts";
 import { paneMaintenance } from "./PaneMaintenance.ts";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
@@ -272,6 +277,19 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
     onSavedHandlers = [] as OnSavedHandler<AllSettingItemKey>[];
 
     inWizard: boolean = false;
+
+    /**
+     * How much of the dialogue to show. Derived from the three mode booleans
+     * upstream persists rather than stored separately, so an existing vault
+     * keeps whatever depth it had chosen.
+     */
+    get viewingTier(): SettingTier {
+        return tierFromModeFlags({
+            useAdvancedMode: this.editingSettings?.useAdvancedMode === true,
+            usePowerUserMode: this.editingSettings?.usePowerUserMode === true,
+            useEdgeCaseMode: this.editingSettings?.useEdgeCaseMode === true,
+        });
+    }
 
     constructor(app: App, plugin: ObsidianLiveSyncPlugin) {
         super(app, plugin);
@@ -676,7 +694,11 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             visibleOnly(() => this.isNeedRebuildLocal() || this.isNeedRebuildRemote())
         );
 
-        // let paneNo = 0;
+        /**
+         * `order` and `wizardHidden` are retained only so that the pane bodies,
+         * which still call `addPane` for their own sub-sections, keep compiling.
+         * Navigation itself is built from the manifest below.
+         */
         const addPane = (
             parentEl: HTMLElement,
             title: string,
@@ -686,37 +708,37 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             level?: ConfigLevel
         ) => {
             const el = this.createEl(parentEl, "div", { text: "" });
-
             setLevelClass(el, level);
             new Setting(el).setName(title).setHeading().setClass("sls-setting-pane-title");
-            if (this.menuEl) {
-                this.menuEl.createEl(
-                    "label",
-                    { cls: `sls-setting-label c-${order} ${wizardHidden ? "wizardHidden" : ""}` },
-                    (el) => {
-                        setLevelClass(el, level);
-                        const inputEl = el.createEl("input", {
-                            type: "radio",
-                            name: "disp",
-                            value: `${order}`,
-                            cls: "sls-setting-tab",
-                        } as DomElementInfo);
-                        // Lucide icons inherit theme colour and font weight; emoji do not.
-                        // See docs/fork/01-design-principles.md (principle 3).
-                        const iconEl = el.createDiv({ cls: "sls-setting-menu-btn", title });
-                        setIcon(iconEl, icon);
-                        inputEl.addEventListener("change", (evt) => this.selectPane(evt));
-                        inputEl.addEventListener("click", (evt) => this.selectPane(evt));
-                    }
-                );
-            }
             this.addScreenElement(`${order}`, el);
-            const p = Promise.resolve(el);
-            // fireAndForget
-            // p.finally(() => {
-            //     // Recap at the end.
-            // });
-            return p;
+            return Promise.resolve(el);
+        };
+
+        /**
+         * One pane of the dialogue: a heading, a body, and a tab in the rail.
+         * The identifier is a name rather than a magic number, so panes can be
+         * reordered by moving a line in the manifest.
+         */
+        const addManifestPane = (pane: SettingPaneDefinition) => {
+            const el = this.createEl(containerEl, "div", { text: "" });
+            new Setting(el).setName(pane.title).setHeading().setClass("sls-setting-pane-title");
+            this.menuEl?.createEl("label", { cls: `sls-setting-label c-${pane.id}` }, (labelEl) => {
+                const inputEl = labelEl.createEl("input", {
+                    type: "radio",
+                    name: "disp",
+                    value: pane.id,
+                    cls: "sls-setting-tab",
+                } as DomElementInfo);
+                // Lucide icons inherit theme colour and font weight; emoji do not.
+                // See docs/fork/01-design-principles.md (principle 3).
+                const iconEl = labelEl.createDiv({ cls: "sls-setting-menu-btn", title: pane.title });
+                setIcon(iconEl, pane.icon);
+                labelEl.createSpan({ cls: "sls-setting-menu-label", text: pane.title });
+                inputEl.addEventListener("change", (evt) => this.selectPane(evt));
+                inputEl.addEventListener("click", (evt) => this.selectPane(evt));
+            });
+            this.addScreenElement(pane.id, el);
+            return el;
         };
         // const panelNoMap = {} as { [key: string]: number };
         const addPanel = (
@@ -746,61 +768,36 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             });
         });
 
-        // Panes
-
-        const bindPane = (
-            paneFunc: (this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, funcs: PageFunctions) => void
-        ): ((paneEl: HTMLElement) => void) => {
-            const callback = (paneEl: HTMLElement) => {
-                paneFunc.call(this, paneEl, {
-                    addPane,
-                    addPanel,
-                });
-            };
-            return callback;
+        // Panes. Each body is a function of the same shape; the manifest decides
+        // which ones exist at the current tier and in what order they appear.
+        const paneBodies: Record<
+            string,
+            (this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, funcs: PageFunctions) => void
+        > = {
+            setup: paneSetup,
+            sync: paneSyncSettings,
+            server: paneRemoteConfig,
+            files: paneSelector,
+            plugins: paneCustomisationSync,
+            appearance: paneGeneral,
+            maintenance: paneMaintenance,
+            diagnostics: paneHatch,
+            tuning: paneTuning,
+            patches: panePatches,
         };
 
-        // Add panes
-
-        // TODO: Refactor to new API style.
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelChangeLog"), "history", 100, false).then(
-            bindPane(paneChangeLog)
-        );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelSetup"), "wand", 110, false).then(
-            bindPane(paneSetup)
-        );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelGeneralSettings"), "settings", 20, false).then(
-            bindPane(paneGeneral)
-        );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.panelRemoteConfiguration"), "server", 0, false).then(
-            bindPane(paneRemoteConfig)
-        );
-        void addPane(containerEl, $msg("obsidianLiveSyncSettingTab.titleSyncSettings"), "refresh-cw", 30, false).then(
-            bindPane(paneSyncSettings)
-        );
-        void addPane(containerEl, "Selector", "filter", 33, false, LEVEL_ADVANCED).then(bindPane(paneSelector));
-        void addPane(containerEl, "Customization sync", "blocks", 60, false, LEVEL_ADVANCED).then(
-            bindPane(paneCustomisationSync)
-        );
-
-        void addPane(containerEl, "Hatch", "wrench", 50, true).then(bindPane(paneHatch));
-        void addPane(containerEl, "Advanced", "sliders-horizontal", 46, false, LEVEL_ADVANCED).then(bindPane(paneAdvanced));
-        void addPane(containerEl, "Power users", "zap", 47, true, LEVEL_POWER_USER).then(bindPane(panePowerUsers));
-
-        void addPane(containerEl, "Patches", "bandage", 51, false, LEVEL_EDGE_CASE).then(bindPane(panePatches));
-
-        void addPane(containerEl, "Maintenance", "hard-drive", 70, true).then(bindPane(paneMaintenance));
+        const visiblePanes = panesForTier(this.viewingTier, this.editingSettings.isConfigured === true);
+        for (const pane of visiblePanes) {
+            const body = paneBodies[pane.id];
+            if (!body) continue;
+            body.call(this, addManifestPane(pane), { addPane, addPanel });
+        }
 
         void yieldNextAnimationFrame().then(() => {
-            if (this.selectedScreen == "") {
-                if (this.isAnySyncEnabled()) {
-                    changeDisplay("20");
-                } else {
-                    changeDisplay("110");
-                }
-            } else {
-                changeDisplay(this.selectedScreen);
-            }
+            const remembered = visiblePanes.some((pane) => pane.id === this.selectedScreen)
+                ? this.selectedScreen
+                : defaultPaneId(this.editingSettings.isConfigured === true);
+            changeDisplay(remembered);
             this.requestUpdate();
         });
     }

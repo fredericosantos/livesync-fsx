@@ -1,18 +1,16 @@
 /**
- * The single declarative source of truth for how each setting is presented.
+ * The single declarative source of truth for how the settings dialogue is
+ * organised: which panes exist, in what order, and how much of each is shown.
  *
  * Upstream already supplies a name and description per key (`SettingInformation`
  * in commonlib) and already knows which keys must agree between devices
  * (`TweakValuesShouldMatchedTemplate`). What has never existed is a statement of
- * *how important each setting is to a working user*, so every pane invented its
- * own visibility rule and the result was 167 keys spread across 24 panes gated
- * by four ad-hoc mode booleans.
+ * *how important each thing is to a working user*, so every pane invented its
+ * own visibility rule and the result was 167 keys across 12 panes, ordered by
+ * magic numbers (0, 20, 30, 33, 46, 47, 50, 51, 60, 70, 100, 110) and gated by
+ * four independent mode booleans.
  *
- * This module supplies exactly that missing axis, and nothing else:
- *
- * - `tier`     — basic, advanced, or expert. Replaces `useAdvancedMode`,
- *                `usePowerUserMode`, `useEdgeCaseMode` and `enableDebugTools`.
- * - `section`  — which group a setting belongs to, in reading order.
+ * This module supplies exactly that missing axis, and nothing else.
  *
  * Deliberately *not* here: labels, descriptions, defaults, or the must-match
  * set. Those already exist upstream and duplicating them would guarantee drift.
@@ -32,8 +30,106 @@ export type SettingTier = (typeof TIERS)[number];
 
 export type SettingKey = keyof ObsidianLiveSyncSettings;
 
+export function isAtLeast(viewing: SettingTier, required: SettingTier): boolean {
+    return TIERS.indexOf(viewing) >= TIERS.indexOf(required);
+}
+
+// --- Tier as a single control, backed by the settings that already exist -----
+
+/**
+ * The tier is not a new stored setting. It is derived from the three mode
+ * booleans upstream already persists, so existing vaults keep working and
+ * nothing has to be migrated. One control writes all three.
+ */
+export interface ModeFlags {
+    useAdvancedMode: boolean;
+    usePowerUserMode: boolean;
+    useEdgeCaseMode: boolean;
+}
+
+export function tierFromModeFlags(flags: Readonly<ModeFlags>): SettingTier {
+    if (flags.usePowerUserMode || flags.useEdgeCaseMode) return TIER_EXPERT;
+    if (flags.useAdvancedMode) return TIER_ADVANCED;
+    return TIER_BASIC;
+}
+
+export function modeFlagsForTier(tier: SettingTier): ModeFlags {
+    return {
+        useAdvancedMode: isAtLeast(tier, TIER_ADVANCED),
+        usePowerUserMode: isAtLeast(tier, TIER_EXPERT),
+        useEdgeCaseMode: isAtLeast(tier, TIER_EXPERT),
+    };
+}
+
+export const TIER_LABELS: Readonly<Record<SettingTier, string>> = {
+    [TIER_BASIC]: "Simple",
+    [TIER_ADVANCED]: "Advanced",
+    [TIER_EXPERT]: "Everything",
+};
+
+export const TIER_DESCRIPTIONS: Readonly<Record<SettingTier, string>> = {
+    [TIER_BASIC]: "What to sync, and how often. Enough for a working vault.",
+    [TIER_ADVANCED]: "Adds conflict handling, file selection, and appearance.",
+    [TIER_EXPERT]: "Every setting, including ones that can break replication.",
+};
+
+// --- Panes -----------------------------------------------------------------
+
+export interface SettingPaneDefinition {
+    /**
+     * Stable identifier. Replaces the magic ordering numbers, which encoded
+     * position and identity in the same value and so could not be reordered.
+     */
+    readonly id: string;
+    readonly title: string;
+    /** Lucide icon name, resolved through Obsidian's `setIcon`. */
+    readonly icon: string;
+    readonly tier: SettingTier;
+    /**
+     * Panes that only make sense once there is a working connection, or only
+     * before there is one. Omitted means "always".
+     */
+    readonly requires?: "configured" | "unconfigured";
+}
+
+/**
+ * Reading order, not importance order. Setup comes first because it is where a
+ * new vault starts and where a broken one is repaired; Sync is what a working
+ * user opens; everything after that is occasional.
+ */
+export const SETTING_PANES: readonly SettingPaneDefinition[] = [
+    { id: "setup", title: "Setup", icon: "wand", tier: TIER_BASIC },
+    { id: "sync", title: "Sync", icon: "refresh-cw", tier: TIER_BASIC },
+    { id: "server", title: "Server", icon: "server", tier: TIER_BASIC },
+    { id: "files", title: "Files", icon: "filter", tier: TIER_ADVANCED },
+    { id: "plugins", title: "Plugins", icon: "blocks", tier: TIER_ADVANCED },
+    { id: "appearance", title: "Appearance", icon: "settings", tier: TIER_ADVANCED },
+    { id: "maintenance", title: "Maintenance", icon: "hard-drive", tier: TIER_ADVANCED },
+    { id: "diagnostics", title: "Diagnostics", icon: "activity", tier: TIER_EXPERT },
+    { id: "tuning", title: "Tuning", icon: "sliders-horizontal", tier: TIER_EXPERT },
+    { id: "patches", title: "Patches", icon: "bandage", tier: TIER_EXPERT },
+];
+
+export function panesForTier(viewing: SettingTier, isConfigured: boolean): readonly SettingPaneDefinition[] {
+    return SETTING_PANES.filter((pane) => {
+        if (!isAtLeast(viewing, pane.tier)) return false;
+        if (pane.requires === "configured") return isConfigured;
+        if (pane.requires === "unconfigured") return !isConfigured;
+        return true;
+    });
+}
+
+/** The pane to open when the dialogue has no remembered selection. */
+export function defaultPaneId(isConfigured: boolean): string {
+    return isConfigured ? "sync" : "setup";
+}
+
+// --- Sections --------------------------------------------------------------
+
 export interface SettingSection {
     readonly id: string;
+    /** Which pane it appears in. */
+    readonly pane: string;
     /** Sentence case, per the design principles. */
     readonly title: string;
     /** One line explaining what the group is for. Shown under the title. */
@@ -52,24 +148,28 @@ export interface SettingSection {
 const BASIC_SECTIONS: readonly SettingSection[] = [
     {
         id: "device",
+        pane: "sync",
         title: "This device",
         summary: "How this device identifies itself to the others.",
         tier: TIER_BASIC,
         // Required before Customisation Sync will activate at all, and the
         // single most common reason it silently does nothing.
-        keys: ["deviceAndVaultName"],
+        keys: ["deviceAndVaultName" as SettingKey],
     },
     {
         id: "when",
+        pane: "sync",
         title: "When to sync",
         summary: "How eagerly changes are exchanged with the server.",
         tier: TIER_BASIC,
-        // Upstream already collapses the eight trigger booleans into this one
-        // pseudo-setting. The booleans themselves are expert-tier below.
-        keys: ["syncMinimumInterval"],
+        // `preset` is upstream's existing pseudo-setting that writes all eight
+        // trigger booleans at once. Promoting it, and leaving the booleans at
+        // expert, makes one control the answer instead of eight.
+        keys: ["preset" as SettingKey, "syncMinimumInterval"],
     },
     {
         id: "what",
+        pane: "sync",
         title: "What to sync",
         summary: "Which files are included, and which are left alone.",
         tier: TIER_BASIC,
@@ -77,6 +177,7 @@ const BASIC_SECTIONS: readonly SettingSection[] = [
     },
     {
         id: "privacy",
+        pane: "sync",
         title: "Privacy",
         summary: "End-to-end encryption of vault contents at rest on the server.",
         tier: TIER_BASIC,
@@ -86,10 +187,25 @@ const BASIC_SECTIONS: readonly SettingSection[] = [
 
 const ADVANCED_SECTIONS: readonly SettingSection[] = [
     {
-        id: "triggers",
-        title: "Sync triggers",
-        summary: "Exactly which events start a replication.",
+        id: "conflicts",
+        pane: "sync",
+        title: "Conflicts",
+        summary: "What happens when the same file changes in two places.",
         tier: TIER_ADVANCED,
+        keys: [
+            "resolveConflictsByNewerFile",
+            "checkConflictOnlyOnOpen",
+            "showMergeDialogOnlyOnActive",
+            "disableMarkdownAutoMerge",
+            "writeDocumentsIfConflicted",
+        ],
+    },
+    {
+        id: "triggers",
+        pane: "sync",
+        title: "Individual sync triggers",
+        summary: "The eight switches that the mode above writes for you.",
+        tier: TIER_EXPERT,
         keys: [
             "liveSync",
             "periodicReplication",
@@ -103,20 +219,8 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         ],
     },
     {
-        id: "conflicts",
-        title: "Conflicts",
-        summary: "What happens when the same file changes in two places.",
-        tier: TIER_ADVANCED,
-        keys: [
-            "resolveConflictsByNewerFile",
-            "checkConflictOnlyOnOpen",
-            "showMergeDialogOnlyOnActive",
-            "disableMarkdownAutoMerge",
-            "writeDocumentsIfConflicted",
-        ],
-    },
-    {
         id: "selection",
+        pane: "files",
         title: "File selection",
         summary: "Finer control over which paths take part.",
         tier: TIER_ADVANCED,
@@ -130,17 +234,27 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
     },
     {
         id: "deletion",
+        pane: "files",
         title: "Deletion",
         summary: "How removals propagate between devices.",
         tier: TIER_ADVANCED,
         keys: ["trashInsteadDelete", "doNotDeleteFolder", "deleteMetadataOfDeletedFiles"],
     },
     {
-        id: "appearance",
-        title: "Appearance",
-        summary: "What the plugin shows you, and when.",
+        id: "visibility",
+        pane: "appearance",
+        title: "What you are shown",
+        summary: "The plugin stays quiet by default; these decide the exceptions.",
         tier: TIER_ADVANCED,
-        keys: ["showStatusOnStatusbar", "showStatusOnEditor", "hideFileWarningNotice"],
+        keys: ["showStatusOnStatusbar", "showStatusOnEditor", "showOnlyIconsOnEditor", "hideFileWarningNotice"],
+    },
+    {
+        id: "logging",
+        pane: "appearance",
+        title: "Logging",
+        summary: "Detail kept for diagnosing problems.",
+        tier: TIER_EXPERT,
+        keys: ["lessInformationInLog", "showVerboseLog", "writeLogToTheFile"],
     },
 ];
 
@@ -159,13 +273,12 @@ export function tierOf(key: SettingKey): SettingTier {
 }
 
 export function isVisibleAtTier(key: SettingKey, viewing: SettingTier): boolean {
-    return TIERS.indexOf(tierOf(key)) <= TIERS.indexOf(viewing);
+    return isAtLeast(viewing, tierOf(key));
 }
 
-/** Sections to render at the given tier, in declaration order. */
-export function sectionsForTier(viewing: SettingTier): readonly SettingSection[] {
-    const limit = TIERS.indexOf(viewing);
-    return SETTING_SECTIONS.filter((section) => TIERS.indexOf(section.tier) <= limit);
+/** Sections of one pane to render at the given tier, in declaration order. */
+export function sectionsForPane(pane: string, viewing: SettingTier): readonly SettingSection[] {
+    return SETTING_SECTIONS.filter((section) => section.pane === pane && isAtLeast(viewing, section.tier));
 }
 
 /** Every key named by the catalogue. Used to prove it against the real schema. */
