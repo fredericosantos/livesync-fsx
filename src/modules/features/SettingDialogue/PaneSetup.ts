@@ -1,7 +1,5 @@
-import { MarkdownRenderer } from "@/deps.ts";
 import { $msg } from "@/common/translation";
 import { LiveSyncSetting as Setting } from "./LiveSyncSetting.ts";
-import { fireAndForget } from "octagonal-wheels/promises";
 import {
     EVENT_REQUEST_COPY_SETUP_URI,
     EVENT_REQUEST_OPEN_SETUP_URI,
@@ -11,10 +9,8 @@ import {
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import type { PageFunctions } from "./SettingPane.ts";
 import { visibleOnly } from "./SettingPane.ts";
-import { request } from "@/deps.ts";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
 import { TIERS, TIER_DESCRIPTIONS, TIER_LABELS, modeFlagsForTier, type SettingTier } from "./settingsCatalogue.ts";
-import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
 import {
     createCoreSettingsAfterFullReset,
     createEditingSettingsAfterFullReset,
@@ -108,7 +104,33 @@ export function paneSetup(
             });
     });
 
-    void addPanel(paneEl, $msg("obsidianLiveSyncSettingTab.titleReset")).then((paneEl) => {
+    void addPanel(paneEl, "How much to show").then((paneEl) => {
+        // Upstream had three independent switches — Advanced, Power user, Edge
+        // case — which the reader had to combine correctly to find a setting.
+        // They are one question with an ordered answer, so they are asked once.
+        // The three booleans are still what gets stored; see settingsCatalogue.
+        const current = this.viewingTier;
+        new Setting(paneEl)
+            .setName("Settings shown")
+            .setDesc(TIER_DESCRIPTIONS[current])
+            .addDropdown((dropdown) => {
+                for (const tier of TIERS) dropdown.addOption(tier, TIER_LABELS[tier]);
+                dropdown.setValue(current).onChange(async (value) => {
+                    this.editingSettings = { ...this.editingSettings, ...modeFlagsForTier(value as SettingTier) };
+                    await this.saveAllDirtySettings();
+                    this.display();
+                });
+            });
+    });
+
+    void addPanel(
+        paneEl,
+        $msg("obsidianLiveSyncSettingTab.titleReset"),
+        undefined,
+        // The panel is gated on the same condition as its only control; without
+        // this it rendered as a heading with nothing underneath.
+        visibleOnly(() => this.isConfiguredAs("isConfigured", true))
+    ).then((paneEl) => {
         new Setting(paneEl)
             .setName($msg("obsidianLiveSyncSettingTab.nameDiscardSettings"))
             .addButton((text) => {
@@ -134,113 +156,20 @@ export function paneSetup(
             .addOnUpdate(visibleOnly(() => this.isConfiguredAs("isConfigured", true)));
     });
 
-    void addPanel(paneEl, "How much to show").then((paneEl) => {
-        // Upstream had three independent switches — Advanced, Power user, Edge
-        // case — which the reader had to combine correctly to find a setting.
-        // They are one question with an ordered answer, so they are asked once.
-        // The three booleans are still what gets stored; see settingsCatalogue.
-        const current = this.viewingTier;
+    void addPanel(paneEl, "Help").then((paneEl) => {
+        // This panel used to fetch upstream's troubleshooting guide over the
+        // network on every open and render the whole document inline. It ran to
+        // several screens, pushed every actual control off the page, and its
+        // advice covers Object Storage and P2P — neither of which exists in this
+        // fork, so following it would send a reader looking for settings that
+        // were deliberately removed. A link is the honest size for it.
         new Setting(paneEl)
-            .setName("Settings shown")
-            .setDesc(TIER_DESCRIPTIONS[current])
-            .addDropdown((dropdown) => {
-                for (const tier of TIERS) dropdown.addOption(tier, TIER_LABELS[tier]);
-                dropdown.setValue(current).onChange(async (value) => {
-                    this.editingSettings = { ...this.editingSettings, ...modeFlagsForTier(value as SettingTier) };
-                    await this.saveAllDirtySettings();
-                    this.display();
-                });
-            });
-    });
-
-    void addPanel(paneEl, $msg("obsidianLiveSyncSettingTab.titleOnlineTips")).then((paneEl) => {
-        // this.createEl(paneEl, "h3", { text: $msg("obsidianLiveSyncSettingTab.titleOnlineTips") });
-        const repo = "vrtmrz/obsidian-livesync";
-        const topPath = $msg("obsidianLiveSyncSettingTab.linkTroubleshooting");
-        const rawRepoURI = `https://raw.githubusercontent.com/${repo}/main`;
-        this.createEl(paneEl, "div", "", (el) => {
-            el.createEl("a", { text: $msg("obsidianLiveSyncSettingTab.linkOpenInBrowser") }, (anchor) => {
-                anchor.href = `https://github.com/${repo}/blob/main${topPath}`;
-                anchor.target = "_blank";
-                anchor.rel = "noopener";
-            });
-        });
-        const troubleShootEl = this.createEl(paneEl, "div", {
-            text: "",
-            cls: "sls-troubleshoot-preview",
-        });
-        const loadMarkdownPage = async (pathAll: string, basePathParam: string = "") => {
-            troubleShootEl.setCssStyles({ minHeight: troubleShootEl.clientHeight + "px" });
-            troubleShootEl.empty();
-            const fullPath = pathAll.startsWith("/") ? pathAll : `${basePathParam}/${pathAll}`;
-
-            const directoryArr = fullPath.split("/");
-            const filename = directoryArr.pop();
-            const directly = directoryArr.join("/");
-            const basePath = directly;
-
-            let remoteTroubleShootMDSrc = "";
-            try {
-                remoteTroubleShootMDSrc = await request(`${rawRepoURI}${basePath}/${filename}`);
-            } catch (ex) {
-                const err = LiveSyncError.fromError(ex);
-                remoteTroubleShootMDSrc = `${$msg("obsidianLiveSyncSettingTab.logErrorOccurred")}\n${err.toString()}`;
-            }
-            const remoteTroubleShootMD = remoteTroubleShootMDSrc.replace(
-                /\((.*?(.png)|(.jpg))\)/g,
-                `(${rawRepoURI}${basePath}/$1)`
+            .setName("Upstream troubleshooting guide")
+            .setDesc("Written for Self-hosted LiveSync. Sections on Object Storage and P2P do not apply to this fork.")
+            .addButton((button) =>
+                button.setButtonText("Open in browser").onClick(() => {
+                    window.open("https://github.com/vrtmrz/obsidian-livesync/blob/main/docs/troubleshooting.md", "_blank");
+                })
             );
-            // Render markdown
-            await MarkdownRenderer.render(
-                this.plugin.app,
-                `<a class='sls-troubleshoot-anchor'></a> [${$msg("obsidianLiveSyncSettingTab.linkTipsAndTroubleshooting")}](${topPath}) [${$msg("obsidianLiveSyncSettingTab.linkPageTop")}](${filename})\n\n${remoteTroubleShootMD}`,
-                troubleShootEl,
-                `${rawRepoURI}`,
-                this.lifetimeComponent
-            );
-            // Menu
-            troubleShootEl.querySelector<HTMLAnchorElement>(".sls-troubleshoot-anchor")?.parentElement?.setCssStyles({
-                position: "sticky",
-                top: "-1em",
-                backgroundColor: "var(--modal-background)",
-            });
-            // Trap internal links.
-            troubleShootEl.querySelectorAll<HTMLAnchorElement>("a.internal-link").forEach((anchorEl) => {
-                anchorEl.addEventListener("click", (evt) => {
-                    fireAndForget(async () => {
-                        const uri = anchorEl.getAttr("data-href");
-                        if (!uri) return;
-                        if (uri.startsWith("#")) {
-                            evt.preventDefault();
-                            const elements = Array.from(
-                                troubleShootEl.querySelectorAll<HTMLHeadingElement>("[data-heading]")
-                            );
-                            const p = elements.find(
-                                (e) =>
-                                    e.getAttr("data-heading")?.toLowerCase().split(" ").join("-") ==
-                                    uri.substring(1).toLowerCase()
-                            );
-                            if (p) {
-                                p.setCssStyles({ scrollMargin: "3em" });
-                                p.scrollIntoView({
-                                    behavior: "instant",
-                                    block: "start",
-                                });
-                            }
-                        } else {
-                            evt.preventDefault();
-                            await loadMarkdownPage(uri, basePath);
-                            troubleShootEl.setCssStyles({ scrollMargin: "1em" });
-                            troubleShootEl.scrollIntoView({
-                                behavior: "instant",
-                                block: "start",
-                            });
-                        }
-                    });
-                });
-            });
-            troubleShootEl.setCssStyles({ minHeight: "" });
-        };
-        void loadMarkdownPage(topPath);
     });
 }

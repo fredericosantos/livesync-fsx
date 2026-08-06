@@ -244,12 +244,21 @@ body {
 .sls-setting-label {
     display: inline-flex;
     align-items: center;
+    justify-content: flex-start;
+    /* Content width. Obsidian's settings styles stretch bare labels, which
+       pushed the icon and the word to opposite ends of a full-width pill. */
+    flex: 0 0 auto;
+    width: auto;
     gap: 0.4em;
     padding: 0.35em 0.7em;
     border-radius: 6px;
     color: var(--text-muted);
     font-size: var(--font-ui-small);
     cursor: pointer;
+}
+
+.sls-setting-label > * {
+    flex: 0 0 auto;
 }
 
 .setting-collapsed {
@@ -554,16 +563,28 @@ div.workspace-leaf-content[data-type="bases"] .livesync-status {
 }
 
 .sls-setting-panel-title {
-    position: sticky;
-    font-size: medium;
-    top: 2.5em;
-    background-color: var(--background-secondary-alt);
-    border-radius: 10px;
-    padding: 0.5em 1em;
+    font-size: var(--font-ui-medium);
+    font-weight: var(--font-semibold);
+    color: var(--text-normal);
+    background: none;
+    padding: 0;
+    margin: 1.6em 0 0.15em;
+    border: none;
 }
 
 .active-pane .sls-setting-panel-title {
-    border: 1px solid var(--interactive-accent);
+    color: var(--text-accent);
+}
+
+/* The pane title has to outrank the panel titles beneath it. */
+.sls-setting-pane-title .setting-item-name {
+    font-size: var(--font-ui-larger);
+    font-weight: var(--font-bold);
+}
+
+.sls-setting-pane-title {
+    border-top: none;
+    padding-top: 0;
 }
 
 .sls-dialogue-note-wrapper {
