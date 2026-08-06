@@ -16,7 +16,7 @@ export type TroubleshootingDocsInspection = {
 };
 
 const guidePaths = ["docs/troubleshooting.md", "docs/recovery.md", "docs/tips/p2p-sync-tips.md"] as const;
-const messageCataloguePath = "src/common/messagesJson/en.json";
+const messageCataloguePath = "src/common/messages/combinedMessages.prod.ts";
 const markdownLinkPattern = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^)]*["'])?\)/gu;
 
 function repositoryRootFromThisFile(): string {
@@ -72,8 +72,9 @@ export async function inspectTroubleshootingDocs(
     }
 
     const troubleshooting = documents.get("docs/troubleshooting.md")!;
-    const catalogue = JSON.parse(
-        await fsPromises.readFile(path.resolve(repositoryRoot, messageCataloguePath), "utf8")
+    const { allMessages } = await import(path.resolve(repositoryRoot, messageCataloguePath));
+    const catalogue = Object.fromEntries(
+        Object.entries(allMessages as Record<string, Record<string, string>>).map(([key, value]) => [key, value.def])
     ) as Record<string, string>;
     const requiredMessageKeys = [
         "TweakMismatchResolve.Action.UseConfigured",

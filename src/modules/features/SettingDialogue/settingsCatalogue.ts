@@ -140,7 +140,7 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
         title: "Appearance",
         summary: "What the plugin shows you, and when.",
         tier: TIER_ADVANCED,
-        keys: ["displayLanguage", "showStatusOnStatusbar", "showStatusOnEditor", "hideFileWarningNotice"],
+        keys: ["showStatusOnStatusbar", "showStatusOnEditor", "hideFileWarningNotice"],
     },
 ];
 

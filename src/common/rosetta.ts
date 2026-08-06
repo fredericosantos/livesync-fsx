@@ -66,7 +66,7 @@ export type MESSAGE = { [key in I18N_LANGS]?: string };
 
 import { Logger } from "octagonal-wheels/common/logger";
 import type { CommonlibMessageKey } from "@vrtmrz/livesync-commonlib/context";
-import type { MessageKeys } from "./messages/combinedMessages.dev.ts";
+import type { MessageKeys } from "./messages/combinedMessages.prod.ts";
 import type { LiveSyncProvisionalMessageKey } from "./messages/LiveSyncProvisionalMessages.ts";
 
 export function expandKeywords<T extends Record<string, U>, U extends Record<string, string>>(
