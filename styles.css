@@ -46,32 +46,37 @@
     white-space: pre-wrap;
 }
 
-.op-warn {
-    border: 1px solid salmon;
-    padding: 2px;
+.op-warn,
+.op-warn-info {
+    border-left: 3px solid;
+    background-color: var(--background-secondary);
     border-radius: 4px;
+    padding: 0.6em 0.85em;
+}
+
+.op-warn::before,
+.op-warn-info::before {
+    font-weight: var(--font-semibold);
+    display: block;
+    margin-bottom: 0.2em;
+}
+
+.op-warn {
+    border-left-color: var(--text-error);
 }
 
 .op-warn::before {
     content: "Warning";
-    font-weight: bold;
-    color: salmon;
-    position: relative;
-    display: block;
+    color: var(--text-error);
 }
 
 .op-warn-info {
-    border: 1px solid rgb(255, 209, 81);
-    padding: 2px;
-    border-radius: 4px;
+    border-left-color: var(--text-warning);
 }
 
 .op-warn-info::before {
     content: "Notice";
-    font-weight: bold;
-    color: rgb(255, 209, 81);
-    position: relative;
-    display: block;
+    color: var(--text-warning);
 }
 
 /*
@@ -240,8 +245,9 @@ body {
 }
 
 .ob-btn-config-info {
-    border: 1px solid salmon;
-    padding: 2px;
+    border-left: 3px solid var(--text-error);
+    background-color: var(--background-secondary);
+    padding: 0.6em 0.85em;
     margin: 1px;
     border-radius: 4px;
 }
@@ -260,12 +266,16 @@ body {
     display: none;
 }
 
-.sls-item-dirty::before {
-    content: "✏";
+.sls-item-dirty {
+    border-left: 2px solid var(--text-accent);
+    padding-left: 0.6em;
+    margin-left: -0.6em;
 }
 
 .sls-item-dirty-help::after {
-    content: " ❓";
+    content: " (unsaved)";
+    color: var(--text-accent);
+    font-size: var(--font-ui-smaller);
 }
 
 .sls-setting .setting-item-control input.sls-item-invalid-value,

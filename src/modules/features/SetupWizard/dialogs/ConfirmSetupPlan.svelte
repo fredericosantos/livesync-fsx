@@ -26,7 +26,15 @@
     </Guidance>
     <UserDecisions>
         {#if canCommit}
-            <Decision title={plan.confirmLabel} important={!plan.isDestructive} commit={() => setResult(TYPE_APPLY)} />
+            <!-- A destructive commit is styled destructive rather than merely
+                 left unhighlighted: the reader has to be able to tell the two
+                 apart at a glance, not by noticing an absence. -->
+            <Decision
+                title={plan.confirmLabel}
+                important={!plan.isDestructive}
+                destructive={plan.isDestructive}
+                commit={() => setResult(TYPE_APPLY)}
+            />
             <Decision title="Cancel" commit={() => setResult(TYPE_CANCELLED)} />
         {:else}
             <Decision title={plan.confirmLabel} important={true} commit={() => setResult(TYPE_CANCELLED)} />
