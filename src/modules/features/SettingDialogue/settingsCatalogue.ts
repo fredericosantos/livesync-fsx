@@ -143,20 +143,16 @@ export interface SettingSection {
  */
 const BASIC_SECTIONS: readonly SettingSection[] = [
     {
-        id: "device",
+        id: "basics",
         pane: "sync",
+        // No heading. The page is the plugin's settings and the section is
+        // sync; naming the group again only repeats what the reader can see.
         title: "",
         tier: TIER_BASIC,
-        // Required before Customisation Sync will activate at all, and the
-        // single most common reason it silently does nothing.
-        keys: ["deviceAndVaultName"],
-    },
-    {
-        id: "what",
-        pane: "sync",
-        title: "What to sync",
-        tier: TIER_BASIC,
-        keys: ["syncInternalFiles", "usePluginSync"],
+        // `deviceAndVaultName` is required before Customisation Sync will
+        // activate at all, and the single most common reason it silently does
+        // nothing — so it leads.
+        keys: ["deviceAndVaultName", "syncInternalFiles", "usePluginSync"],
     },
     {
         id: "privacy",

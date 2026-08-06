@@ -24,8 +24,7 @@ type SectionRenderer = (
 ) => void | Promise<void>;
 
 const CUSTOM_SECTIONS: Record<string, SectionRenderer> = {
-    device: (tab, el) => renderDeviceName(tab, el),
-    what: (tab, el) => renderWhatToSync(tab, el),
+    basics: (tab, el) => renderBasics(tab, el),
     privacy: (tab, el) => renderEncryption(tab, el),
 };
 
@@ -56,7 +55,9 @@ export function paneSync(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, 
     }
 }
 
-function renderWhatToSync(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
+function renderBasics(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
+    renderDeviceName(tab, el);
+
     new Setting(el)
         .setName("Sync hidden files")
         .setDesc("Themes, snippets and plugin data under the configuration folder.")
