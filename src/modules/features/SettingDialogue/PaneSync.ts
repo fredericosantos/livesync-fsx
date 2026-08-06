@@ -3,7 +3,6 @@ import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts
 import type { PageFunctions } from "./SettingPane.ts";
 import { visibleOnly } from "./SettingPane.ts";
 import { sectionsForPane, TIER_ADVANCED, TIER_EXPERT, isAtLeast } from "./settingsCatalogue.ts";
-import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
 import { renderDeviceName } from "./controls/DeviceName.ts";
 import { renderPassphrase } from "./controls/Passphrase.ts";
 import { paneSyncSettings } from "./PaneSyncSettings.ts";
@@ -57,13 +56,6 @@ export function paneSync(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, 
 }
 
 function renderWhatToSync(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
-    new Setting(el)
-        .setName("Use ignore files")
-        .setDesc("Honour gitignore-style rules found inside the vault.")
-        .autoWireToggle("useIgnoreFiles");
-
-    renderIgnoreFileList(tab, el);
-
     new Setting(el)
         .setName("Sync hidden files")
         .setDesc("Themes, snippets and plugin data under the configuration folder.")

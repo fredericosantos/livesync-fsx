@@ -49,12 +49,4 @@ export function paneGeneral(
             onUpdate: visibleOnly(() => this.isConfiguredAs("lessInformationInLog", false)),
         });
     });
-    new Setting(paneEl).setClass("wizardOnly").addButton((button) =>
-        button
-            .setButtonText($msg("obsidianLiveSyncSettingTab.btnNext"))
-            .setCta()
-            .onClick(() => {
-                this.changeDisplay("0");
-            })
-    );
 }

@@ -1,3 +1,4 @@
+import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
 import { LEVEL_ADVANCED, type CustomRegExpSource } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { constructCustomRegExpList, splitCustomRegExpList } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import MultipleRegExpControl from "./MultipleRegExpControl.svelte";
@@ -49,7 +50,8 @@ export function paneSelector(this: ObsidianLiveSyncSettingTab, paneEl: HTMLEleme
         new Setting(paneEl).setClass("wizardHidden").autoWireNumeric("syncMaxSizeInMB", { clampMin: 0 });
 
         new Setting(paneEl).setClass("wizardHidden").autoWireToggle("useIgnoreFiles");
-        new Setting(paneEl).setClass("wizardHidden").autoWireTextArea("ignoreFiles", {
+        renderIgnoreFileList(this, paneEl);
+        new Setting(paneEl).setClass("sls-setting-hidden").autoWireTextArea("ignoreFiles", {
             onUpdate: visibleOnly(() => this.isConfiguredAs("useIgnoreFiles", true)),
         });
     });

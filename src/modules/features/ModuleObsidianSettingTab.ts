@@ -12,10 +12,9 @@ export class ModuleObsidianSettingDialogue extends AbstractObsidianModule {
         this.settingTab = new ObsidianLiveSyncSettingTab(this.app, this.plugin);
         this.plugin.addSettingTab(this.settingTab);
         eventHub.onEvent(EVENT_REQUEST_OPEN_SETTINGS, () => this.openSetting());
-        eventHub.onEvent(EVENT_REQUEST_OPEN_SETTING_WIZARD, () => {
-            this.openSetting();
-            void this.settingTab.enableMinimalSetup();
-        });
+        // The settings page opens on "Connect this vault" when the vault is
+        // unconfigured, so the wizard request needs nothing beyond opening it.
+        eventHub.onEvent(EVENT_REQUEST_OPEN_SETTING_WIZARD, () => this.openSetting());
 
         return Promise.resolve(true);
     }

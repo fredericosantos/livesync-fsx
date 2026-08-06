@@ -145,60 +145,6 @@
     max-width: 100%;
 }
 
-.sls-setting-tab {
-    display: none;
-}
-
-/*
- * Navigation rail. A tab names itself in words; the icon is there to make the
- * row scannable, not to be decoded. Only the selected tab carries colour.
- * See docs/fork/01-design-principles.md (principles 4 and 5).
- */
-div.sls-setting-menu-btn {
-    color: inherit;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-}
-
-div.sls-setting-menu-btn > svg {
-    width: 1em;
-    height: 1em;
-}
-
-.sls-setting-menu-label {
-    white-space: nowrap;
-}
-
-.sls-setting-tab:hover ~ * {
-    color: var(--text-normal);
-}
-
-.sls-setting-label.selected {
-    color: var(--text-on-accent);
-    background-color: var(--interactive-accent);
-}
-
-.sls-setting-menu-wrapper {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    position: sticky;
-    top: 0;
-    background-color: var(--background-primary);
-    padding: 4px 0 8px;
-    z-index: 10;
-}
-
-.sls-setting-menu {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 2px;
-    overflow-x: auto;
-}
-
 /*
  * A quiet explanatory line under a section heading. Secondary text, never a
  * banner: it is context for the controls below, not a message to act on.
@@ -239,30 +185,6 @@ body {
     margin-right: auto;
     flex-grow: 1;
     color: var(--text-normal);
-}
-
-.sls-setting-label {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-start;
-    /* Content width. Obsidian's settings styles stretch bare labels, which
-       pushed the icon and the word to opposite ends of a full-width pill. */
-    flex: 0 0 auto;
-    width: auto;
-    gap: 0.4em;
-    padding: 0.35em 0.7em;
-    border-radius: 6px;
-    color: var(--text-muted);
-    font-size: var(--font-ui-small);
-    cursor: pointer;
-}
-
-.sls-setting-label > * {
-    flex: 0 0 auto;
-}
-
-.setting-collapsed {
-    display: none;
 }
 
 .sls-plugins-tbl-buttons {
@@ -950,4 +872,17 @@ body.is-mobile .livesync-compatibility-review-notice {
 .sls-list__input {
     flex: 1;
     min-width: 0;
+}
+
+/*
+ * The settings page is a single scroll. Sections are separated by space and a
+ * heading, not by a tab the reader has to discover and click.
+ */
+.sls-section + .sls-section {
+    margin-top: 2.5em;
+}
+
+.sls-section .sls-setting-pane-title {
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: 1.2em;
 }

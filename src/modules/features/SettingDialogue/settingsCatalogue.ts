@@ -68,7 +68,7 @@ export const TIER_LABELS: Readonly<Record<SettingTier, string>> = {
 };
 
 export const TIER_DESCRIPTIONS: Readonly<Record<SettingTier, string>> = {
-    [TIER_BASIC]: "What to sync, and how often. Enough for a working vault.",
+    [TIER_BASIC]: "Just enough for a working vault.",
     [TIER_ADVANCED]: "Adds conflict handling, file selection, and appearance.",
     [TIER_EXPERT]: "Every setting, including ones that can break replication.",
 };
@@ -100,7 +100,7 @@ export interface SettingPaneDefinition {
 export const SETTING_PANES: readonly SettingPaneDefinition[] = [
     { id: "setup", title: "Setup", icon: "wand", tier: TIER_BASIC },
     { id: "sync", title: "Sync", icon: "refresh-cw", tier: TIER_BASIC },
-    { id: "server", title: "Server", icon: "server", tier: TIER_BASIC },
+    { id: "server", title: "Server", icon: "server", tier: TIER_ADVANCED },
     { id: "files", title: "Files", icon: "filter", tier: TIER_ADVANCED },
     { id: "plugins", title: "Plugins", icon: "blocks", tier: TIER_ADVANCED },
     { id: "appearance", title: "Appearance", icon: "settings", tier: TIER_ADVANCED },
@@ -117,11 +117,6 @@ export function panesForTier(viewing: SettingTier, isConfigured: boolean): reado
         if (pane.requires === "unconfigured") return !isConfigured;
         return true;
     });
-}
-
-/** The pane to open when the dialogue has no remembered selection. */
-export function defaultPaneId(isConfigured: boolean): string {
-    return isConfigured ? "sync" : "setup";
 }
 
 // --- Sections --------------------------------------------------------------
@@ -162,7 +157,7 @@ const BASIC_SECTIONS: readonly SettingSection[] = [
         title: "What to sync",
         summary: "Which files are left out. Everything else is included.",
         tier: TIER_BASIC,
-        keys: ["useIgnoreFiles", "ignoreFiles", "syncInternalFiles", "usePluginSync"],
+        keys: ["syncInternalFiles", "usePluginSync"],
     },
     {
         id: "privacy",
@@ -221,6 +216,14 @@ const ADVANCED_SECTIONS: readonly SettingSection[] = [
             "syncAfterMerge",
             "keepReplicationActiveInBackground",
         ],
+    },
+    {
+        id: "ignore-rules",
+        pane: "files",
+        title: "Ignore rules",
+        summary: "Honour gitignore-style rule files found inside the vault.",
+        tier: TIER_ADVANCED,
+        keys: ["useIgnoreFiles", "ignoreFiles"],
     },
     {
         id: "selection",

@@ -1,4 +1,4 @@
-import { App, Component, PluginSettingTab, setIcon } from "@/deps.ts";
+import { App, Component, PluginSettingTab } from "@/deps.ts";
 import {
     type ObsidianLiveSyncSettings,
     type RemoteDBSettings,
@@ -7,9 +7,6 @@ import {
     FLAGMD_REDFLAG3_HR,
     REMOTE_COUCHDB,
     type ConfigLevel,
-    LEVEL_POWER_USER,
-    LEVEL_ADVANCED,
-    LEVEL_EDGE_CASE,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { delay, isObjectDifferent, sizeToHumanReadable } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { Logger } from "@vrtmrz/livesync-commonlib/compat/common/logger";
@@ -49,7 +46,6 @@ import {
 import { paneSetup } from "./PaneSetup.ts";
 import { paneTuning } from "./PaneTuning.ts";
 import {
-    defaultPaneId,
     panesForTier,
     tierFromModeFlags,
     type SettingPaneDefinition,
@@ -428,61 +424,11 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         }
     }
 
-    screenElements: { [key: string]: HTMLElement[] } = {};
-    changeDisplay(screen: string) {
-        for (const k in this.screenElements) {
-            if (k == screen) {
-                this.screenElements[k].forEach((element) => element.removeClass("setting-collapsed"));
-            } else {
-                this.screenElements[k].forEach((element) => element.addClass("setting-collapsed"));
-            }
-        }
-        if (this.menuEl) {
-            this.menuEl.querySelectorAll(`.sls-setting-label`).forEach((element) => {
-                if (element.hasClass(`c-${screen}`)) {
-                    element.addClass("selected");
-                    element.querySelector<HTMLInputElement>("input[type=radio]")!.checked = true;
-                } else {
-                    element.removeClass("selected");
-                    element.querySelector<HTMLInputElement>("input[type=radio]")!.checked = false;
-                }
-            });
-        }
-        this.selectedScreen = screen;
-    }
-    async enableMinimalSetup() {
-        this.editingSettings.liveSync = false;
-        this.editingSettings.periodicReplication = false;
-        this.editingSettings.syncOnSave = false;
-        this.editingSettings.syncOnEditorSave = false;
-        this.editingSettings.syncOnStart = false;
-        this.editingSettings.syncOnFileOpen = false;
-        this.editingSettings.syncAfterMerge = false;
-        this.core.replicator.closeReplication();
-        await this.saveAllDirtySettings();
-        this.containerEl.addClass("isWizard");
-        this.inWizard = true;
-        this.changeDisplay("20");
-    }
-    menuEl?: HTMLElement;
-
-    addScreenElement(key: string, element: HTMLElement) {
-        if (!(key in this.screenElements)) {
-            this.screenElements[key] = [];
-        }
-        this.screenElements[key].push(element);
-    }
-
-    selectPane(event: Event) {
-        const target = event.target as HTMLElement;
-        if (target.tagName == "INPUT") {
-            const value = target.getAttribute("value");
-            if (value && this.selectedScreen != value) {
-                this.changeDisplay(value);
-            }
-        }
-    }
-
+    /**
+     * Kept because the settings page is a single scroll and there is nothing to
+     * switch between; `enableMinimalSetup` used to drop the dialogue into a
+     * cut-down wizard mode, which the setup flow now handles on its own.
+     */
     isNeedRebuildLocal() {
         return this.isSomeDirty([
             "useIndexedDBAdapter",
@@ -638,14 +584,12 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
     }
 
     override display(): void {
-        const changeDisplay = this.changeDisplay.bind(this);
         // Make sure lifetime component is loaded for markdown rendering in panes.
         this._lifetimeComponent.load();
         const { containerEl } = this;
         this.settingComponents.length = 0;
         this.controlledElementFunc.length = 0;
         this.onSavedHandlers.length = 0;
-        this.screenElements = {};
         if (this._editingSettings == undefined || this.initialSettings == undefined) {
             this.reloadAllSettings();
         }
@@ -663,15 +607,9 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         setStyle(containerEl, "menu-setting-advanced", () => this.isConfiguredAs("useAdvancedMode", true));
         setStyle(containerEl, "menu-setting-edgecase", () => this.isConfiguredAs("useEdgeCaseMode", true));
 
-        // const addScreenElement = (key: string, element: HTMLElement) => addScreenElement.bind(this)(key, element);
+        // One page. Tabs exist to manage volume; once the volume is cut, they
+        // only hide things a reader could otherwise scan past in a second.
         const menuWrapper = this.createEl(containerEl, "div", { cls: "sls-setting-menu-wrapper" });
-
-        if (this.menuEl) {
-            this.menuEl.remove();
-        }
-        this.menuEl = menuWrapper.createDiv("");
-        this.menuEl.addClass("sls-setting-menu");
-        const menuTabs = this.menuEl.querySelectorAll(".sls-setting-label");
 
         this.createEl(
             menuWrapper,
@@ -710,34 +648,18 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             const el = this.createEl(parentEl, "div", { text: "" });
             setLevelClass(el, level);
             new Setting(el).setName(title).setHeading().setClass("sls-setting-pane-title");
-            this.addScreenElement(`${order}`, el);
             return Promise.resolve(el);
         };
 
         /**
-         * One pane of the dialogue: a heading, a body, and a tab in the rail.
-         * The identifier is a name rather than a magic number, so panes can be
-         * reordered by moving a line in the manifest.
+         * One section of the single settings page. There is no tab, and no
+         * heading for the first section: the page already says what it is.
          */
-        const addManifestPane = (pane: SettingPaneDefinition) => {
-            const el = this.createEl(containerEl, "div", { text: "" });
-            new Setting(el).setName(pane.title).setHeading().setClass("sls-setting-pane-title");
-            this.menuEl?.createEl("label", { cls: `sls-setting-label c-${pane.id}` }, (labelEl) => {
-                const inputEl = labelEl.createEl("input", {
-                    type: "radio",
-                    name: "disp",
-                    value: pane.id,
-                    cls: "sls-setting-tab",
-                } as DomElementInfo);
-                // Lucide icons inherit theme colour and font weight; emoji do not.
-                // See docs/fork/01-design-principles.md (principle 3).
-                const iconEl = labelEl.createDiv({ cls: "sls-setting-menu-btn", title: pane.title });
-                setIcon(iconEl, pane.icon);
-                labelEl.createSpan({ cls: "sls-setting-menu-label", text: pane.title });
-                inputEl.addEventListener("change", (evt) => this.selectPane(evt));
-                inputEl.addEventListener("click", (evt) => this.selectPane(evt));
-            });
-            this.addScreenElement(pane.id, el);
+        const addManifestPane = (pane: SettingPaneDefinition, isFirst: boolean) => {
+            const el = this.createEl(containerEl, "div", { cls: "sls-section" });
+            if (!isFirst) {
+                new Setting(el).setName(pane.title).setHeading().setClass("sls-setting-pane-title");
+            }
             return el;
         };
         // const panelNoMap = {} as { [key: string]: number };
@@ -758,17 +680,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             return p;
         };
 
-        menuTabs.forEach((element) => {
-            const e = element.querySelector(".sls-setting-tab");
-            if (!e) return;
-            e.addEventListener("change", (event) => {
-                menuTabs.forEach((element) => element.removeClass("selected"));
-                this.changeDisplay((event.currentTarget as HTMLInputElement).value);
-                element.addClass("selected");
-            });
-        });
-
-        // Panes. Each body is a function of the same shape; the manifest decides
+        // Sections. Each body is a function of the same shape; the manifest decides
         // which ones exist at the current tier and in what order they appear.
         const paneBodies: Record<
             string,
@@ -787,19 +699,15 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         };
 
         const visiblePanes = panesForTier(this.viewingTier, this.editingSettings.isConfigured === true);
+        let isFirst = true;
         for (const pane of visiblePanes) {
             const body = paneBodies[pane.id];
             if (!body) continue;
-            body.call(this, addManifestPane(pane), { addPane, addPanel });
+            body.call(this, addManifestPane(pane, isFirst), { addPane, addPanel });
+            isFirst = false;
         }
 
-        void yieldNextAnimationFrame().then(() => {
-            const remembered = visiblePanes.some((pane) => pane.id === this.selectedScreen)
-                ? this.selectedScreen
-                : defaultPaneId(this.editingSettings.isConfigured === true);
-            changeDisplay(remembered);
-            this.requestUpdate();
-        });
+        void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }
 
 }
