@@ -84,7 +84,7 @@ describe("setupObsidian/setupManagerHandlers", () => {
 
         expect(anchor.href).toBe("#");
         expect(anchor.textContent).toBe("Start setup");
-        expect(addClass).toHaveBeenCalledWith("sls-onboarding-invitation-action");
+        expect(addClass).toHaveBeenCalledWith("lsfsx-onboarding-invitation-action");
         const preventDefault = vi.fn();
         click!({ preventDefault });
         await vi.waitFor(() => expect(setupManager.startOnBoarding).toHaveBeenCalledOnce());

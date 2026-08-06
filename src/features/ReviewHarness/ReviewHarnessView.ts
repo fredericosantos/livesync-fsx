@@ -72,7 +72,7 @@ export class ReviewHarnessView extends ItemView {
         const setting = new Setting(this.contentEl)
             .setName(scenario.title)
             .setDesc(`${scenario.description} Mode: ${scenario.mode}. Access: ${scenario.access}.`)
-            .setClass("sls-review-harness__scenario");
+            .setClass("lsfsx-review-harness__scenario");
         setting.settingEl.dataset.testid = `review-harness-scenario-${id}`;
 
         this.addActionButton(
@@ -82,7 +82,7 @@ export class ReviewHarnessView extends ItemView {
             () => this.controller.runScenario(id)
         );
 
-        const resultEl = this.contentEl.createDiv({ cls: "sls-review-harness__result" });
+        const resultEl = this.contentEl.createDiv({ cls: "lsfsx-review-harness__result" });
         resultEl.dataset.testid = `review-harness-result-${id}`;
         resultEl.createEl("strong", { text: `${STATUS_LABELS[result.status]}: ` });
         resultEl.appendText(result.detail);
@@ -92,7 +92,7 @@ export class ReviewHarnessView extends ItemView {
         }
 
         if (id === "compatibility-review" && result.status === "waiting-for-user") {
-            const actions = new Setting(this.contentEl).setClass("sls-review-harness__actions");
+            const actions = new Setting(this.contentEl).setClass("lsfsx-review-harness__actions");
             this.addActionButton(
                 actions,
                 "Open compatibility review",
@@ -108,12 +108,12 @@ export class ReviewHarnessView extends ItemView {
 
     private render(): void {
         this.contentEl.empty();
-        this.contentEl.addClass("sls-review-harness");
+        this.contentEl.addClass("lsfsx-review-harness");
         this.contentEl.dataset.testid = "review-harness";
         this.contentEl.createEl("h2", { text: "Self-hosted LiveSync review harness" });
         this.contentEl.createEl("p", {
             text: "Use a dedicated test Vault. Read-only scenarios are labelled. The Vault round-trip scenario writes only after confirmation, owns one fixed fixture tree, and removes it in a finally block. The Harness never accepts arbitrary commands, paths, code, or remote credentials.",
-            cls: "sls-review-harness__warning",
+            cls: "lsfsx-review-harness__warning",
         });
         this.contentEl.createEl("p", {
             text: "Automatic scenarios inspect local contracts. The guided compatibility review uses the same device-local pause and explicit action as normal start-up. Real P2P transport remains covered by the Compose E2E suite.",
@@ -123,12 +123,12 @@ export class ReviewHarnessView extends ItemView {
         if (snapshot.continuationError) {
             this.contentEl.createEl("p", {
                 text: `Continuation error: ${snapshot.continuationError}`,
-                cls: "sls-review-harness__error",
+                cls: "lsfsx-review-harness__error",
             });
         } else if (snapshot.resumedRequestId) {
             const resumed = this.contentEl.createEl("p", {
                 text: "The one-shot restart continuation was consumed. Complete the guided review below.",
-                cls: "sls-review-harness__resumed",
+                cls: "lsfsx-review-harness__resumed",
             });
             resumed.dataset.testid = "review-harness-resumed";
         }
@@ -136,7 +136,7 @@ export class ReviewHarnessView extends ItemView {
         const suiteActions = new Setting(this.contentEl)
             .setName("Review suite")
             .setDesc(snapshot.running ? `Running ${snapshot.current ?? "scenario"}.` : "Choose the scope to run.")
-            .setClass("sls-review-harness__actions");
+            .setClass("lsfsx-review-harness__actions");
         this.addActionButton(suiteActions, "Automatic", "review-harness-run-automatic", () =>
             this.controller.runAutomaticScenarios()
         );
@@ -153,7 +153,7 @@ export class ReviewHarnessView extends ItemView {
 
         this.contentEl.createEl("p", {
             text: "Reports are copied locally and are not transmitted. They omit Vault identifiers, paths, contents, remote configuration, and secrets.",
-            cls: "sls-review-harness__privacy",
+            cls: "lsfsx-review-harness__privacy",
         });
     }
 }

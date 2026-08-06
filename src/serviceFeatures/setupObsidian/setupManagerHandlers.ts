@@ -21,7 +21,7 @@ export function showOnboardingInvitation(host: NecessaryServices<"UI", never>, s
         message,
         (anchor) => {
             anchor.href = "#";
-            anchor.classList.add("sls-onboarding-invitation-action");
+            anchor.classList.add("lsfsx-onboarding-invitation-action");
             anchor.textContent = $msg("Ui.SetupWizard.Invitation.Start");
             anchor.addEventListener("click", (event) => {
                 event.preventDefault();

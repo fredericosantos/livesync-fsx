@@ -34,6 +34,7 @@ export {
     ToggleComponent,
     DropdownComponent,
     Component,
+    SettingGroup,
 } from "obsidian";
 export type {
     DataWriteOptions,

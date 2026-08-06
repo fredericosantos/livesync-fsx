@@ -535,7 +535,7 @@ export class ConfigSync extends LiveSyncCommands {
     }
     _everyAfterResumeProcess(): Promise<boolean> {
         const q = activeDocument.querySelector(`.livesync-ribbon-showcustom`);
-        q?.toggleClass("sls-hidden", !this.isThisModuleEnabled());
+        q?.toggleClass("lsfsx-hidden", !this.isThisModuleEnabled());
         return Promise.resolve(true);
     }
     async reloadPluginList(showMessage: boolean) {

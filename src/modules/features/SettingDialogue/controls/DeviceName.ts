@@ -1,6 +1,8 @@
 import { LiveSyncSetting as Setting } from "../LiveSyncSetting.ts";
 import type { ObsidianLiveSyncSettingTab } from "../ObsidianLiveSyncSettingTab.ts";
 import { validateDeviceName } from "./deviceNameRules.ts";
+import { suggestDeviceName } from "./suggestDeviceName.ts";
+import { Platform } from "@/deps.ts";
 
 /**
  * The device name. Required, because Customisation Sync silently does nothing
@@ -15,20 +17,24 @@ export function renderDeviceName(tab: ObsidianLiveSyncSettingTab, el: HTMLElemen
         .setName("Device name")
         .setDesc("Shown on your other devices. Must be unique among them.");
 
-    const problemEl = el.createDiv({ cls: "sls-setting-problem" });
+    const problemEl = el.createDiv({ cls: "lsfsx-setting-problem" });
     problemEl.hide();
 
     const report = (value: string) => {
         const verdict = validateDeviceName(value, knownDeviceNames(tab));
         problemEl.setText(verdict.message);
         problemEl.toggle(!verdict.ok);
-        setting.settingEl.toggleClass("sls-setting--invalid", !verdict.ok);
+        setting.settingEl.toggleClass("lsfsx-setting--invalid", !verdict.ok);
         return verdict.ok;
     };
 
+    // Prefilled, not merely hinted: an empty device name makes Customisation
+    // Sync silently do nothing, and a placeholder leaves it empty.
+    const suggestion = suggestDeviceName(Platform, tab.plugin.app.vault.getName(), knownDeviceNames(tab));
+
     setting.addText((text) => {
-        text.setPlaceholder("MacBook Air")
-            .setValue(tab.editingSettings.deviceAndVaultName ?? "")
+        text.setPlaceholder(suggestion)
+            .setValue(tab.editingSettings.deviceAndVaultName || suggestion)
             .onChange((value) => {
                 // The value is still written while invalid; blocking the keystroke
                 // would make the field impossible to correct mid-word. Saving is

@@ -70,21 +70,21 @@ export class LiveSyncSetting extends Setting {
         this.holdValue = opt?.holdValue || this.holdValue;
         this.selfKey = key;
         if (conf.obsolete || opt?.obsolete) {
-            this.settingEl.toggleClass("sls-setting-obsolete", true);
+            this.settingEl.toggleClass("lsfsx-setting-obsolete", true);
         }
         if (opt?.onUpdate) this.addOnUpdate(opt.onUpdate);
         const stat = this._getComputedStatus();
         if (stat.visibility === false) {
-            this.settingEl.toggleClass("sls-setting-hidden", !stat.visibility);
+            this.settingEl.toggleClass("lsfsx-setting-hidden", !stat.visibility);
         }
         return conf;
     }
     autoWireComponent<T>(component: ValueComponent<T>, conf?: ConfigurationItem, opt?: AutoWireOption) {
         this.placeHolderBuf = conf?.placeHolder || opt?.placeHolder || "";
         if (conf?.level == LEVEL_ADVANCED) {
-            this.settingEl.toggleClass("sls-setting-advanced", true);
+            this.settingEl.toggleClass("lsfsx-setting-advanced", true);
         } else if (conf?.level == LEVEL_POWER_USER) {
-            this.settingEl.toggleClass("sls-setting-poweruser", true);
+            this.settingEl.toggleClass("lsfsx-setting-poweruser", true);
         }
         if (this.placeHolderBuf && component instanceof TextComponent) {
             component.setPlaceholder(this.placeHolderBuf);
@@ -180,7 +180,7 @@ export class LiveSyncSetting extends Setting {
                 if (!hasError) {
                     lastError = false;
                     this.setTooltip(``);
-                    text.inputEl.toggleClass("sls-item-invalid-value", false);
+                    text.inputEl.toggleClass("lsfsx-item-invalid-value", false);
                     await this.commitValue(value);
                 } else {
                     this.setTooltip(
@@ -189,7 +189,7 @@ export class LiveSyncSetting extends Setting {
                             max: opt.clampMax?.toString() || "~",
                         })
                     );
-                    text.inputEl.toggleClass("sls-item-invalid-value", true);
+                    text.inputEl.toggleClass("lsfsx-item-invalid-value", true);
                     lastError = true;
                     return false;
                 }
@@ -280,14 +280,14 @@ export class LiveSyncSetting extends Setting {
                 // const newValue = newConf[k];
                 switch (k) {
                     case "visibility":
-                        this.settingEl.toggleClass("sls-setting-hidden", !(newConf[k] || false));
+                        this.settingEl.toggleClass("lsfsx-setting-hidden", !(newConf[k] || false));
                         this.prevStatus[k] = newConf[k];
                         break;
                     case "classes":
                         break;
                     case "disabled":
                         this.setDisabled(newConf[k] || false);
-                        this.settingEl.toggleClass("sls-setting-disabled", newConf[k] || false);
+                        this.settingEl.toggleClass("lsfsx-setting-disabled", newConf[k] || false);
                         this.prevStatus[k] = newConf[k];
                         break;
                     case "isCta":
@@ -341,9 +341,9 @@ export class LiveSyncSetting extends Setting {
                       value: String(LiveSyncSetting.env.initialSettings?.[this.selfKey] ?? ""),
                   })
                 : "";
-            this.controlEl.toggleClass("sls-item-dirty", isDirty);
+            this.controlEl.toggleClass("lsfsx-item-dirty", isDirty);
             if (!this.hasPassword) {
-                this.nameEl.toggleClass("sls-item-dirty-help", isDirty);
+                this.nameEl.toggleClass("lsfsx-item-dirty-help", isDirty);
                 this.setTooltip(alt, { delay: 10, placement: "right" });
             }
         }

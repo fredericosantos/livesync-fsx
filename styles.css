@@ -107,20 +107,20 @@
     text-align: center;
 }
 
-.sls-plugins-wrap {
+.lsfsx-plugins-wrap {
     display: flex;
     flex-grow: 1;
     max-height: 50vh;
     overflow-y: scroll;
 }
 
-.sls-remote-list .setting-item-description {
+.lsfsx-remote-list .setting-item-description {
     white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-.sls-plugins-tbl {
+.lsfsx-plugins-tbl {
     border: 1px solid var(--background-modifier-border);
     width: 100%;
     max-height: 80%;
@@ -130,31 +130,31 @@
     border-top: 1px solid var(--background-modifier-border);
 }
 
-.sls-header-button {
+.lsfsx-header-button {
     margin-left: 2em;
 }
 
-.sls-hidden {
+.lsfsx-hidden {
     display: none;
 }
 
 :root {
-    --sls-log-text: "";
+    --lsfsx-log-text: "";
 }
 
-.sls-troubleshoot-preview {
+.lsfsx-troubleshoot-preview {
     max-width: max-content;
 }
 
-.sls-troubleshoot-preview img {
+.lsfsx-troubleshoot-preview img {
     max-width: 100%;
 }
 
 body {
-    --sls-col-transparent: transparent;
-    --sls-col-warn: rgba(var(--background-modifier-error-rgb), 0.1);
-    --sls-col-warn-stripe1: var(--sls-col-transparent);
-    --sls-col-warn-stripe2: var(--sls-col-warn);
+    --lsfsx-col-transparent: transparent;
+    --lsfsx-col-warn: rgba(var(--background-modifier-error-rgb), 0.1);
+    --lsfsx-col-warn-stripe1: var(--lsfsx-col-transparent);
+    --lsfsx-col-warn-stripe2: var(--lsfsx-col-warn);
 }
 
 /*
@@ -163,7 +163,7 @@ body {
  * for a state the user had just created themselves. A left rule and a warning
  * colour say the same thing once.
  */
-.sls-setting-menu-buttons {
+.lsfsx-setting-menu-buttons {
     border-left: 3px solid var(--text-warning);
     background-color: var(--background-secondary);
     border-radius: 4px;
@@ -174,22 +174,22 @@ body {
     align-items: center;
 }
 
-.sls-setting-menu-buttons label {
+.lsfsx-setting-menu-buttons label {
     margin-right: auto;
     flex-grow: 1;
     color: var(--text-normal);
 }
 
-.sls-plugins-tbl-buttons {
+.lsfsx-plugins-tbl-buttons {
     text-align: right;
 }
 
-.sls-plugins-tbl-buttons button {
+.lsfsx-plugins-tbl-buttons button {
     flex-grow: 0;
     padding: 6px 10px;
 }
 
-.sls-plugins-tbl-device-head {
+.lsfsx-plugins-tbl-device-head {
     background-color: var(--background-secondary-alt);
     color: var(--text-accent);
 }
@@ -250,42 +250,42 @@ body {
     display: none;
 }
 
-.sls-setting:not(.isWizard) .wizardOnly {
+.lsfsx-setting:not(.isWizard) .wizardOnly {
     display: none;
 }
 
-.sls-item-dirty {
+.lsfsx-item-dirty {
     border-left: 2px solid var(--text-accent);
     padding-left: 0.6em;
     margin-left: -0.6em;
 }
 
-.sls-item-dirty-help::after {
+.lsfsx-item-dirty-help::after {
     content: " (unsaved)";
     color: var(--text-accent);
     font-size: var(--font-ui-smaller);
 }
 
-.sls-setting .setting-item-control input.sls-item-invalid-value,
-.sls-setting .setting-item-control textarea.sls-item-invalid-value {
+.lsfsx-setting .setting-item-control input.lsfsx-item-invalid-value,
+.lsfsx-setting .setting-item-control textarea.lsfsx-item-invalid-value {
     background-color: rgba(var(--background-modifier-error-rgb), 0.3);
 }
 
-.sls-setting-disabled input[type="text"],
-.sls-setting-disabled input[type="number"],
-.sls-setting-disabled input[type="password"] {
+.lsfsx-setting-disabled input[type="text"],
+.lsfsx-setting-disabled input[type="number"],
+.lsfsx-setting-disabled input[type="password"] {
     filter: brightness(80%);
     color: var(--text-muted);
 }
 
-.sls-setting-hidden {
+.lsfsx-setting-hidden {
     display: none;
 }
 
-.sls-setting-obsolete {
+.lsfsx-setting-obsolete {
     /* background-image: linear-gradient(-45deg,
-            var(--sls-col-warn-stripe1) 25%, var(--sls-col-warn-stripe2) 25%, var(--sls-col-warn-stripe2) 50%,
-            var(--sls-col-warn-stripe1) 50%, var(--sls-col-warn-stripe1) 75%, var(--sls-col-warn-stripe2) 75%, var(--sls-col-warn-stripe2)); */
+            var(--lsfsx-col-warn-stripe1) 25%, var(--lsfsx-col-warn-stripe2) 25%, var(--lsfsx-col-warn-stripe2) 50%,
+            var(--lsfsx-col-warn-stripe1) 50%, var(--lsfsx-col-warn-stripe1) 75%, var(--lsfsx-col-warn-stripe2) 75%, var(--lsfsx-col-warn-stripe2)); */
     background-image: linear-gradient(
         -45deg,
         transparent 25%,
@@ -303,7 +303,7 @@ body {
     -webkit-text-security: disc;
 }
 
-.sls-onboarding-invitation-action {
+.lsfsx-onboarding-invitation-action {
     display: inline-flex;
     min-width: 44px;
     min-height: 44px;
@@ -311,52 +311,52 @@ body {
     justify-content: center;
 }
 
-.sls-review-harness {
+.lsfsx-review-harness {
     box-sizing: border-box;
     max-width: 100%;
     overflow-x: clip;
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
-.sls-review-harness .setting-item,
-.sls-review-harness .setting-item-control {
+.lsfsx-review-harness .setting-item,
+.lsfsx-review-harness .setting-item-control {
     flex-wrap: wrap;
     max-width: 100%;
 }
 
-.sls-review-harness .setting-item-info {
+.lsfsx-review-harness .setting-item-info {
     min-width: min(16rem, 100%);
 }
 
-.sls-review-harness .setting-item-control {
+.lsfsx-review-harness .setting-item-control {
     gap: 0.5rem;
 }
 
-.sls-review-harness button {
+.lsfsx-review-harness button {
     min-height: 44px;
     max-width: 100%;
     white-space: normal;
 }
 
-.sls-review-harness__result,
-.sls-review-harness__warning,
-.sls-review-harness__privacy,
-.sls-review-harness__error,
-.sls-review-harness__resumed {
+.lsfsx-review-harness__result,
+.lsfsx-review-harness__warning,
+.lsfsx-review-harness__privacy,
+.lsfsx-review-harness__error,
+.lsfsx-review-harness__resumed {
     max-width: 100%;
     overflow-wrap: anywhere;
 }
 
-.sls-review-harness__result {
+.lsfsx-review-harness__result {
     margin: 0 0 1rem;
 }
 
-.sls-review-harness__warning,
-.sls-review-harness__error {
+.lsfsx-review-harness__warning,
+.lsfsx-review-harness__error {
     color: var(--text-error);
 }
 
-.sls-review-harness__resumed {
+.lsfsx-review-harness__resumed {
     color: var(--text-success);
 }
 
@@ -470,25 +470,25 @@ div.workspace-leaf-content[data-type="bases"] .livesync-status {
     margin-left: auto;
 }
 
-.menu-setting-poweruser-disabled .sls-setting-poweruser {
+.menu-setting-poweruser-disabled .lsfsx-setting-poweruser {
     display: none;
 }
 
-.menu-setting-advanced-disabled .sls-setting-advanced {
+.menu-setting-advanced-disabled .lsfsx-setting-advanced {
     display: none;
 }
 
-.menu-setting-edgecase-disabled .sls-setting-edgecase {
+.menu-setting-edgecase-disabled .lsfsx-setting-edgecase {
     display: none;
 }
 
-.sls-dialogue-note-wrapper {
+.lsfsx-dialogue-note-wrapper {
     display: flex;
     justify-content: flex-end;
     align-items: center;
 }
 
-.sls-dialogue-note-countdown {
+.lsfsx-dialogue-note-countdown {
     font-size: 0.8em;
 }
 
@@ -520,33 +520,33 @@ body.is-mobile .livesync-compatibility-review-notice {
     );
 }
 
-.sls-qr {
+.lsfsx-qr {
     display: flex;
     justify-content: center;
     align-items: center;
     max-width: max-content;
 }
 
-.sls-keypair pre {
+.lsfsx-keypair pre {
     max-width: 100%;
     overflow-x: auto;
     white-space: pre-wrap;
     word-break: break-all;
 }
 
-.sls-repair-results {
+.lsfsx-repair-results {
     display: grid;
     gap: var(--size-4-3);
 }
 
-.sls-repair-result {
+.lsfsx-repair-result {
     padding: var(--size-4-3);
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
     background: var(--background-secondary);
 }
 
-.sls-repair-header {
+.lsfsx-repair-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -554,17 +554,17 @@ body.is-mobile .livesync-compatibility-review-notice {
     min-width: 0;
 }
 
-.sls-repair-header > :first-child {
+.lsfsx-repair-header > :first-child {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.sls-repair-header h6 {
+.lsfsx-repair-header h6 {
     margin: 0;
     overflow-wrap: anywhere;
 }
 
-.sls-repair-status {
+.lsfsx-repair-status {
     display: flex;
     flex-wrap: wrap;
     gap: var(--size-4-2);
@@ -572,22 +572,22 @@ body.is-mobile .livesync-compatibility-review-notice {
     font-size: var(--font-ui-smaller);
 }
 
-.sls-repair-status-ok {
+.lsfsx-repair-status-ok {
     color: var(--text-success);
 }
 
-.sls-repair-status-warning {
+.lsfsx-repair-status-warning {
     color: var(--text-warning);
 }
 
-.sls-repair-metric {
+.lsfsx-repair-metric {
     margin-top: var(--size-4-1);
     font-size: var(--font-ui-smaller);
     line-height: var(--line-height-tight);
     overflow-wrap: anywhere;
 }
 
-.sls-repair-action-menu {
+.lsfsx-repair-action-menu {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -597,31 +597,31 @@ body.is-mobile .livesync-compatibility-review-notice {
     padding: 0;
 }
 
-.sls-repair-action-menu .svg-icon {
+.lsfsx-repair-action-menu .svg-icon {
     width: 18px;
     height: 18px;
 }
 
-.sls-repair-revision {
+.lsfsx-repair-revision {
     margin-top: var(--size-4-2);
     padding: var(--size-4-2);
     border-left: 3px solid var(--background-modifier-border);
     background: var(--background-primary-alt);
 }
 
-.sls-repair-revision-title {
+.lsfsx-repair-revision-title {
     font-weight: var(--font-semibold);
     overflow-wrap: anywhere;
 }
 
-.sls-repair-revision code {
+.lsfsx-repair-revision code {
     display: block;
     margin-top: var(--size-4-1);
     overflow-wrap: anywhere;
     white-space: normal;
 }
 
-.sls-repair-ancestor-warning {
+.lsfsx-repair-ancestor-warning {
     margin-top: var(--size-4-2);
     color: var(--text-warning);
 }
@@ -756,7 +756,7 @@ body.is-mobile .livesync-compatibility-review-notice {
  * appears under the field it belongs to, in the colour reserved for problems.
  * See docs/fork/01-design-principles.md (principles 5 and 8).
  */
-.sls-setting-problem {
+.lsfsx-setting-problem {
     color: var(--text-error);
     font-size: var(--font-ui-smaller);
     line-height: 1.5;
@@ -764,11 +764,11 @@ body.is-mobile .livesync-compatibility-review-notice {
     max-width: 60ch;
 }
 
-.sls-setting--invalid input[type="text"] {
+.lsfsx-setting--invalid input[type="text"] {
     border-color: var(--text-error);
 }
 
-.sls-setting-crossref .setting-item-name {
+.lsfsx-setting-crossref .setting-item-name {
     color: var(--text-muted);
     font-weight: normal;
 }
@@ -777,7 +777,7 @@ body.is-mobile .livesync-compatibility-review-notice {
  * A list of short values is a list, not prose. Editing two or three tokens
  * inside one comma-separated textarea hid both the count and the boundaries.
  */
-.sls-list {
+.lsfsx-list {
     display: flex;
     flex-direction: column;
     border: 1px solid var(--background-modifier-border);
@@ -786,7 +786,7 @@ body.is-mobile .livesync-compatibility-review-notice {
     overflow: hidden;
 }
 
-.sls-list__head {
+.lsfsx-list__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -797,17 +797,17 @@ body.is-mobile .livesync-compatibility-review-notice {
     color: var(--text-muted);
 }
 
-.sls-list__count {
+.lsfsx-list__count {
     font-variant-numeric: tabular-nums;
 }
 
-.sls-list__empty {
+.lsfsx-list__empty {
     padding: 0.7em 0.75em;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
 
-.sls-list__row {
+.lsfsx-list__row {
     display: flex;
     align-items: center;
     gap: 0.5em;
@@ -815,13 +815,13 @@ body.is-mobile .livesync-compatibility-review-notice {
     border-top: 1px solid var(--background-modifier-border);
 }
 
-.sls-list__name {
+.lsfsx-list__name {
     flex: 1;
     font-family: var(--font-monospace);
     font-size: var(--font-ui-smaller);
 }
 
-.sls-list__remove {
+.lsfsx-list__remove {
     background: none;
     border: none;
     box-shadow: none;
@@ -831,18 +831,18 @@ body.is-mobile .livesync-compatibility-review-notice {
     display: inline-flex;
 }
 
-.sls-list__remove:hover {
+.lsfsx-list__remove:hover {
     color: var(--text-error);
 }
 
-.sls-list__add {
+.lsfsx-list__add {
     display: flex;
     gap: 0.5em;
     padding: 0.5em 0.75em;
     border-top: 1px solid var(--background-modifier-border);
 }
 
-.sls-list__input {
+.lsfsx-list__input {
     flex: 1;
     min-width: 0;
 }
@@ -851,7 +851,7 @@ body.is-mobile .livesync-compatibility-review-notice {
  * The settings page is a single scroll. Sections are separated by space and a
  * heading, not by a tab the reader has to discover and click.
  */
-.sls-section + .sls-section {
+.lsfsx-section + .lsfsx-section {
     margin-top: 2.5em;
 }
 

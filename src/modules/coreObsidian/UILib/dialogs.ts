@@ -198,9 +198,9 @@ export class MessageBox<T extends readonly string[]> extends AutoClosableModal {
         void MarkdownRenderer.render(this.plugin.app, this.contentMd, div, "/", this.component);
         const buttonSetting = new Setting(contentEl);
         const labelWrapper = contentEl.createDiv();
-        labelWrapper.addClass("sls-dialogue-note-wrapper");
+        labelWrapper.addClass("lsfsx-dialogue-note-wrapper");
         const labelEl = labelWrapper.createEl("label", { text: "To stop the countdown, tap anywhere on the dialogue" });
-        labelEl.addClass("sls-dialogue-note-countdown");
+        labelEl.addClass("lsfsx-dialogue-note-countdown");
         if (!this.timeout || !this.timer) {
             labelWrapper.empty();
             labelWrapper.setCssStyles({ display: "none" });

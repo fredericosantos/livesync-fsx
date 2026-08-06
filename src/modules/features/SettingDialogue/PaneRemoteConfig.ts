@@ -137,7 +137,7 @@ export function paneRemoteConfig(
             // );
 
             // Connection List
-            const listContainer = paneEl.createDiv({ cls: "sls-remote-list" });
+            const listContainer = paneEl.createDiv({ cls: "lsfsx-remote-list" });
             const syncRemoteConfigurationBuffers = () => {
                 const currentConfigs = cloneRemoteConfigurations(this.core.settings.remoteConfigurations);
                 this.editingSettings.remoteConfigurations = currentConfigs;
@@ -294,7 +294,7 @@ export function paneRemoteConfig(
                         .setDesc(config.uri.split("@").pop() || ""); // Show host part for privacy
 
                     if (config.id === this.editingSettings.activeConfigurationId) {
-                        row.nameEl.addClass("sls-active-remote-name");
+                        row.nameEl.addClass("lsfsx-active-remote-name");
                         row.nameEl.appendText(" (Active)");
                     }
 

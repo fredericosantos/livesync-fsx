@@ -128,7 +128,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
     });
 
     void addPanel(paneEl, "Recovery and Repair").then((paneEl) => {
-        const resultArea = paneEl.createDiv({ text: "", cls: "sls-repair-results" });
+        const resultArea = paneEl.createDiv({ text: "", cls: "lsfsx-repair-results" });
         type RepairMenuAction = {
             title: string;
             run: () => Promise<void> | void;
@@ -142,7 +142,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
             if (actions.length === 0) {
                 return;
             }
-            this.createEl(parent, "button", { cls: "sls-repair-action-menu" }, (button) => {
+            this.createEl(parent, "button", { cls: "lsfsx-repair-action-menu" }, (button) => {
                 setIcon(button, "wrench");
                 button.setAttr("aria-label", label);
                 button.setAttr("title", label);
@@ -323,7 +323,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
         const addRepairResult = (inspection: FileRepairInspection) => {
             const { information, revisions } = inspection;
             const path = information.path;
-            const card = this.createEl(resultArea, "div", { cls: "sls-repair-result" });
+            const card = this.createEl(resultArea, "div", { cls: "lsfsx-repair-result" });
             const refresh = async () => {
                 card.remove();
                 const refreshed = await inspectFileRepair(this.core, path);
@@ -376,7 +376,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                 },
             });
 
-            const fileHeader = this.createEl(card, "div", { cls: "sls-repair-header" });
+            const fileHeader = this.createEl(card, "div", { cls: "lsfsx-repair-header" });
             this.createEl(fileHeader, "h6", { text: path });
             const fileMenuHost = this.createEl(fileHeader, "div");
             if (information.storage.exists) {
@@ -385,18 +385,18 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                         TIME: new Date(information.storage.mtime ?? 0).toLocaleString(),
                         SIZE: `${information.storage.size ?? 0}`,
                     }),
-                    cls: "sls-repair-metric",
+                    cls: "lsfsx-repair-metric",
                 });
             } else {
                 this.createEl(card, "div", {
                     text: $msg("Vault: missing"),
-                    cls: "sls-repair-metric",
+                    cls: "lsfsx-repair-metric",
                 });
             }
             if (!information.database.exists) {
                 this.createEl(card, "div", {
                     text: $msg("Local DB: missing"),
-                    cls: "sls-repair-metric",
+                    cls: "lsfsx-repair-metric",
                 });
             }
             if (information.database.conflictCount > 0) {
@@ -407,40 +407,40 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                         ? !information.storage.exists
                         : information.storage.exists &&
                           winner.contentMatchesStorage === true);
-                const status = this.createEl(card, "div", { cls: "sls-repair-status" });
+                const status = this.createEl(card, "div", { cls: "lsfsx-repair-status" });
                 if (vaultMatchesWinner) {
                     this.createEl(status, "span", {
                         text: $msg("Vault matches winner"),
-                        cls: "sls-repair-status-ok",
+                        cls: "lsfsx-repair-status-ok",
                     });
                 }
                 this.createEl(status, "span", {
                     text: $msg("Conflicts: ${COUNT}", {
                         COUNT: `${information.database.conflictCount}`,
                     }),
-                    cls: "sls-repair-status-warning",
+                    cls: "lsfsx-repair-status-warning",
                 });
             }
 
             const addRevision = (revision: FileRepairRevision) => {
                 const { metadata } = revision;
-                const revisionEl = this.createEl(card, "div", { cls: "sls-repair-revision" });
+                const revisionEl = this.createEl(card, "div", { cls: "lsfsx-repair-revision" });
                 const revisionHeader = this.createEl(revisionEl, "div", {
-                    cls: "sls-repair-header",
+                    cls: "lsfsx-repair-header",
                 });
                 this.createEl(revisionHeader, "div", {
                     text: $msg("${ROLE}: ${REVISION}", {
                         ROLE: revision.role === "winner" ? $msg("Winner revision") : $msg("Conflict revision"),
                         REVISION: metadata.revision ?? $msg("Unknown revision"),
                     }),
-                    cls: "sls-repair-revision-title",
+                    cls: "lsfsx-repair-revision-title",
                 });
                 const revisionMenuHost = this.createEl(revisionHeader, "div");
                 const comparison = getFileRepairRevisionComparison(inspection, revision);
                 if (metadata.deleted) {
                     this.createEl(revisionEl, "div", {
                         text: $msg("Logical deletion"),
-                        cls: "sls-repair-metric",
+                        cls: "lsfsx-repair-metric",
                     });
                 } else if (revision.contentReadable) {
                     this.createEl(revisionEl, "div", {
@@ -454,7 +454,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                                 ),
                             }
                         ),
-                        cls: "sls-repair-metric",
+                        cls: "lsfsx-repair-metric",
                     });
                 } else {
                     const missing = metadata.chunks.filter(
@@ -465,13 +465,13 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                         text: $msg("Missing chunks: ${COUNT}", {
                             COUNT: `${missing.length}`,
                         }),
-                        cls: "sls-repair-metric mod-warning",
+                        cls: "lsfsx-repair-metric mod-warning",
                     });
                     this.createEl(revisionEl, "div", {
                         text: $msg("DB: recorded ${RECORDED} B · decoded unavailable", {
                             RECORDED: `${comparison.recordedSize}`,
                         }),
-                        cls: "sls-repair-metric",
+                        cls: "lsfsx-repair-metric",
                     });
                     if (missing.length > 0) {
                         this.createEl(revisionEl, "code", {
@@ -493,7 +493,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                                 comparison.databaseToVaultSizeDifference
                             ),
                         }),
-                        cls: "sls-repair-metric",
+                        cls: "lsfsx-repair-metric",
                     });
                 }
                 if (
@@ -518,18 +518,18 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                                 ),
                             }
                         ),
-                        cls: "sls-repair-metric",
+                        cls: "lsfsx-repair-metric",
                     });
                 }
                 if (revision.contentMatchesStorage === true) {
                     this.createEl(revisionEl, "div", {
                         text: $msg("Matches vault"),
-                        cls: "sls-repair-metric",
+                        cls: "lsfsx-repair-metric",
                     });
                 } else if (revision.contentMatchesStorage === false) {
                     this.createEl(revisionEl, "div", {
                         text: $msg("Differs from vault"),
-                        cls: "sls-repair-metric mod-warning",
+                        cls: "lsfsx-repair-metric mod-warning",
                     });
                 }
 
@@ -713,16 +713,16 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
             revisions.forEach(addRevision);
 
             for (const revision of information.database.unavailableConflictRevisions) {
-                const revisionEl = this.createEl(card, "div", { cls: "sls-repair-revision" });
+                const revisionEl = this.createEl(card, "div", { cls: "lsfsx-repair-revision" });
                 const revisionHeader = this.createEl(revisionEl, "div", {
-                    cls: "sls-repair-header",
+                    cls: "lsfsx-repair-header",
                 });
                 this.createEl(revisionHeader, "div", {
                     text: $msg("${ROLE}: ${REVISION}", {
                         ROLE: $msg("Conflict revision"),
                         REVISION: revision,
                     }),
-                    cls: "sls-repair-revision-title",
+                    cls: "lsfsx-repair-revision-title",
                 });
                 const revisionMenuHost = this.createEl(revisionHeader, "div");
                 this.createEl(revisionEl, "div", {
@@ -766,7 +766,7 @@ export function paneHatch(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
                         : $msg(
                               "No shared ancestor is available for this conflict. The live revisions remain available for explicit review."
                           ),
-                    cls: "sls-repair-ancestor-warning",
+                    cls: "lsfsx-repair-ancestor-warning",
                 });
             }
 

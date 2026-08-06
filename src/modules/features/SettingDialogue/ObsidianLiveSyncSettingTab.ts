@@ -1,4 +1,4 @@
-import { App, Component, PluginSettingTab } from "@/deps.ts";
+import { App, Component, PluginSettingTab, SettingGroup } from "@/deps.ts";
 import {
     type ObsidianLiveSyncSettings,
     type RemoteDBSettings,
@@ -330,7 +330,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
                 for (const k of keys) {
                     if (prev[k] !== newValue[k]) {
                         if (k == "visibility") {
-                            element.toggleClass("sls-setting-hidden", !(newValue[k] || false));
+                            element.toggleClass("lsfsx-setting-hidden", !(newValue[k] || false));
                         }
                         //@ts-ignore
                         prev[k] = newValue[k];
@@ -600,7 +600,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
         containerEl.empty();
 
-        containerEl.addClass("sls-setting");
+        containerEl.addClass("lsfsx-setting");
         containerEl.removeClass("isWizard");
 
         setStyle(containerEl, "menu-setting-poweruser", () => this.isConfiguredAs("usePowerUserMode", true));
@@ -609,12 +609,15 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
         // One page. Tabs exist to manage volume; once the volume is cut, they
         // only hide things a reader could otherwise scan past in a second.
-        const menuWrapper = this.createEl(containerEl, "div", { cls: "sls-setting-menu-wrapper" });
+        // The banner below is attached directly: the wrapper it used to live in
+        // survived the rail's removal as an empty div, and upstream's stylesheet
+        // — loaded alongside ours whenever both plugins are enabled — made it a
+        // sticky, blurred bar that smeared the content scrolling under it.
 
         this.createEl(
-            menuWrapper,
+            containerEl,
             "div",
-            { cls: "sls-setting-menu-buttons" },
+            { cls: "lsfsx-setting-menu-buttons" },
             (el) => {
                 el.addClass("wizardHidden");
                 el.createEl("label", { text: $msg("obsidianLiveSyncSettingTab.msgChangesNeedToBeApplied") });
@@ -656,7 +659,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
          * heading for the first section: the page already says what it is.
          */
         const addManifestPane = (pane: SettingPaneDefinition, isFirst: boolean) => {
-            const el = this.createEl(containerEl, "div", { cls: "sls-section" });
+            const el = this.createEl(containerEl, "div", { cls: "lsfsx-section" });
             if (!isFirst) {
                 new Setting(el).setName(pane.title).setHeading();
             }
@@ -672,15 +675,13 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         ) => {
             const el = this.createEl(parentEl, "div", { text: "" }, callback, func);
             setLevelClass(el, level);
-            // Obsidian's own heading component, not a styled `h4`. Every attempt
-            // to hand-build this chrome ended up looking like a different app
-            // bolted into the settings window.
-            if (title) new Setting(el).setName(title).setHeading();
-            const p = Promise.resolve(el);
-            // p.finally(() => {
-            //     // Recap at the end.
-            // })
-            return p;
+            // `SettingGroup` is Obsidian's own primitive (API 1.11+): it renders
+            // the heading outside a single rounded card and puts hairline rules
+            // between the items inside it. Hand-building that chrome produced a
+            // separate card per row, which is why the page never looked native.
+            const group = new SettingGroup(el);
+            if (title) group.setHeading(title);
+            return Promise.resolve(group.listEl);
         };
 
         // Sections. Each body is a function of the same shape; the manifest decides
@@ -712,7 +713,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
         // Page furniture, not a section: how much of the page to show, and how
         // to discard it. Both belong after everything they act upon.
-        paneSetupFooter.call(this, this.createEl(containerEl, "div", { cls: "sls-section" }), { addPane, addPanel });
+        paneSetupFooter.call(this, this.createEl(containerEl, "div", { cls: "lsfsx-section" }), { addPane, addPanel });
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }

@@ -11,13 +11,13 @@ export const combineOnUpdate = (func1: OnUpdateFunc, func2: OnUpdateFunc): OnUpd
 export const setLevelClass = (el: HTMLElement, level?: ConfigLevel) => {
     switch (level) {
         case LEVEL_POWER_USER:
-            el.addClass("sls-setting-poweruser");
+            el.addClass("lsfsx-setting-poweruser");
             break;
         case LEVEL_ADVANCED:
-            el.addClass("sls-setting-advanced");
+            el.addClass("lsfsx-setting-advanced");
             break;
         case LEVEL_EDGE_CASE:
-            el.addClass("sls-setting-edgecase");
+            el.addClass("lsfsx-setting-edgecase");
             break;
         default:
         // NO OP.
@@ -110,11 +110,16 @@ export type PageFunctions = {
         wizardHidden: boolean,
         level?: ConfigLevel
     ) => Promise<HTMLDivElement>;
+    /**
+     * Returns the list element of an Obsidian `SettingGroup`: one rounded card
+     * with the heading above it and hairline rules between its items. Settings
+     * must be appended to the returned element, not to `parentEl`.
+     */
     addPanel: (
         parentEl: HTMLElement,
         title: string,
         callback?: (el: HTMLDivElement) => void,
         func?: OnUpdateFunc,
         level?: ConfigLevel
-    ) => Promise<HTMLDivElement>;
+    ) => Promise<HTMLElement>;
 };

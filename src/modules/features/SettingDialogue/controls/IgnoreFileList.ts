@@ -13,7 +13,7 @@ import { parseIgnoreFileNames, serialiseIgnoreFileNames } from "./ignoreFileName
  * tokens look like free prose.
  */
 export function renderIgnoreFileList(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
-    const container = el.createDiv({ cls: "sls-list" });
+    const container = el.createDiv({ cls: "lsfsx-list" });
 
     const draw = () => {
         container.empty();
@@ -25,21 +25,21 @@ export function renderIgnoreFileList(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
             draw();
         };
 
-        const head = container.createDiv({ cls: "sls-list__head" });
+        const head = container.createDiv({ cls: "lsfsx-list__head" });
         head.createSpan({ text: "Rule files" });
-        head.createSpan({ cls: "sls-list__count", text: `${names.length}` });
+        head.createSpan({ cls: "lsfsx-list__count", text: `${names.length}` });
 
         if (names.length === 0) {
             container.createDiv({
-                cls: "sls-list__empty",
+                cls: "lsfsx-list__empty",
                 text: "No rule files. Nothing is being excluded by ignore rules.",
             });
         }
 
         for (const name of names) {
-            const row = container.createDiv({ cls: "sls-list__row" });
-            row.createSpan({ cls: "sls-list__name", text: name });
-            const remove = row.createEl("button", { cls: "sls-list__remove" });
+            const row = container.createDiv({ cls: "lsfsx-list__row" });
+            row.createSpan({ cls: "lsfsx-list__name", text: name });
+            const remove = row.createEl("button", { cls: "lsfsx-list__remove" });
             setIcon(remove, "x");
             remove.ariaLabel = `Stop honouring ${name}`;
             remove.addEventListener("click", () => {
@@ -47,8 +47,8 @@ export function renderIgnoreFileList(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
             });
         }
 
-        const adder = container.createDiv({ cls: "sls-list__add" });
-        const input = adder.createEl("input", { type: "text", cls: "sls-list__input" });
+        const adder = container.createDiv({ cls: "lsfsx-list__add" });
+        const input = adder.createEl("input", { type: "text", cls: "lsfsx-list__input" });
         input.placeholder = ".gitignore";
         const add = adder.createEl("button", { text: "Add" });
         const submit = () => {
@@ -73,5 +73,5 @@ export function renderIgnoreFileList(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
     new Setting(el)
         .setName("Path rules")
         .setDesc("Regular expressions applied to paths directly, without a rule file. Under File selection.")
-        .setClass("sls-setting-crossref");
+        .setClass("lsfsx-setting-crossref");
 }

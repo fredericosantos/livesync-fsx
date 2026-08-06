@@ -51,7 +51,7 @@ export function paneSelector(this: ObsidianLiveSyncSettingTab, paneEl: HTMLEleme
 
         new Setting(paneEl).setClass("wizardHidden").autoWireToggle("useIgnoreFiles");
         renderIgnoreFileList(this, paneEl);
-        new Setting(paneEl).setClass("sls-setting-hidden").autoWireTextArea("ignoreFiles", {
+        new Setting(paneEl).setClass("lsfsx-setting-hidden").autoWireTextArea("ignoreFiles", {
             onUpdate: visibleOnly(() => this.isConfiguredAs("useIgnoreFiles", true)),
         });
     });

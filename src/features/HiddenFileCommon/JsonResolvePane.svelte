@@ -136,9 +136,9 @@
     <div class="options">
         {#each modes as m}
             {#if m[0] == "" || mergedObjs[m[0]] != false}
-                <label class={`sls-setting-label ${m[0] == mode ? "selected" : ""}`}
-                    ><input type="radio" name="disp" bind:group={mode} value={m[0]} class="sls-setting-tab" />
-                    <div class="sls-setting-menu-btn">{m[1]}</div></label
+                <label class={`lsfsx-setting-label ${m[0] == mode ? "selected" : ""}`}
+                    ><input type="radio" name="disp" bind:group={mode} value={m[0]} class="lsfsx-setting-tab" />
+                    <div class="lsfsx-setting-menu-btn">{m[1]}</div></label
                 >
             {/if}
         {/each}
