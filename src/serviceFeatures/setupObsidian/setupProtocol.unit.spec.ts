@@ -42,7 +42,7 @@ describe("setupObsidian/setupProtocol", () => {
         } as any;
 
         registerSetupProtocolHandler(host, log, setupManager);
-        expect(host.services.API.registerProtocolHandler).toHaveBeenCalledWith("setuplivesync", expect.any(Function));
+        expect(host.services.API.registerProtocolHandler).toHaveBeenCalledWith("setuplivesync-fsx", expect.any(Function));
 
         await protocolHandler!({ settings: "a b" });
         expect(setupManager.onUseSetupURI).toHaveBeenCalledWith(
@@ -126,6 +126,6 @@ describe("setupObsidian/setupProtocol", () => {
         const loadedHandler = addHandler.mock.calls[0][0] as () => Promise<boolean>;
         await loadedHandler();
 
-        expect(registerProtocolHandler).toHaveBeenCalledWith("setuplivesync", expect.any(Function));
+        expect(registerProtocolHandler).toHaveBeenCalledWith("setuplivesync-fsx", expect.any(Function));
     });
 });

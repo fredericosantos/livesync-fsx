@@ -70,7 +70,7 @@
 <InputRow label={translateMessage("Setup-URI")}>
     <input
         type="text"
-        placeholder="obsidian://setuplivesync?settings=...."
+        placeholder="obsidian://setuplivesync-fsx?settings=...."
         bind:value={setupURI}
         autocorrect="off"
         autocapitalize="off"

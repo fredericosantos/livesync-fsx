@@ -16,7 +16,7 @@ async function handleSetupProtocol(setupManager: SetupManager, conf: Record<stri
 
 export function registerSetupProtocolHandler(host: SetupFeatureHost, log: LogFunction, setupManager: SetupManager) {
     try {
-        host.services.API.registerProtocolHandler("setuplivesync", async (conf) => {
+        host.services.API.registerProtocolHandler("setuplivesync-fsx", async (conf) => {
             await handleSetupProtocol(setupManager, conf);
         });
     } catch (e) {

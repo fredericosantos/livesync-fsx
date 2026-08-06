@@ -136,7 +136,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
     async saveLocalSetting(key: keyof typeof OnDialogSettingsDefault) {
         if (key == "configPassphrase") {
-            compatGlobal.localStorage.setItem("ls-setting-passphrase", this.editingSettings?.[key] ?? "");
+            compatGlobal.localStorage.setItem("ls-fsx-setting-passphrase", this.editingSettings?.[key] ?? "");
             return await Promise.resolve();
         }
         if (key == "deviceAndVaultName") {
@@ -206,7 +206,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
     reloadAllLocalSettings() {
         const ret = { ...OnDialogSettingsDefault };
-        ret.configPassphrase = compatGlobal.localStorage.getItem("ls-setting-passphrase") || "";
+        ret.configPassphrase = compatGlobal.localStorage.getItem("ls-fsx-setting-passphrase") || "";
         ret.preset = "";
         ret.deviceAndVaultName = this.services.setting.getDeviceAndVaultName();
         return ret;
