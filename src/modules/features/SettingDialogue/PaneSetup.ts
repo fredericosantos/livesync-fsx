@@ -52,6 +52,18 @@ export function paneSetup(
                         eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
                     });
                 });
+            // Scanning works through the `obsidian://` protocol handler without
+            // any help from here, but only for someone who already knows the
+            // steps. This is the entry point to the instructions for someone
+            // who does not.
+            new Setting(paneEl)
+                .setName("Scan a QR code from another device")
+                .setDesc("Useful on a phone, where typing a server address and passphrase is the worst part.")
+                .addButton((text) => {
+                    text.setButtonText("Show me how").onClick(async () => {
+                        await this.core.getModule(SetupManager).onPromptQRCodeInstruction();
+                    });
+                });
         }
     );
 
