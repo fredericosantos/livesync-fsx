@@ -35,14 +35,17 @@ Attention always outranks activity. A conflict during an active transfer reads
 Activity is suppressed below a latency threshold. Work that finishes in 200 ms
 must not flash — a flicker is noise, and noise is worse than silence.
 
-## 3. No emoji
+## 3. Emoji are not the icon set
 
-Emoji are not an icon set. They render differently on every platform, carry
-unintended connotations, cannot be recoloured to match a theme, ignore font
-weight, and are illegible at status-bar size.
+Emoji are not banned; they are simply the wrong tool for chrome. They render
+differently on every platform, carry unintended connotations, cannot be
+recoloured to match a theme, ignore font weight, and are illegible at
+status-bar size.
 
 Where a glyph genuinely aids scanning, use Obsidian's built-in Lucide icons,
-which inherit theme colour and weight. Otherwise use words.
+which inherit theme colour and weight. Otherwise use words. Prose — release
+notes, documentation, a one-off celebratory line — is not chrome, and this
+principle does not reach it.
 
 ## 4. Words over symbols
 

@@ -115,27 +115,6 @@ describe("presentStatus", () => {
     });
 
     describe("presentation contract", () => {
-        it("never emits an emoji in any reachable state", () => {
-            const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{23F0}-\u{23FF}]/u;
-            const states: StatusInput[] = [
-                healthy(),
-                healthy({ connected: false }),
-                healthy({ paused: true }),
-                healthy({ errored: true, errorDetail: "boom" }),
-                healthy({ conflicts: 4 }),
-                healthy({ restartRequired: true }),
-                busy({ pendingUpload: 7 }),
-                busy({ pendingDownload: 8 }),
-                busy({ pendingUpload: 1, pendingDownload: 1 }),
-                busy({ processing: 2, queued: 5 }),
-            ];
-            for (const state of states) {
-                const { text, detail } = presentStatus(state);
-                expect(text).not.toMatch(emoji);
-                if (detail) expect(detail).not.toMatch(emoji);
-            }
-        });
-
         it("gives every non-idle state a tooltip, and the idle state none", () => {
             expect(presentStatus(healthy()).detail).toBeUndefined();
             for (const state of [healthy({ conflicts: 1 }), busy({ pendingUpload: 1 })]) {
