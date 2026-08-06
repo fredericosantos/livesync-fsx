@@ -8,14 +8,20 @@ import {
 import { createNewVaultSettings } from "@vrtmrz/livesync-commonlib/settings";
 import { upsertRemoteConfigurationInPlace } from "@vrtmrz/livesync-commonlib/remote-configurations";
 import { isObjectDifferent } from "@vrtmrz/livesync-commonlib/compat/common/utils";
-import Intro from "./SetupWizard/dialogs/Intro.svelte";
-import SelectMethodNewUser from "./SetupWizard/dialogs/SelectMethodNewUser.svelte";
-import SelectMethodExisting from "./SetupWizard/dialogs/SelectMethodExisting.svelte";
 import ScanQRCode from "./SetupWizard/dialogs/ScanQRCode.svelte";
 import UseSetupURI from "./SetupWizard/dialogs/UseSetupURI.svelte";
 import OutroNewUser from "./SetupWizard/dialogs/OutroNewUser.svelte";
 import OutroExistingUser from "./SetupWizard/dialogs/OutroExistingUser.svelte";
 import OutroAskUserMode from "./SetupWizard/dialogs/OutroAskUserMode.svelte";
+import ConfirmSetupPlan from "./SetupWizard/dialogs/ConfirmSetupPlan.svelte";
+import {
+    SETUP_RECONNECT,
+    SETUP_SEED,
+    planSetup,
+    type RemoteObservation,
+    type SetupAction,
+} from "./SetupWizard/setupPlan.ts";
+import { probeCouchDBConnection } from "./SetupWizard/dialogs/couchDBConnectionProbe.ts";
 import SetupRemoteCouchDB from "./SetupWizard/dialogs/SetupRemoteCouchDB.svelte";
 import SetupRemoteE2EE from "./SetupWizard/dialogs/SetupRemoteE2EE.svelte";
 import { decodeSettingsFromQRCodeData } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
@@ -78,54 +84,117 @@ export class SetupManager extends AbstractModule {
     }
 
     /**
-     * Starts the onboarding process
-     * @returns Promise that resolves to true if onboarding completed successfully, false otherwise
+     * Setup, in three questions: where the server is, whether to encrypt, and
+     * what to do about the files that already exist.
+     *
+     * The last one used to be asked twice, in the user's own words — "are you a
+     * new user or an existing user?" — before and after the connection details.
+     * Neither asking was necessary: once the server has answered, the plugin can
+     * see which case it is in. It now looks, and states what it will do.
      */
     async startOnBoarding(): Promise<boolean> {
-        const isUserNewOrExisting = await this.dialogManager.openWithExplicitCancel(Intro);
-        if (isUserNewOrExisting === "new-user") {
-            await this.onOnboard(UserMode.NewUser);
-        } else if (isUserNewOrExisting === "existing-user") {
-            await this.onOnboard(UserMode.ExistingUser);
-        } else if (isUserNewOrExisting === "cancelled") {
-            this._log("Onboarding cancelled by user.", LOG_LEVEL_NOTICE);
+        const isConfigured = this.settings.isConfigured === true;
+        const startingPoint = isConfigured ? this.core.settings : createNewVaultSettings();
+
+        const couchConf = await this.dialogManager.openWithExplicitCancel<
+            SetupRemoteCouchDBResultType,
+            SetupRemoteCouchDBInitialData
+        >(SetupRemoteCouchDB, {
+            settings: startingPoint,
+            mode: isConfigured ? "settings" : "create-or-connect",
+        });
+        if (couchConf === "cancelled") {
+            this._log("Setup cancelled.", LOG_LEVEL_VERBOSE);
             return false;
         }
-        return false;
+
+        const e2eeConf = await this.dialogManager.openWithExplicitCancel<SetupRemoteE2EEResultType, EncryptionSettings>(
+            SetupRemoteE2EE,
+            { ...startingPoint, ...couchConf } as EncryptionSettings
+        );
+        if (e2eeConf === "cancelled") {
+            this._log("Setup cancelled.", LOG_LEVEL_VERBOSE);
+            return false;
+        }
+
+        const newSetting = {
+            ...copySettingsForRemoteProfileUpdate(startingPoint),
+            ...couchConf,
+            ...e2eeConf,
+            remoteType: REMOTE_COUCHDB,
+        } as ObsidianLiveSyncSettings;
+        upsertRemoteConfigurationInPlace(newSetting, "couchdb", { activate: true });
+
+        const plan = planSetup(await this.observeRemote(newSetting), {
+            fileCount: await this.countLocalFiles(),
+            wasConfigured: isConfigured,
+        });
+        const confirmed = await this.dialogManager.openWithExplicitCancel<
+            OutroExistingUserResultType,
+            typeof plan
+        >(ConfirmSetupPlan, plan);
+        if (confirmed !== "apply") {
+            this._log("Setup was not applied.", LOG_LEVEL_NOTICE);
+            return false;
+        }
+
+        return await this.applyPlannedSetup(newSetting, plan.action);
     }
 
     /**
-     *  Handles the onboarding process based on user mode
-     * @param userMode
-     * @returns Promise that resolves to true if onboarding completed successfully, false otherwise
+     * Files in this vault, as the user would count them. Used only to say what
+     * is at stake, so a failure to count must not block setup.
      */
-    async onOnboard(userMode: UserMode): Promise<boolean> {
-        const originalSetting = userMode === UserMode.NewUser ? createNewVaultSettings() : this.core.settings;
-        if (userMode === UserMode.NewUser) {
-            //Ask how to apply initial setup
-            const method = await this.dialogManager.openWithExplicitCancel(SelectMethodNewUser);
-            if (method === "use-setup-uri") {
-                await this.onUseSetupURI(userMode);
-            } else if (method === "configure-manually") {
-                await this.onConfigureManually(originalSetting, userMode);
-            } else if (method === "cancelled") {
-                this._log("Onboarding cancelled by user.", LOG_LEVEL_NOTICE);
-                return false;
-            }
-        } else if (userMode === UserMode.ExistingUser) {
-            const method = await this.dialogManager.openWithExplicitCancel(SelectMethodExisting);
-            if (method === "use-setup-uri") {
-                await this.onUseSetupURI(userMode);
-            } else if (method === "configure-manually") {
-                await this.onConfigureManually(originalSetting, userMode);
-            } else if (method === "scan-qr-code") {
-                await this.onPromptQRCodeInstruction();
-            } else if (method === "cancelled") {
-                this._log("Onboarding cancelled by user.", LOG_LEVEL_NOTICE);
-                return false;
-            }
+    private async countLocalFiles(): Promise<number> {
+        try {
+            return (await this.core.storageAccess.getFiles()).length;
+        } catch {
+            return 0;
         }
-        return false;
+    }
+
+    /**
+     * Asks the server what it already holds.
+     *
+     * `doc_count` counts chunks as well as files, so it is deliberately not
+     * reported as a file count — it is used only to tell an empty database from
+     * one that must not be seeded over.
+     */
+    private async observeRemote(settings: ObsidianLiveSyncSettings): Promise<RemoteObservation> {
+        const replicator = await this.services.replicator.getNewReplicator(settings);
+        if (!replicator) {
+            return { reachable: false, initialised: false, unreachableReason: "No replicator is available." };
+        }
+        const probe = await probeCouchDBConnection(replicator, settings, false);
+        if (!probe.ok) {
+            return { reachable: false, initialised: false, unreachableReason: probe.reason };
+        }
+        const status = await replicator.getRemoteStatus(settings);
+        const estimatedSize = status === false ? 0 : (status.estimatedSize ?? 0);
+        return { reachable: true, initialised: estimatedSize > 0 };
+    }
+
+    /**
+     * Commits the plan. Seeding rebuilds the remote from this vault; joining
+     * fetches it; reconnecting writes the settings and leaves both sides alone.
+     */
+    private async applyPlannedSetup(newConf: ObsidianLiveSyncSettings, action: SetupAction): Promise<boolean> {
+        const settled = await this.services.setting.adjustSettings({ ...this.settings, ...newConf });
+        if (action === SETUP_RECONNECT) {
+            await this.applySetting(settled, UserMode.ExistingUser);
+            this._log("Connection settings saved.", LOG_LEVEL_NOTICE);
+            return true;
+        }
+        // The initialisation must be reserved before the new settings are
+        // enabled, so the running plugin cannot start ordinary processing first.
+        await applySettingsWithScheduledInitialisation(
+            this.core.rebuilder,
+            action === SETUP_SEED ? "rebuild" : "fetch",
+            async () => {
+                await this.applySetting(settled, action === SETUP_SEED ? UserMode.NewUser : UserMode.ExistingUser);
+            }
+        );
+        return true;
     }
 
     /**
@@ -173,7 +242,7 @@ export class SetupManager extends AbstractModule {
         });
         if (couchConf === "cancelled") {
             this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
-            return await this.onOnboard(userMode);
+            return false;
         }
         const newSetting = {
             ...copySettingsForRemoteProfileUpdate(currentSetting),
@@ -223,7 +292,7 @@ export class SetupManager extends AbstractModule {
         );
         if (e2eeConf === "cancelled") {
             this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
-            return await this.onOnboard(userMode);
+            return false;
         }
         const currentSetting = {
             ...originalSetting,

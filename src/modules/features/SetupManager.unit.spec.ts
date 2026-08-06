@@ -135,16 +135,6 @@ describe("SetupManager", () => {
         vi.restoreAllMocks();
     });
 
-    it("starts manual new-user setup from the recommended new-Vault settings", async () => {
-        const { manager, dialogManager } = createSetupManager();
-        dialogManager.openWithExplicitCancel.mockResolvedValueOnce("configure-manually");
-        const configureManually = vi.spyOn(manager, "onConfigureManually").mockResolvedValue(true);
-
-        await manager.onOnboard(UserMode.NewUser);
-
-        expect(configureManually).toHaveBeenCalledWith(createNewVaultSettings(), UserMode.NewUser);
-    });
-
     it("compatibility: normalises imported flat remote settings from a Setup URI before applying", async () => {
         const { manager, setting, dialogManager } = createSetupManager();
         dialogManager.openWithExplicitCancel
