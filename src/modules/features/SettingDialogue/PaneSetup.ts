@@ -10,7 +10,6 @@ import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts
 import type { PageFunctions } from "./SettingPane.ts";
 import { visibleOnly } from "./SettingPane.ts";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
-import { TIERS, TIER_DESCRIPTIONS, TIER_LABELS, modeFlagsForTier, type SettingTier } from "./settingsCatalogue.ts";
 import {
     createCoreSettingsAfterFullReset,
     createEditingSettingsAfterFullReset,
@@ -87,25 +86,14 @@ export function paneSetup(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
 export function paneSetupFooter(
     this: ObsidianLiveSyncSettingTab,
     paneEl: HTMLElement,
-    { addPanel }: PageFunctions
+    { addPanel }: PageFunctions,
+    openTools: () => void
 ): void {
     void addPanel(paneEl, "").then((el) => {
-        // Upstream had three independent switches — Advanced, Power user, Edge
-        // case — which the reader had to combine correctly to find a setting.
-        // One ordered question replaces them; the three booleans are still what
-        // gets stored, so nothing has to migrate.
-        const current = this.viewingTier;
         new Setting(el)
-            .setName("Settings shown")
-            .setDesc(TIER_DESCRIPTIONS[current])
-            .addDropdown((dropdown) => {
-                for (const tier of TIERS) dropdown.addOption(tier, TIER_LABELS[tier]);
-                dropdown.setValue(current).onChange(async (value) => {
-                    this.editingSettings = { ...this.editingSettings, ...modeFlagsForTier(value as SettingTier) };
-                    await this.saveAllDirtySettings();
-                    this.display();
-                });
-            });
+            .setName("Tools")
+            .setDesc("Rebuild, fetch, inspect the log, and other things you need when something is wrong.")
+            .addButton((button) => button.setButtonText("Open").onClick(openTools));
 
         new Setting(el)
             .setName($msg("obsidianLiveSyncSettingTab.nameDiscardSettings"))

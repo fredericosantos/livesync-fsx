@@ -2,10 +2,9 @@ import { LiveSyncSetting as Setting } from "./LiveSyncSetting.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import type { PageFunctions } from "./SettingPane.ts";
 import { visibleOnly } from "./SettingPane.ts";
-import { sectionsForPane, TIER_ADVANCED, TIER_EXPERT, isAtLeast } from "./settingsCatalogue.ts";
+import { sectionsForPane } from "./settingsCatalogue.ts";
 import { renderDeviceName } from "./controls/DeviceName.ts";
 import { renderPassphrase } from "./controls/Passphrase.ts";
-import { paneSyncSettings } from "./PaneSyncSettings.ts";
 
 /**
  * The Sync pane, rendered from the settings catalogue rather than from a
@@ -29,9 +28,7 @@ const CUSTOM_SECTIONS: Record<string, SectionRenderer> = {
 };
 
 export function paneSync(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, funcs: PageFunctions): void {
-    const tier = this.viewingTier;
-
-    for (const section of sectionsForPane("sync", tier)) {
+    for (const section of sectionsForPane("sync")) {
         // The title goes to the group, which renders it above the card. Adding
         // a heading inside the returned list element would put it in the card.
         void funcs.addPanel(paneEl, section.title).then((el) => {
@@ -46,13 +43,6 @@ export function paneSync(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, 
         });
     }
 
-    // Panels that are behaviour rather than settings — enabling hidden-file
-    // sync has to choose between merging, fetching and overwriting, and cannot
-    // be expressed as a key. They stay in the original pane body, shown only
-    // once the reader has asked for that much.
-    if (isAtLeast(tier, TIER_EXPERT)) {
-        paneSyncSettings.call(this, paneEl, funcs);
-    }
 }
 
 function renderBasics(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
@@ -82,5 +72,3 @@ function renderEncryption(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): voi
     renderPassphrase(tab, el, visibleOnly(() => tab.isConfiguredAs("encrypt", true)));
 }
 
-/** Advanced sections have no custom rendering; they are plain key lists. */
-export const ADVANCED_SYNC_TIER = TIER_ADVANCED;

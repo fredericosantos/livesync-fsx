@@ -45,12 +45,8 @@ import {
 } from "./SettingPane.ts";
 import { paneSetup, paneSetupFooter } from "./PaneSetup.ts";
 import { paneTuning } from "./PaneTuning.ts";
-import {
-    panesForTier,
-    tierFromModeFlags,
-    type SettingPaneDefinition,
-    type SettingTier,
-} from "./settingsCatalogue.ts";
+import { panesFor, type SettingPaneDefinition } from "./settingsCatalogue.ts";
+import { ToolsModal, type ToolPaneBody } from "./ToolsModal.ts";
 import { paneGeneral } from "./PaneGeneral.ts";
 import { paneRemoteConfig } from "./PaneRemoteConfig.ts";
 import { paneSelector } from "./PaneSelector.ts";
@@ -273,19 +269,6 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
     onSavedHandlers = [] as OnSavedHandler<AllSettingItemKey>[];
 
     inWizard: boolean = false;
-
-    /**
-     * How much of the dialogue to show. Derived from the three mode booleans
-     * upstream persists rather than stored separately, so an existing vault
-     * keeps whatever depth it had chosen.
-     */
-    get viewingTier(): SettingTier {
-        return tierFromModeFlags({
-            useAdvancedMode: this.editingSettings?.useAdvancedMode === true,
-            usePowerUserMode: this.editingSettings?.usePowerUserMode === true,
-            useEdgeCaseMode: this.editingSettings?.useEdgeCaseMode === true,
-        });
-    }
 
     constructor(app: App, plugin: ObsidianLiveSyncPlugin) {
         super(app, plugin);
@@ -696,13 +679,9 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             files: paneSelector,
             plugins: paneCustomisationSync,
             appearance: paneGeneral,
-            maintenance: paneMaintenance,
-            diagnostics: paneHatch,
-            tuning: paneTuning,
-            patches: panePatches,
         };
 
-        const visiblePanes = panesForTier(this.viewingTier, this.editingSettings.isConfigured === true);
+        const visiblePanes = panesFor(this.editingSettings.isConfigured === true);
         let isFirst = true;
         for (const pane of visiblePanes) {
             const body = paneBodies[pane.id];
@@ -711,9 +690,20 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             isFirst = false;
         }
 
-        // Page furniture, not a section: how much of the page to show, and how
-        // to discard it. Both belong after everything they act upon.
-        paneSetupFooter.call(this, this.createEl(containerEl, "div", { cls: "lsfsx-section" }), { addPane, addPanel });
+        // Page furniture, not settings: the tools, and the way to discard
+        // everything. Both belong after all the settings they act upon.
+        const toolBodies: Record<string, ToolPaneBody> = {
+            maintenance: paneMaintenance,
+            diagnostics: paneHatch,
+            tuning: paneTuning,
+            patches: panePatches,
+        };
+        paneSetupFooter.call(
+            this,
+            this.createEl(containerEl, "div", { cls: "lsfsx-section" }),
+            { addPane, addPanel },
+            () => new ToolsModal(this, toolBodies, { addPane, addPanel }).open()
+        );
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }
