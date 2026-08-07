@@ -13,6 +13,7 @@ import { ModuleObsidianSettingDialogue } from "./modules/features/ModuleObsidian
 import { ModuleObsidianDocumentHistory } from "./modules/features/ModuleObsidianDocumentHistory.ts";
 import { ModuleObsidianGlobalHistory } from "./modules/features/ModuleGlobalHistory.ts";
 import { LocalDatabaseMaintenance } from "./features/LocalDatabaseMainte/CmdLocalDatabaseMainte.ts";
+import { CmdRecovery } from "./features/Recovery/CmdRecovery.ts";
 import type { InjectableServiceHub } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableServiceHub";
 import { ObsidianServiceHub } from "./modules/services/ObsidianServiceHub.ts";
 import { ServiceRebuilder } from "@vrtmrz/livesync-commonlib/compat/serviceModules/Rebuilder";
@@ -169,6 +170,7 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                     new ConfigSync(this, core),
                     new HiddenFileSync(this, core),
                     new LocalDatabaseMaintenance(this, core),
+                    new CmdRecovery(this, core),
                 ];
                 return addOns;
             },

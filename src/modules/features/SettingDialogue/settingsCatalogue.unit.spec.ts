@@ -4,7 +4,6 @@ import { TweakValuesShouldMatchedTemplate } from "@vrtmrz/livesync-commonlib/com
 import {
     SETTING_PANES,
     SETTING_SECTIONS,
-    TOOL_PANES,
     cataloguedKeys,
     type SettingKey,
 } from "./settingsCatalogue.ts";
@@ -34,12 +33,6 @@ describe("settings catalogue", () => {
         const paneIds = new Set(SETTING_PANES.map((pane) => pane.id));
         const orphaned = SETTING_SECTIONS.filter((section) => !paneIds.has(section.pane));
         expect(orphaned.map((section) => `${section.id} -> ${section.pane}`)).toEqual([]);
-    });
-
-    it("keeps settings and tools in separate lists", () => {
-        const settingIds = new Set(SETTING_PANES.map((pane) => pane.id));
-        const overlap = TOOL_PANES.filter((pane) => settingIds.has(pane.id));
-        expect(overlap.map((pane) => pane.id)).toEqual([]);
     });
 
     it("shows no must-match tweak except the one setup is about", () => {

@@ -9,7 +9,7 @@
  * gated by four independent mode booleans.
  *
  * There is now no tier and no mode. The settings page shows what a working vault
- * needs; everything else is a tool, and tools live behind one button.
+ * needs. Repairing a broken one is a command, not a setting.
  *
  * Deliberately *not* here: labels, descriptions, defaults, or the must-match
  * set. Those already exist upstream and duplicating them would guarantee drift.
@@ -43,18 +43,6 @@ export const SETTING_PANES: readonly SettingPaneDefinition[] = [
     { id: "files", title: "Files", requires: "configured" },
     { id: "plugins", title: "Plugins", requires: "configured" },
     { id: "appearance", title: "Appearance" },
-];
-
-/**
- * Not settings. Rebuilding a database, reading a log and applying a patch are
- * things you *do*, occasionally, usually because something is wrong. They open
- * from one row at the foot of the settings page rather than living on it.
- */
-export const TOOL_PANES: readonly SettingPaneDefinition[] = [
-    { id: "maintenance", title: "Maintenance" },
-    { id: "diagnostics", title: "Diagnostics" },
-    { id: "tuning", title: "Performance" },
-    { id: "patches", title: "Patches" },
 ];
 
 export function panesFor(isConfigured: boolean): readonly SettingPaneDefinition[] {

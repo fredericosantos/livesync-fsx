@@ -86,15 +86,9 @@ export function paneSetup(this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement,
 export function paneSetupFooter(
     this: ObsidianLiveSyncSettingTab,
     paneEl: HTMLElement,
-    { addPanel }: PageFunctions,
-    openTools: () => void
+    { addPanel }: PageFunctions
 ): void {
     void addPanel(paneEl, "").then((el) => {
-        new Setting(el)
-            .setName("Tools")
-            .setDesc("Rebuild, fetch, inspect the log, and other things you need when something is wrong.")
-            .addButton((button) => button.setButtonText("Open").onClick(openTools));
-
         new Setting(el)
             .setName($msg("obsidianLiveSyncSettingTab.nameDiscardSettings"))
             .setDesc("Forgets the server and deletes the local database. Your notes are not touched.")

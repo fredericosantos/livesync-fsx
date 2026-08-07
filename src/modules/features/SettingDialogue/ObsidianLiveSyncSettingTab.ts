@@ -44,17 +44,12 @@ import {
     type UpdateFunction,
 } from "./SettingPane.ts";
 import { paneSetup, paneSetupFooter } from "./PaneSetup.ts";
-import { paneTuning } from "./PaneTuning.ts";
 import { panesFor, type SettingPaneDefinition } from "./settingsCatalogue.ts";
-import { ToolsModal, type ToolPaneBody } from "./ToolsModal.ts";
 import { paneGeneral } from "./PaneGeneral.ts";
 import { paneRemoteConfig } from "./PaneRemoteConfig.ts";
 import { paneSelector } from "./PaneSelector.ts";
 import { paneSync } from "./PaneSync.ts";
 import { paneCustomisationSync } from "./PaneCustomisationSync.ts";
-import { paneHatch } from "./PaneHatch.ts";
-import { panePatches } from "./PanePatches.ts";
-import { paneMaintenance } from "./PaneMaintenance.ts";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 import { closeObsidianSettings } from "@/common/obsidianSettings.ts";
 
@@ -690,20 +685,9 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             isFirst = false;
         }
 
-        // Page furniture, not settings: the tools, and the way to discard
-        // everything. Both belong after all the settings they act upon.
-        const toolBodies: Record<string, ToolPaneBody> = {
-            maintenance: paneMaintenance,
-            diagnostics: paneHatch,
-            tuning: paneTuning,
-            patches: panePatches,
-        };
-        paneSetupFooter.call(
-            this,
-            this.createEl(containerEl, "div", { cls: "lsfsx-section" }),
-            { addPane, addPanel },
-            () => new ToolsModal(this, toolBodies, { addPane, addPanel }).open()
-        );
+        // Page furniture, not settings: the way to discard everything. Last,
+        // so a destructive action is never above an ordinary one.
+        paneSetupFooter.call(this, this.createEl(containerEl, "div", { cls: "lsfsx-section" }), { addPane, addPanel });
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }
