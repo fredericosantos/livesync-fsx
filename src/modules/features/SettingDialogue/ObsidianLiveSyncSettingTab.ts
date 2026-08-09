@@ -610,25 +610,28 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         // catalogue order. `SettingGroup` is Obsidian's own primitive (API
         // 1.11+) — it renders the heading above a single rounded card, puts
         // hairline rules between the items, and carries the same vertical
-        // rhythm as every other settings page in the app. Hand-built chrome and
-        // a hand-picked `margin-top` are exactly what made two adjacent groups
-        // look unrelated.
+        // rhythm as every other settings page in the app.
+        //
+        // The groups must be *direct siblings* of one another. Obsidian spaces
+        // them with `.setting-group + .setting-group`, so wrapping each one in
+        // a div of our own — which is what a per-section visibility hook
+        // tempted us into — silently removes every gap on the page.
         for (const section of sectionsFor(this.editingSettings.isConfigured === true)) {
-            const host = this.createEl(
-                containerEl,
-                "div",
-                { text: "" },
-                undefined,
-                section.shownWhen
-                    ? visibleOnly(() =>
-                          this.isConfiguredAs(section.shownWhen!.key as never, section.shownWhen!.is as never)
-                      )
-                    : undefined
-            );
-            const group = new SettingGroup(host);
+            const group = new SettingGroup(containerEl);
             if (section.title) group.setHeading(section.title);
             renderSection(this, group.listEl, section);
             SECTION_EXTRAS[section.extra ?? ""]?.(this, group.listEl);
+            if (section.shownWhen) {
+                const groupEl = group.listEl.closest(".setting-group");
+                if (groupEl instanceof HTMLElement) {
+                    this.handleElement(
+                        groupEl,
+                        visibleOnly(() =>
+                            this.isConfiguredAs(section.shownWhen!.key as never, section.shownWhen!.is as never)
+                        )
+                    );
+                }
+            }
         }
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
