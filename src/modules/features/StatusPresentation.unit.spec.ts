@@ -63,7 +63,7 @@ describe("presentStatus", () => {
 
         it("combines both directions into a single total", () => {
             const result = presentStatus(busy({ pendingUpload: 2, pendingDownload: 4 }));
-            expect(result.text).toBe("Syncing 6");
+            expect(result.text).toBe("Syncing 6 changes");
             expect(result.detail).toBe("Uploading 2 changes, downloading 4.");
         });
 

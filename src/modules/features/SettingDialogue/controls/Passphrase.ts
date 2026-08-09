@@ -1,7 +1,7 @@
 import { setIcon } from "@/deps.ts";
-import { LiveSyncSetting as Setting } from "../LiveSyncSetting.ts";
-import type { ObsidianLiveSyncSettingTab } from "../ObsidianLiveSyncSettingTab.ts";
-import type { OnUpdateFunc } from "../SettingPane.ts";
+import { LiveSyncSetting as Setting } from "@/modules/features/SettingDialogue/LiveSyncSetting.ts";
+import type { ObsidianLiveSyncSettingTab } from "@/modules/features/SettingDialogue/ObsidianLiveSyncSettingTab.ts";
+import type { OnUpdateFunc } from "@/modules/features/SettingDialogue/SettingPane.ts";
 
 /**
  * The end-to-end encryption passphrase.

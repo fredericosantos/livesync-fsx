@@ -9,15 +9,8 @@ import {
 import { type LogEntry, logMessages } from "@vrtmrz/livesync-commonlib/compat/mock_and_interop/stores";
 import { cancelTask, scheduleTask } from "octagonal-wheels/concurrency/task";
 import { fireAndForget, isDirty, throttle } from "@vrtmrz/livesync-commonlib/compat/common/utils";
-import {
-    EVENT_FILE_RENAMED,
-    EVENT_LAYOUT_READY,
-    EVENT_LEAF_ACTIVE_CHANGED,
-    EVENT_ON_UNRESOLVED_ERROR,
-    eventHub,
-} from "@/common/events.ts";
 import { AbstractObsidianModule } from "@/modules/AbstractObsidianModule.ts";
-import { addIcon, debounce, normalizePath, Notice, stringifyYaml, type WorkspaceLeaf } from "@/deps.ts";
+import { addIcon, debounce, normalizePath, Notice, setIcon, stringifyYaml, type WorkspaceLeaf } from "@/deps.ts";
 import { LOG_LEVEL_NOTICE, setGlobalLogFunction } from "octagonal-wheels/common/logger";
 import { LogPaneView, VIEW_TYPE_LOG } from "./Log/LogPaneView.ts";
 import { serialized } from "octagonal-wheels/concurrency/lock";
@@ -26,14 +19,6 @@ import { P2PLogCollector } from "@vrtmrz/livesync-commonlib/compat/replication/t
 import { STATUS_ACTIVITY, STATUS_ATTENTION, presentStatus, type StatusLevel } from "./StatusPresentation.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
-import { isValidPath } from "@/common/utils.ts";
-import {
-    isValidFilenameInAndroid,
-    isValidFilenameInDarwin,
-    isValidFilenameInWidows,
-} from "@vrtmrz/livesync-commonlib/compat/string_and_binary/path";
-import { MARK_LOG_NETWORK_ERROR, MARK_LOG_SEPARATOR } from "@vrtmrz/livesync-commonlib/compat/services/lib/logUtils";
-import { NetworkWarningStyles } from "@vrtmrz/livesync-commonlib/compat/common/models/setting.const";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 import { generateReport } from "@/common/reportTool.ts";
 
@@ -97,15 +82,9 @@ export const MARK_DONE = "\u{2009}\u{2009}";
 export class ModuleLog extends AbstractObsidianModule {
     statusBar?: HTMLElement;
 
-    statusDiv?: HTMLElement;
-    statusLine?: HTMLDivElement;
-    logMessage?: HTMLDivElement;
-    logHistory?: HTMLDivElement;
-    messageArea?: HTMLDivElement;
 
-    statusBarLabels!: ReactiveValue<{ message: string; status: string; level: StatusLevel; detail: string }>;
+    statusBarLabels!: ReactiveValue<{ icon: string; message: string; level: StatusLevel; detail: string }>;
     statusLog = reactiveSource("");
-    activeFileStatus = reactiveSource("");
     notifies: { [key: string]: { notice: Notice; count: number } } = {};
     p2pLogCollector = new P2PLogCollector(this.services.context.events);
 
@@ -145,10 +124,10 @@ export class ModuleLog extends AbstractObsidianModule {
         });
 
         const statusBarLabels = reactive(() => {
-            const { level, text, detail } = statusPresentation();
+            const { level, icon, text, detail } = statusPresentation();
             return {
+                icon,
                 message: text,
-                status: this.statusLog.value,
                 level,
                 detail: detail ?? "",
             };
@@ -160,111 +139,6 @@ export class ModuleLog extends AbstractObsidianModule {
             this.applyStatusBarText();
         }, 20);
         statusBarLabels.onChanged((label) => applyToDisplay(label.value));
-        this.activeFileStatus.onChanged(() => this.updateMessageArea());
-    }
-
-    private _everyOnload(): Promise<boolean> {
-        eventHub.onEvent(EVENT_LEAF_ACTIVE_CHANGED, () => this.onActiveLeafChange());
-        eventHub.onceEvent(EVENT_LAYOUT_READY, () => this.onActiveLeafChange());
-        eventHub.onEvent(EVENT_ON_UNRESOLVED_ERROR, () => this.updateMessageArea());
-
-        return Promise.resolve(true);
-    }
-    adjustStatusDivPosition() {
-        const mdv = this.app.workspace.getMostRecentLeaf();
-        if (mdv && this.statusDiv) {
-            this.statusDiv.remove();
-            // this.statusDiv.pa();
-            const container = mdv.view.containerEl;
-            container.appendChild(this.statusDiv);
-        }
-    }
-
-    async getActiveFileStatus() {
-        const reason = [] as string[];
-        const reasonWarn = [] as string[];
-        const thisFile = this.app.workspace.getActiveFile();
-        if (!thisFile) return "";
-        const validPath = isValidPath(thisFile.path);
-        if (!validPath) {
-            reason.push("This file has an invalid path under the current settings");
-        } else {
-            // The most narrow check: Filename validity on Windows
-            const validOnWindows = isValidFilenameInWidows(thisFile.name);
-            const validOnDarwin = isValidFilenameInDarwin(thisFile.name);
-            const validOnAndroid = isValidFilenameInAndroid(thisFile.name);
-            // Name the platforms in words. Flag-style emoji are ambiguous at a
-            // glance and render inconsistently across the very platforms named.
-            const labels = [];
-            if (!validOnWindows) labels.push("Windows");
-            if (!validOnDarwin) labels.push("macOS");
-            if (!validOnAndroid) labels.push("Android");
-            if (labels.length > 0) {
-                reasonWarn.push("This file name is not valid on " + labels.join(", ") + ".");
-            }
-        }
-        // Case Sensitivity
-        if (this.services.vault.shouldCheckCaseInsensitively()) {
-            const f = (await this.core.storageAccess.getFiles())
-                .map((e) => e.path)
-                .filter((e) => e.toLowerCase() == thisFile.path.toLowerCase());
-            if (f.length > 1) {
-                reason.push("There are multiple files with the same name (case-insensitive match)");
-            }
-        }
-        if (!(await this.services.vault.isTargetFile(thisFile.path))) {
-            reason.push("This file is ignored by the ignore rules");
-        }
-        if (this.services.vault.isFileSizeTooLarge(thisFile.stat.size)) {
-            reason.push("This file size exceeds the configured limit");
-        }
-        const result = reason.length > 0 ? "Not synchronised: " + reason.join(", ") : "";
-        const warnResult = reasonWarn.length > 0 ? "Warning: " + reasonWarn.join(", ") : "";
-        return [result, warnResult].filter((e) => e).join("\n");
-    }
-    async setFileStatus() {
-        const fileStatus = await this.getActiveFileStatus();
-        this.activeFileStatus.value = fileStatus;
-    }
-
-    async updateMessageArea() {
-        if (!this.messageArea) return;
-
-        const showStatusOnEditor = this.settings?.showStatusOnEditor ?? false;
-        if (this.statusDiv) {
-            this.statusDiv.setCssStyles({ display: showStatusOnEditor ? "" : "none" });
-        }
-        if (!showStatusOnEditor) {
-            this.messageArea.innerText = "";
-            return;
-        }
-
-        const messageLines = [];
-        const fileStatus = this.activeFileStatus.value;
-        if (fileStatus && !this.settings.hideFileWarningNotice) messageLines.push(fileStatus);
-        const messages = (await this.services.appLifecycle.getUnresolvedMessages()).flat().filter((e) => e);
-        const stringMessages = messages.filter((m): m is string => typeof m === "string"); // for 'startsWith'
-        const networkMessages = stringMessages.filter((m) => m.startsWith(MARK_LOG_NETWORK_ERROR));
-        const otherMessages = stringMessages.filter((m) => !m.startsWith(MARK_LOG_NETWORK_ERROR));
-
-        messageLines.push(...otherMessages);
-
-        if (
-            this.settings.networkWarningStyle !== NetworkWarningStyles.ICON &&
-            this.settings.networkWarningStyle !== NetworkWarningStyles.HIDDEN
-        ) {
-            messageLines.push(...networkMessages);
-        } else if (this.settings.networkWarningStyle === NetworkWarningStyles.ICON) {
-            if (networkMessages.length > 0) messageLines.push("Network unreachable");
-        }
-        this.messageArea.innerText = messageLines.join("\n");
-    }
-
-    onActiveLeafChange() {
-        fireAndForget(async () => {
-            this.adjustStatusDivPosition();
-            await this.setFileStatus();
-        });
     }
 
     nextFrameQueue: ReturnType<typeof compatGlobal.requestAnimationFrame> | undefined = undefined;
@@ -276,47 +150,23 @@ export class ModuleLog extends AbstractObsidianModule {
         }
         this.nextFrameQueue = compatGlobal.requestAnimationFrame(() => {
             this.nextFrameQueue = undefined;
-            const { message, status, level, detail } = this.statusBarLabels.value;
-            // const recent = logMessages.value;
-            const newMsg = message;
-            let newLog = this.settings?.showOnlyIconsOnEditor ? "" : status;
-            const moduleTagEnd = newLog.indexOf(`]${MARK_LOG_SEPARATOR}`);
-            if (moduleTagEnd != -1) {
-                newLog = newLog.substring(moduleTagEnd + MARK_LOG_SEPARATOR.length + 1);
-            }
+            if (!this.statusBar) return;
+            const { icon, message, level, detail } = this.statusBarLabels.value;
 
-            // Silence is the default state: an idle, healthy sync renders nothing at all.
-            const headline = newMsg.split("\n")[0];
-            this.statusBar?.setText(headline);
-            if (this.statusBar) {
-                this.statusBar.toggleClass("livesync-status--hidden", headline === "");
-                this.statusBar.toggleClass("livesync-status--attention", level === STATUS_ATTENTION);
-                this.statusBar.toggleClass("livesync-status--activity", level === STATUS_ACTIVITY);
-                this.statusBar.ariaLabel = detail || null;
+            // One icon, no text. Silence is the default state: an idle,
+            // healthy sync renders nothing at all, so the corner of the screen
+            // stays still while the user writes.
+            if (isDirty("statusIcon", icon)) {
+                this.statusBar.empty();
+                if (icon) setIcon(this.statusBar, icon);
             }
-            if (this.statusDiv) {
-                this.statusDiv.setCssStyles({ display: this.settings?.showStatusOnEditor ? "" : "none" });
-            }
-            if (this.settings?.showStatusOnEditor && this.statusDiv) {
-                if (this.settings.showLongerLogInsideEditor) {
-                    const now = new Date().getTime();
-                    this.logLines = this.logLines.filter((e) => e.ttl > now);
-                    const minimumNext = this.logLines.reduce(
-                        (a, b) => (a < b.ttl ? a : b.ttl),
-                        Number.MAX_SAFE_INTEGER
-                    );
-                    if (this.logLines.length > 0)
-                        compatGlobal.setTimeout(() => this.applyStatusBarText(), minimumNext - now);
-                    const recent = this.logLines.map((e) => e.message);
-                    const recentLogs = recent.reverse().join("\n");
-                    if (isDirty("recentLogs", recentLogs)) this.logHistory!.innerText = recentLogs;
-                }
-                if (isDirty("newMsg", newMsg)) this.statusLine!.innerText = newMsg;
-                if (isDirty("newLog", newLog)) this.logMessage!.innerText = newLog;
-            } else {
-                // const root = activeDocument.documentElement;
-                // root.style.setProperty("--log-text", "'" + (newMsg + "\\A " + newLog) + "'");
-            }
+            this.statusBar.toggleClass("livesync-status--hidden", icon === "");
+            this.statusBar.toggleClass("livesync-status--attention", level === STATUS_ATTENTION);
+            this.statusBar.toggleClass("livesync-status--activity", level === STATUS_ACTIVITY);
+            // The icon alone cannot say which of the stopped states it is, so
+            // the words go where a hover and a screen reader both find them.
+            const tooltip = [message, detail].filter((e) => e).join("\n");
+            this.statusBar.ariaLabel = tooltip || null;
         });
 
         scheduleTask("log-hide", 3000, () => {
@@ -325,9 +175,6 @@ export class ModuleLog extends AbstractObsidianModule {
     }
 
     private _allStartOnUnload(): Promise<boolean> {
-        if (this.statusDiv) {
-            this.statusDiv.remove();
-        }
         compatGlobal.document.querySelectorAll(`.livesync-status`)?.forEach((e) => e.remove());
         return Promise.resolve(true);
     }
@@ -381,29 +228,17 @@ ${stringifyYaml(info)}
             recentLogEntries.value = [];
             newEntries.forEach((e) => this.__addLog(e.message, e.level, e.key));
         });
-        eventHub.onEvent(EVENT_FILE_RENAMED, (data) => {
-            void this.setFileStatus();
-        });
-
         const w = compatGlobal.document.querySelectorAll(`.livesync-status`);
         w.forEach((e) => e.remove());
 
         this.observeForLogs();
 
-        if (this.settings.showStatusOnEditor) {
-            this.statusDiv = this.app.workspace.containerEl.createDiv({ cls: "livesync-status" });
-            this.statusLine = this.statusDiv.createDiv({ cls: "livesync-status-statusline" });
-            this.messageArea = this.statusDiv.createDiv({ cls: "livesync-status-messagearea" });
-            this.logMessage = this.statusDiv.createDiv({ cls: "livesync-status-logmessage" });
-            this.logHistory = this.statusDiv.createDiv({ cls: "livesync-status-loghistory" });
-            this.statusDiv.setCssStyles({ display: this.settings?.showStatusOnEditor ? "" : "none" });
+        const statusBar = this.services.API.addStatusBarItem();
+        if (statusBar) {
+            statusBar.addClass("syncstatusbar");
+            statusBar.addClass("livesync-status--hidden");
+            this.statusBar = statusBar;
         }
-        eventHub.onEvent(EVENT_LAYOUT_READY, () => this.adjustStatusDivPosition());
-        if (this.settings?.showStatusOnStatusbar) {
-            this.statusBar = this.services.API.addStatusBarItem();
-            this.statusBar?.addClass("syncstatusbar");
-        }
-        this.adjustStatusDivPosition();
         this._log("Log module loaded", LOG_LEVEL_INFO);
         this._log("Verbose log", LOG_LEVEL_VERBOSE);
         return Promise.resolve(true);
@@ -514,7 +349,6 @@ ${stringifyYaml(info)}
         services.API.addLog.setHandler(globalLogFunction);
         services.appLifecycle.onInitialise.addHandler(this._everyOnloadStart.bind(this));
         services.appLifecycle.onSettingLoaded.addHandler(this._everyOnloadAfterLoadSettings.bind(this));
-        services.appLifecycle.onLoaded.addHandler(this._everyOnload.bind(this));
         services.appLifecycle.onBeforeUnload.addHandler(this._allStartOnUnload.bind(this));
     }
 }

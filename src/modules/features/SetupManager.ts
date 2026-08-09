@@ -110,7 +110,7 @@ export class SetupManager extends AbstractModule {
 
         const e2eeConf = await this.dialogManager.openWithExplicitCancel<SetupRemoteE2EEResultType, EncryptionSettings>(
             SetupRemoteE2EE,
-            { ...startingPoint, ...couchConf } as EncryptionSettings
+            { ...startingPoint, ...couchConf }
         );
         if (e2eeConf === "cancelled") {
             this._log("Setup cancelled.", LOG_LEVEL_VERBOSE);

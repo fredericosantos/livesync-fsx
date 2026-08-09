@@ -48,13 +48,27 @@ export interface StatusInput {
 
 export interface StatusPresentation {
     readonly level: StatusLevel;
-    /** Status bar text. Empty when idle — the region renders nothing. */
+    /**
+     * Lucide icon name. Empty when idle — the status bar renders nothing at
+     * all. The status bar is one icon, as Obsidian's own Sync does it: a
+     * running count of documents is a progress bar for a process nobody asked
+     * to watch, and it moves in the corner of the eye while you write.
+     */
+    readonly icon: string;
+    /** What the icon means, in words. Empty when idle. Used as the tooltip. */
     readonly text: string;
     /** Longer explanation for the tooltip. Absent when idle. */
     readonly detail?: string;
 }
 
-const IDLE: StatusPresentation = { level: STATUS_IDLE, text: "" };
+/** Not syncing, and not because it is busy. */
+const ICON_STOPPED = "refresh-cw-off";
+/** Syncing right now. */
+const ICON_WORKING = "refresh-cw";
+/** Waiting on a person, not on the network. */
+const ICON_DECIDE = "alert-circle";
+
+const IDLE: StatusPresentation = { level: STATUS_IDLE, icon: "", text: "" };
 
 function pluralise(count: number, singular: string, plural = `${singular}s`): string {
     return `${count} ${count === 1 ? singular : plural}`;
@@ -69,6 +83,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (input.restartRequired) {
         return {
             level: STATUS_ATTENTION,
+            icon: ICON_DECIDE,
             text: "Restart required",
             detail: "Obsidian must be restarted before the new settings take effect.",
         };
@@ -76,6 +91,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (input.conflicts > 0) {
         return {
             level: STATUS_ATTENTION,
+            icon: ICON_DECIDE,
             text: pluralise(input.conflicts, "conflict"),
             detail: "The same file was edited on more than one device. Select which version to keep.",
         };
@@ -83,6 +99,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (input.errored) {
         return {
             level: STATUS_ATTENTION,
+            icon: ICON_STOPPED,
             text: "Sync error",
             detail: input.errorDetail ?? "Synchronisation stopped because of an error.",
         };
@@ -90,6 +107,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (input.paused) {
         return {
             level: STATUS_ATTENTION,
+            icon: ICON_STOPPED,
             text: "Sync paused",
             detail: "Synchronisation is suspended. Resume it from the settings pane.",
         };
@@ -98,6 +116,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
         // Not an error on its own — the remote may simply be unreachable right now.
         return {
             level: STATUS_ATTENTION,
+            icon: ICON_STOPPED,
             text: "Not connected",
             detail: "No connection to the remote server.",
         };
@@ -113,13 +132,15 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (upload > 0 && download > 0) {
         return {
             level: STATUS_ACTIVITY,
-            text: `Syncing ${upload + download}`,
+            icon: ICON_WORKING,
+            text: `Syncing ${upload + download} changes`,
             detail: `Uploading ${pluralise(upload, "change")}, downloading ${download}.`,
         };
     }
     if (upload > 0) {
         return {
             level: STATUS_ACTIVITY,
+            icon: ICON_WORKING,
             text: `Uploading ${upload}`,
             detail: `Sending ${pluralise(upload, "change")} to the remote server.`,
         };
@@ -127,6 +148,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (download > 0) {
         return {
             level: STATUS_ACTIVITY,
+            icon: ICON_WORKING,
             text: `Downloading ${download}`,
             detail: `Receiving ${pluralise(download, "change")} from the remote server.`,
         };
@@ -134,6 +156,7 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     if (local > 0) {
         return {
             level: STATUS_ACTIVITY,
+            icon: ICON_WORKING,
             text: `Processing ${local}`,
             detail: `Reading or writing ${pluralise(local, "file")}.`,
         };

@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AllSettingDefault } from "@vrtmrz/livesync-commonlib/compat/common/settingConstants";
 import { TweakValuesShouldMatchedTemplate } from "@vrtmrz/livesync-commonlib/compat/common/models/tweak.definition";
-import {
-    SETTING_PANES,
-    SETTING_SECTIONS,
-    cataloguedKeys,
-    type SettingKey,
-} from "./settingsCatalogue.ts";
+import { SETTING_SECTIONS, cataloguedKeys, sectionsFor, type SettingKey } from "./settingsCatalogue.ts";
 
 const schemaKeys = new Set(Object.keys(AllSettingDefault));
 
@@ -29,10 +24,18 @@ describe("settings catalogue", () => {
         expect(duplicates).toEqual([]);
     });
 
-    it("puts every section in a pane that exists", () => {
-        const paneIds = new Set(SETTING_PANES.map((pane) => pane.id));
-        const orphaned = SETTING_SECTIONS.filter((section) => !paneIds.has(section.pane));
-        expect(orphaned.map((section) => `${section.id} -> ${section.pane}`)).toEqual([]);
+    it("never shows the same heading twice on one page", () => {
+        for (const isConfigured of [false, true]) {
+            const headings = sectionsFor(isConfigured)
+                .map((section) => section.title)
+                .filter((title) => title !== "");
+            expect(headings, `duplicate heading while isConfigured=${isConfigured}`).toEqual([...new Set(headings)]);
+        }
+    });
+
+    it("gives every section either a control or an action", () => {
+        const empty = SETTING_SECTIONS.filter((section) => section.keys.length === 0 && !section.extra);
+        expect(empty.map((section) => section.id)).toEqual([]);
     });
 
     it("shows no must-match tweak except the one setup is about", () => {

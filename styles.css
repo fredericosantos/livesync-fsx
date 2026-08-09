@@ -82,13 +82,21 @@
 /*
  * Status bar. See docs/fork/01-design-principles.md.
  *
- * A healthy, current sync shows nothing: the item is removed from the layout
- * entirely rather than rendered empty, so it claims no space and no attention.
- * Colour is reserved for states that need a decision, and is always paired with
- * text so the meaning survives monochrome themes and colour blindness.
+ * One icon, no text, as Obsidian's own Sync does it. A healthy, current sync
+ * shows nothing: the item is removed from the layout entirely rather than
+ * rendered empty, so it claims no space and no attention. Colour is reserved
+ * for states that need a decision; the icon differs as well as the colour, so
+ * the meaning survives monochrome themes and colour blindness, and the words
+ * are always in the tooltip.
  */
 .syncstatusbar {
-    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+}
+
+.syncstatusbar .svg-icon {
+    width: var(--icon-s);
+    height: var(--icon-s);
 }
 
 .syncstatusbar.livesync-status--hidden {
@@ -99,8 +107,24 @@
     color: var(--text-muted);
 }
 
+.syncstatusbar.livesync-status--activity .svg-icon {
+    animation: livesync-spin 1.6s linear infinite;
+}
+
 .syncstatusbar.livesync-status--attention {
     color: var(--text-warning);
+}
+
+@keyframes livesync-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .syncstatusbar.livesync-status--activity .svg-icon {
+        animation: none;
+    }
 }
 
 .tcenter {
@@ -408,66 +432,6 @@ span.ls-mark-cr::after {
     100% {
         opacity: 1;
     }
-}
-
-.livesync-status {
-    user-select: none;
-    pointer-events: none;
-    height: auto;
-    min-height: 1em;
-    position: absolute;
-    background-color: transparent;
-    width: 100%;
-    padding: 10px;
-    padding-right: 16px;
-    top: var(--header-height);
-    z-index: calc(var(--layer-cover) + 1);
-
-    font-variant-numeric: tabular-nums;
-    tab-size: 4;
-    text-align: right;
-    white-space: pre-wrap;
-    display: inline-block;
-    color: var(--text-normal);
-    font-size: 80%;
-}
-
-div.workspace-leaf-content[data-type="bases"] .livesync-status {
-    top: calc(var(--bases-header-height) + var(--header-height));
-    padding: 5px;
-    padding-right: 18px;
-}
-
-.is-mobile div.workspace-leaf-content[data-type="bases"] .livesync-status {
-    top: calc(var(--bases-header-height) + var(--view-header-height));
-    padding: 6px;
-    padding-right: 18px;
-}
-
-.livesync-status div {
-    opacity: 0.6;
-    -webkit-filter: grayscale(100%);
-    filter: grayscale(100%);
-}
-
-.livesync-status .livesync-status-loghistory {
-    text-align: left;
-    opacity: 0.4;
-}
-
-.livesync-status div.livesync-status-messagearea:empty {
-    display: none;
-}
-
-.livesync-status div.livesync-status-messagearea:not(:empty) {
-    opacity: 0.6;
-    color: var(--text-on-accent);
-    border: 1px solid var(--background-modifier-error);
-    background-color: rgba(var(--background-modifier-error-rgb), 0.2);
-    -webkit-filter: unset;
-    filter: unset;
-    width: fit-content;
-    margin-left: auto;
 }
 
 .menu-setting-poweruser-disabled .lsfsx-setting-poweruser {
@@ -847,11 +811,4 @@ body.is-mobile .livesync-compatibility-review-notice {
     min-width: 0;
 }
 
-/*
- * The settings page is a single scroll. Sections are separated by space and a
- * heading, not by a tab the reader has to discover and click.
- */
-.lsfsx-section + .lsfsx-section {
-    margin-top: 2.5em;
-}
 

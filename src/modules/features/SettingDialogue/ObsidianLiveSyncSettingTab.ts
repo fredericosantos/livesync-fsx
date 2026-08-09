@@ -6,7 +6,6 @@ import {
     FLAGMD_REDFLAG2_HR,
     FLAGMD_REDFLAG3_HR,
     REMOTE_COUCHDB,
-    type ConfigLevel,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { delay, isObjectDifferent, sizeToHumanReadable } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { Logger } from "@vrtmrz/livesync-commonlib/compat/common/logger";
@@ -33,23 +32,17 @@ import {
     enableOnly,
     // findAttrFromParent,
     // getLevelStr,
-    setLevelClass,
     setStyle,
     visibleOnly,
     type OnSavedHandler,
     type OnSavedHandlerFunc,
     type OnUpdateFunc,
     type OnUpdateResult,
-    type PageFunctions,
     type UpdateFunction,
 } from "./SettingPane.ts";
-import { paneSetup, paneSetupFooter } from "./PaneSetup.ts";
-import { panesFor, type SettingPaneDefinition } from "./settingsCatalogue.ts";
-import { paneGeneral } from "./PaneGeneral.ts";
-import { paneRemoteConfig } from "./PaneRemoteConfig.ts";
-import { paneSelector } from "./PaneSelector.ts";
-import { paneSync } from "./PaneSync.ts";
-import { paneCustomisationSync } from "./PaneCustomisationSync.ts";
+import { sectionsFor } from "./settingsCatalogue.ts";
+import { renderSection } from "./renderSection.ts";
+import { SECTION_EXTRAS } from "./sectionExtras.ts";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 import { closeObsidianSettings } from "@/common/obsidianSettings.ts";
 
@@ -613,81 +606,30 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             visibleOnly(() => this.isNeedRebuildLocal() || this.isNeedRebuildRemote())
         );
 
-        /**
-         * `order` and `wizardHidden` are retained only so that the pane bodies,
-         * which still call `addPane` for their own sub-sections, keep compiling.
-         * Navigation itself is built from the manifest below.
-         */
-        const addPane = (
-            parentEl: HTMLElement,
-            title: string,
-            icon: string,
-            order: number,
-            wizardHidden: boolean,
-            level?: ConfigLevel
-        ) => {
-            const el = this.createEl(parentEl, "div", { text: "" });
-            setLevelClass(el, level);
-            new Setting(el).setName(title).setHeading();
-            return Promise.resolve(el);
-        };
-
-        /**
-         * One section of the single settings page. There is no tab, and no
-         * heading for the first section: the page already says what it is.
-         */
-        const addManifestPane = (pane: SettingPaneDefinition, isFirst: boolean) => {
-            const el = this.createEl(containerEl, "div", { cls: "lsfsx-section" });
-            if (!isFirst) {
-                new Setting(el).setName(pane.title).setHeading();
-            }
-            return el;
-        };
-        // const panelNoMap = {} as { [key: string]: number };
-        const addPanel = (
-            parentEl: HTMLElement,
-            title: string,
-            callback?: (el: HTMLDivElement) => void,
-            func?: OnUpdateFunc,
-            level?: ConfigLevel
-        ) => {
-            const el = this.createEl(parentEl, "div", { text: "" }, callback, func);
-            setLevelClass(el, level);
-            // `SettingGroup` is Obsidian's own primitive (API 1.11+): it renders
-            // the heading outside a single rounded card and puts hairline rules
-            // between the items inside it. Hand-building that chrome produced a
-            // separate card per row, which is why the page never looked native.
-            const group = new SettingGroup(el);
-            if (title) group.setHeading(title);
-            return Promise.resolve(group.listEl);
-        };
-
-        // Sections. Each body is a function of the same shape; the manifest decides
-        // which ones exist at the current tier and in what order they appear.
-        const paneBodies: Record<
-            string,
-            (this: ObsidianLiveSyncSettingTab, paneEl: HTMLElement, funcs: PageFunctions) => void
-        > = {
-            setup: paneSetup,
-            sync: paneSync,
-            server: paneRemoteConfig,
-            files: paneSelector,
-            plugins: paneCustomisationSync,
-            appearance: paneGeneral,
-        };
-
-        const visiblePanes = panesFor(this.editingSettings.isConfigured === true);
-        let isFirst = true;
-        for (const pane of visiblePanes) {
-            const body = paneBodies[pane.id];
-            if (!body) continue;
-            body.call(this, addManifestPane(pane, isFirst), { addPane, addPanel });
-            isFirst = false;
+        // The whole page: one `SettingGroup` per catalogue section, appended in
+        // catalogue order. `SettingGroup` is Obsidian's own primitive (API
+        // 1.11+) — it renders the heading above a single rounded card, puts
+        // hairline rules between the items, and carries the same vertical
+        // rhythm as every other settings page in the app. Hand-built chrome and
+        // a hand-picked `margin-top` are exactly what made two adjacent groups
+        // look unrelated.
+        for (const section of sectionsFor(this.editingSettings.isConfigured === true)) {
+            const host = this.createEl(
+                containerEl,
+                "div",
+                { text: "" },
+                undefined,
+                section.shownWhen
+                    ? visibleOnly(() =>
+                          this.isConfiguredAs(section.shownWhen!.key as never, section.shownWhen!.is as never)
+                      )
+                    : undefined
+            );
+            const group = new SettingGroup(host);
+            if (section.title) group.setHeading(section.title);
+            renderSection(this, group.listEl, section);
+            SECTION_EXTRAS[section.extra ?? ""]?.(this, group.listEl);
         }
-
-        // Page furniture, not settings: the way to discard everything. Last,
-        // so a destructive action is never above an ordinary one.
-        paneSetupFooter.call(this, this.createEl(containerEl, "div", { cls: "lsfsx-section" }), { addPane, addPanel });
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }

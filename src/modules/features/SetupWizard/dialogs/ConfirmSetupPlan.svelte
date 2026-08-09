@@ -4,7 +4,7 @@
     import Decision from "@/modules/services/LiveSyncUI/components/Decision.svelte";
     import UserDecisions from "@/modules/services/LiveSyncUI/components/UserDecisions.svelte";
 
-    import { SETUP_UNREACHABLE, type SetupPlan } from "../setupPlan";
+    import { SETUP_UNREACHABLE, type SetupPlan } from "@/modules/features/SetupWizard/setupPlan";
     import { TYPE_APPLY, TYPE_CANCELLED, type OutroExistingUserResultType } from "./setupDialogTypes";
 
     type Props = {
