@@ -20,37 +20,54 @@ export function renderDeviceName(tab: ObsidianLiveSyncSettingTab, el: HTMLElemen
     const problemEl = el.createDiv({ cls: "lsfsx-setting-problem" });
     problemEl.hide();
 
-    const report = (value: string) => {
+    const report = () => {
+        const value = tab.editingSettings.deviceAndVaultName ?? "";
         const verdict = validateDeviceName(value, knownDeviceNames(tab));
-        problemEl.setText(verdict.message);
+        // Being nameless only matters once something depends on the name. The
+        // message says which thing, at the field that can fix it, instead of a
+        // permanent caveat printed under the toggle that caused it.
+        const message =
+            verdict.problem?.kind === "empty" && tab.isConfiguredAs("usePluginSync", true)
+                ? "Needed before plugins and settings can sync."
+                : verdict.message;
+        problemEl.setText(message);
         problemEl.toggle(!verdict.ok);
         setting.settingEl.toggleClass("lsfsx-setting--invalid", !verdict.ok);
         return verdict.ok;
     };
 
-    // Prefilled, not merely hinted: an empty device name makes Customisation
-    // Sync silently do nothing, and a placeholder leaves it empty.
-    const suggestion = suggestDeviceName(Platform, tab.plugin.app.vault.getName(), knownDeviceNames(tab));
+    // Prefilled and adopted, not merely hinted. A placeholder leaves the stored
+    // value empty, and an empty device name is exactly the state in which
+    // Customisation Sync silently does nothing.
+    if (!tab.editingSettings.deviceAndVaultName) {
+        tab.editingSettings.deviceAndVaultName = suggestDeviceName(
+            Platform,
+            tab.plugin.app.vault.getName(),
+            knownDeviceNames(tab)
+        );
+    }
 
     setting.addText((text) => {
-        text.setPlaceholder(suggestion)
-            .setValue(tab.editingSettings.deviceAndVaultName || suggestion)
-            .onChange((value) => {
-                // The value is still written while invalid; blocking the keystroke
-                // would make the field impossible to correct mid-word. Saving is
-                // what the verdict gates.
-                tab.editingSettings.deviceAndVaultName = value;
-                report(value);
-            });
-        report(text.getValue());
+        text.setValue(tab.editingSettings.deviceAndVaultName ?? "").onChange((value) => {
+            // The value is still written while invalid; blocking the keystroke
+            // would make the field impossible to correct mid-word. Saving is
+            // what the verdict gates.
+            tab.editingSettings.deviceAndVaultName = value;
+            report();
+        });
     });
 
     setting.addButton((button) =>
         button.setButtonText("Save").onClick(async () => {
-            if (!report(tab.editingSettings.deviceAndVaultName ?? "")) return;
+            if (!report()) return;
             await tab.saveSettings(["deviceAndVaultName"]);
         })
     );
+
+    // Re-run whenever anything on the page changes, so switching plugin sync on
+    // flags the field immediately rather than at the next redraw.
+    tab.controlledElementFunc.push(report);
+    report();
 }
 
 /**

@@ -28,15 +28,15 @@ import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
 type KeyRenderer = (tab: ObsidianLiveSyncSettingTab, el: HTMLElement) => void;
 
 /** Copy we deliberately override, applied after the schema name and description. */
-const COPY: Partial<Record<SettingKey, { name: string; desc: string }>> = {
+const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
     syncInternalFiles: {
         name: "Sync hidden files",
         desc: "Themes, snippets and plugin data under the configuration folder.",
     },
-    usePluginSync: {
-        name: "Sync plugins and their settings",
-        desc: "Customisation Sync. Needs a device name, above.",
-    },
+    // No description. The dependency on a device name is not worth a sentence
+    // under every toggle: if the name is missing when this is switched on, the
+    // field above says so, where the problem actually is.
+    usePluginSync: { name: "Sync plugins and their settings" },
     encrypt: {
         name: "Encrypt this vault",
         desc: "Every device must use the same passphrase, or they cannot read each other's notes.",
@@ -93,7 +93,10 @@ const KEY_RENDERERS: Partial<Record<SettingKey, KeyRenderer>> = {
 function applySchema(setting: Setting, key: SettingKey & AllSettingItemKey): void {
     setting.autoWireSetting(key);
     const copy = COPY[key];
-    if (copy) setting.setName(copy.name).setDesc(copy.desc);
+    if (copy) {
+        setting.setName(copy.name);
+        if (copy.desc) setting.setDesc(copy.desc);
+    }
 }
 
 /**
@@ -124,7 +127,10 @@ function renderKey(tab: ObsidianLiveSyncSettingTab, el: HTMLElement, key: Settin
             throw new Error(`No control for setting "${key}"; add one to KEY_RENDERERS.`);
     }
     const copy = COPY[key];
-    if (copy) setting.setName(copy.name).setDesc(copy.desc);
+    if (copy) {
+        setting.setName(copy.name);
+        if (copy.desc) setting.setDesc(copy.desc);
+    }
 }
 
 export function renderSection(tab: ObsidianLiveSyncSettingTab, el: HTMLElement, section: SettingSection): void {
