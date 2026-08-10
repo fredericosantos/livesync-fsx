@@ -15,6 +15,7 @@ import {
     eventHub,
 } from "@/common/events.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
+import { yieldNextAnimationFrame } from "octagonal-wheels/promises";
 import { visibleOnly } from "./SettingPane.ts";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
 import {
@@ -23,6 +24,19 @@ import {
 } from "@/serviceFeatures/setupObsidian/settingsReset.ts";
 
 type Extra = (tab: ObsidianLiveSyncSettingTab, el: HTMLElement) => void;
+
+/**
+ * Leave the settings screen before opening a wizard.
+ *
+ * Obsidian 1.13 runs settings in a window of its own, and a dialogue opened
+ * from it competes with that window for the foreground. A wizard is also not a
+ * setting: once it starts, the page behind it is no longer the thing being
+ * used. The yield lets the settings window finish closing first.
+ */
+async function leaveSettings(tab: ObsidianLiveSyncSettingTab): Promise<void> {
+    tab.closeSetting();
+    await yieldNextAnimationFrame();
+}
 
 /** Where this vault syncs, in the form a person would say it. */
 function describeConnection(uri: string, database: string): string {
@@ -41,13 +55,14 @@ const connect: Extra = (tab, el) => {
         .setName("This vault is not syncing")
         .setDesc("Connect it to a CouchDB server. Nothing is uploaded or downloaded until you confirm.")
         .addButton((button) =>
-            button.setButtonText("Paste link").onClick(() => {
-                tab.closeSetting();
+            button.setButtonText("Paste link").onClick(async () => {
+                await leaveSettings(tab);
                 eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
             })
         )
         .addButton((button) =>
             button.setButtonText("Scan QR").onClick(async () => {
+                await leaveSettings(tab);
                 await tab.core.getModule(SetupManager).onPromptQRCodeInstruction();
             })
         )
@@ -56,6 +71,7 @@ const connect: Extra = (tab, el) => {
                 .setButtonText("Set up")
                 .setCta()
                 .onClick(async () => {
+                    await leaveSettings(tab);
                     await tab.core.getModule(SetupManager).startOnBoarding();
                 })
         );
@@ -67,6 +83,7 @@ const server: Extra = (tab, el) => {
         .setDesc(describeConnection(tab.editingSettings.couchDB_URI, tab.editingSettings.couchDB_DBNAME))
         .addButton((button) =>
             button.setButtonText("Reconfigure").onClick(async () => {
+                await leaveSettings(tab);
                 await tab.core.getModule(SetupManager).startOnBoarding();
             })
         );

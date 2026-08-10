@@ -10,6 +10,7 @@ import {
 } from "@vrtmrz/livesync-commonlib/compat/services/implements/base/SvelteDialog";
 import { fireAndForget, promiseWithResolvers, type PromiseWithResolvers } from "octagonal-wheels/promises";
 import { mount, unmount, type Component } from "svelte";
+import { LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE, Logger } from "octagonal-wheels/common/logger";
 
 /** Host dialogue surface controlled by an explicit session. */
 export interface SvelteDialogSurface {
@@ -94,7 +95,25 @@ export class SvelteDialogSession<
             this.surface.close();
         });
 
-        this.mountedDialog = this.renderer.mount(this.dialogHost, this.surface.contentEl, {
+        // A dialogue that fails to mount used to leave an empty box on screen
+        // and put its reason somewhere only a developer console would show it.
+        // Whatever went wrong, the person who clicked the button hears about it.
+        if (!this.component) {
+            Logger("This dialogue could not be opened: it has no content.", LOG_LEVEL_NOTICE);
+            this.surface.close();
+            return;
+        }
+        try {
+            this.mountedDialog = this.mountDialog();
+        } catch (error) {
+            Logger(`This dialogue could not be opened: ${error}`, LOG_LEVEL_NOTICE);
+            Logger(error instanceof Error ? (error.stack ?? "") : `${error}`, LOG_LEVEL_VERBOSE);
+            this.surface.close();
+        }
+    }
+
+    private mountDialog(): MountedDialog {
+        return this.renderer.mount(this.dialogHost, this.surface.contentEl, {
             onSetupContext: (props: DialogSvelteComponentBaseProps<TResult, TInitial>) => {
                 setupDialogContext({
                     ...props,
