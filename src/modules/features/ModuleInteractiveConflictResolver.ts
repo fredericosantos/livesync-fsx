@@ -232,19 +232,13 @@ export class ModuleInteractiveConflictResolver extends AbstractObsidianModule {
                 notes.push({ path: this.getPath(doc), mtime: doc.mtime });
             }
             if (notes.length > 0) {
-                this.core.confirm.askInPopup(
-                    `conflicting-detected-on-safety`,
-                    `Some files have been left conflicted! Press {HERE} to resolve them, or you can do it later by "Pick a file to resolve conflict`,
-                    (anchor) => {
-                        anchor.text = "HERE";
-                        anchor.addEventListener("click", () => {
-                            fireAndForget(() => this.allConflictCheck());
-                        });
-                    }
-                );
+                // No popup. Unresolved conflicts are already counted in the
+                // status bar, and this one carried a link into a command the
+                // reader can reach whenever they choose. A conflict waits; it
+                // does not need to interrupt.
                 this._log(
-                    `Some files have been left conflicted! Please resolve them by "Pick a file to resolve conflict". The list is written in the log.`,
-                    LOG_LEVEL_VERBOSE
+                    `${notes.length} file(s) are still conflicted. They are resolved when opened, or from "Pick a file to resolve conflict".`,
+                    LOG_LEVEL_INFO
                 );
                 for (const note of notes) {
                     this._log(`Conflicted: ${note.path}`);

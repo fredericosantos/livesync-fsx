@@ -809,7 +809,7 @@ export class ConfigSync extends LiveSyncCommands {
 
     async migrateV1ToV2(showMessage: boolean, entry: AnyEntry): Promise<void> {
         const v1Path = entry.path;
-        this._log(`Migrating ${entry.path} to V2`, showMessage ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO);
+        this._log(`Migrating ${entry.path} to V2`, LOG_LEVEL_INFO);
         if (entry.deleted) {
             this._log(`The entry ${v1Path} is already deleted`, LOG_LEVEL_VERBOSE);
             return;

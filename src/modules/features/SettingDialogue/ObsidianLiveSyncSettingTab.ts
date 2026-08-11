@@ -342,18 +342,13 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
                     // Something has changed
                     if (this.isDirty(k as AllSettingItemKey)) {
                         // And modified.
-                        this.core.confirm.askInPopup(
-                            `config-reloaded-${k}`,
-                            $msg("obsidianLiveSyncSettingTab.msgSettingModified", {
-                                setting: getConfName(k as AllSettingItemKey),
-                            }),
-                            (anchor) => {
-                                anchor.text = $msg("obsidianLiveSyncSettingTab.optionHere");
-                                anchor.addEventListener("click", () => {
-                                    this.refreshSetting(k as AllSettingItemKey);
-                                    this.display();
-                                });
-                            }
+                        // Changed elsewhere while being edited here. The
+                        // reader's own edit wins until they leave the page;
+                        // a Notice with a link into this same page is not
+                        // worth interrupting them for.
+                        Logger(
+                            `${getConfName(k as AllSettingItemKey)} was changed elsewhere while you were editing it.`,
+                            LOG_LEVEL_INFO
                         );
                     } else {
                         // not modified

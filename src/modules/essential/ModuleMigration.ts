@@ -10,7 +10,6 @@ import {
     eventHub,
 } from "@/common/events.ts";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
-import { $msg } from "@/common/translation";
 import { HOLD_INSECURE_CHUNKS, syncHold } from "@/common/syncHold.ts";
 import { performDoctorConsultation, RebuildOptions } from "@vrtmrz/livesync-commonlib/compat/common/configForDoc";
 import { isValidPath } from "@/common/utils.ts";
@@ -83,7 +82,7 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
 
     async migrateDisableBulkSend() {
         if (this.settings.sendChunksBulk) {
-            this._log($msg("moduleMigration.logBulkSendCorrupted"), LOG_LEVEL_NOTICE);
+            this._log("Bulk chunk sending has been switched off: it is not reliable.", LOG_LEVEL_INFO);
             this.settings.sendChunksBulk = false;
             this.settings.sendChunksBulkMaxSize = 1;
             await this.saveSettings();
@@ -279,7 +278,7 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
     async _everyOnFirstInitialize(): Promise<boolean> {
         return await runConfiguredStartupLifecycle({
             databaseReady: this.localDatabase.isReady,
-            reportDatabaseNotReady: () => this._log($msg("moduleMigration.logLocalDatabaseNotReady"), LOG_LEVEL_NOTICE),
+            reportDatabaseNotReady: () => this._log("The local database is not ready.", LOG_LEVEL_NOTICE),
             hasCompromisedChunks: () => this.hasCompromisedChunks(),
             hasIncompleteDocuments: () => this.hasIncompleteDocs(),
             waitForCompatibilityReview: () => this.waitForCompatibilityReview(),
