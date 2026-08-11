@@ -86,6 +86,15 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
         keys: ["encrypt", "passphrase"],
     },
     {
+        id: "server-storage",
+        title: "Server storage",
+        requires: "configured",
+        // Was a start-up popup — "We can set a maximum database capacity
+        // warning... Do you want to enable this?" — leading to a dialogue of
+        // four sizes. It is a preference, so it lives where preferences live.
+        keys: ["notifyThresholdOfRemoteStorageSize"],
+    },
+    {
         id: "files",
         title: "Files",
         requires: "configured",

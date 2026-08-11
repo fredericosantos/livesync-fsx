@@ -17,7 +17,7 @@ export async function encodeSetupSettingsAsQR(host: SetupFeatureHost) {
 
     if (typeof result === "string") {
         const msg = host.services.context.translate("Setup.QRCode", { qr_image: result });
-        await host.services.UI.confirm.confirmWithMessage("Settings QR Code", msg, ["OK"], "OK");
+        await host.services.UI.confirm.confirmWithMessage("Scan this on the other device", msg, ["Done"], "Done");
         return result;
     } else {
         // Multi-page QR code
@@ -42,7 +42,7 @@ ${result.parts[currentIndex]}`;
             }
 
             const choice = await host.services.UI.confirm.confirmWithMessage(
-                "Settings QR Code (Aggregated)",
+                "Scan these in order on the other device",
                 msg,
                 buttons,
                 buttons[buttons.indexOf("Next") !== -1 ? buttons.indexOf("Next") : buttons.indexOf("Done")]

@@ -37,9 +37,9 @@
     }
 </script>
 
-<DialogHeader title="Your {title || 'Data'} is ready to be copied" />
+<DialogHeader title="Copy the {title || 'text'}" />
 <Instruction>
-    <InputRow label={title || translateMessage("Data to Copy")}>
+    <InputRow label={title || translateMessage("Text")}>
         <textarea readonly rows="4">{dataToCopy}</textarea>
         <button onclick={() => copyToClipboard()}
             >{#if !copied}Copy{:else}Copied{/if}

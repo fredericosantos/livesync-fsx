@@ -57,7 +57,7 @@
     }
 </script>
 
-<DialogHeader title={translateMessage("Enter Setup URI")} />
+<DialogHeader title={translateMessage("Paste the setup link")} />
 <Guidance
     >{translateMessage(
         "Please enter the Setup URI that was generated during server installation or on another device, along with the vault passphrase."
@@ -91,7 +91,7 @@
 
 <UserDecisions>
     <Decision
-        title={translateMessage("Test Settings and Continue")}
+        title={translateMessage("Continue")}
         important={true}
         disabled={!canProceed}
         commit={() => processSetupURI()}

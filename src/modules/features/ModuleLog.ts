@@ -213,7 +213,7 @@ export class ModuleLog extends AbstractObsidianModule {
 # ---- Debug Info Dump ----
 ${stringifyYaml(info)}
 \`\`\`\``;
-                if (await this.services.UI.promptCopyToClipboard("Debug info", yaml)) {
+                if (await this.services.UI.promptCopyToClipboard("debug report", yaml)) {
                     new Notice(
                         "Debug info copied to clipboard. You can paste it in the issue. Be careful as it may contain sensitive information, review it before sharing."
                     );

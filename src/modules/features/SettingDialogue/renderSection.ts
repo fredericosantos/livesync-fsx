@@ -45,6 +45,10 @@ const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
         name: "Use ignore files",
         desc: "Skip anything excluded by a gitignore-style file in the vault.",
     },
+    notifyThresholdOfRemoteStorageSize: {
+        name: "Warn when the database passes",
+        desc: "Megabytes. 0 never warns. Useful when the server has a quota.",
+    },
     syncOnlyRegEx: {
         name: "Sync only these paths",
         desc: "Regular expressions. Empty means every file.",

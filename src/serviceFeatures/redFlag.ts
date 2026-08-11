@@ -77,7 +77,7 @@ async function askAndActivateRemoteDatabase(host: NecessaryServices<"UI" | "sett
         // const defaultAction =
         //     options.find((option) => option.id === settings.activeConfigurationId)?.name || selections[0];
         const selectedId = await host.services.UI.confirm.askSelectStringDialogue(message, selections, {
-            title: "Select Remote Configuration",
+            title: "Choose a server",
             defaultAction: REMOTE_KEEP_CURRENT,
         });
         const selectedConfig = options.find((option) => option.name === selectedId);

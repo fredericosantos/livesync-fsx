@@ -76,7 +76,7 @@ export class ObsidianConfirm<T extends ObsidianServiceContext = ObsidianServiceC
 
     async askYesNoDialog(
         message: string,
-        opt: { title?: string; defaultOption?: "Yes" | "No"; timeout?: number } = { title: "Confirmation" }
+        opt: { title?: string; defaultOption?: "Yes" | "No"; timeout?: number } = { title: "Confirm" }
     ): Promise<"yes" | "no"> {
         const defaultTitle = $msg("moduleInputUIObsidian.defaultTitleConfirmation");
         const yesLabel = $msg("moduleInputUIObsidian.optionYes");

@@ -84,7 +84,7 @@ describe("setupObsidian/setupUri", () => {
             ["pluginSyncExtendedSetting"],
             true
         );
-        expect(promptCopyToClipboard).toHaveBeenCalledWith("Setup URI", "uri://value");
+        expect(promptCopyToClipboard).toHaveBeenCalledWith("setup link", "uri://value");
         expect(log).toHaveBeenCalled();
     });
 
@@ -110,7 +110,7 @@ describe("setupObsidian/setupUri", () => {
         await copySetupURIFull(host, log);
 
         expect(encodeSettingsToSetupURI).toHaveBeenCalledWith(currentSettings, "pass-full", [], false);
-        expect(promptCopyToClipboard).toHaveBeenCalledWith("Setup URI", "uri://full");
+        expect(promptCopyToClipboard).toHaveBeenCalledWith("setup link", "uri://full");
         expect(log).toHaveBeenCalled();
     });
 

@@ -13,7 +13,7 @@
     const { setResult }: Props = $props();
 </script>
 
-<DialogHeader title={translateMessage("Scan QR Code")} />
+<DialogHeader title={translateMessage("Scan the QR code")} />
 <Guidance>{translateMessage("Please follow the steps below to import settings from your existing device.")}</Guidance>
 <Instruction>
     <!-- <Question>How would you like to configure the connection to your server?</Question> -->
@@ -33,5 +33,5 @@
     </ol>
 </Instruction>
 <UserDecisions>
-    <Decision title={translateMessage("Close this dialog")} important={true} commit={() => setResult(TYPE_CLOSE)} />
+    <Decision title={translateMessage("Close")} important={true} commit={() => setResult(TYPE_CLOSE)} />
 </UserDecisions>

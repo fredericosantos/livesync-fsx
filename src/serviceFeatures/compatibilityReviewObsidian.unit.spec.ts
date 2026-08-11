@@ -43,15 +43,17 @@ describe("Obsidian compatibility review", () => {
     });
 
     it("offers the generic resume action in a vertical action dialogue", async () => {
-        const confirmWithMessage = vi.fn().mockResolvedValue("Resume synchronisation");
+        const confirmWithMessage = vi.fn().mockResolvedValue("Resume syncing");
         const ui = new ObsidianCompatibilityReviewUi({ confirmWithMessage } as never);
 
         await expect(ui.showSummary(resumablePause)).resolves.toBe("resume");
+        // A title names the thing; the buttons name their verbs. Neither
+        // repeats "compatibility review", which is the name of the machinery.
         expect(confirmWithMessage).toHaveBeenCalledWith(
-            "Synchronisation paused for compatibility review",
+            "Why syncing is held back",
             expect.any(String),
-            ["Review compatibility details", "Resume synchronisation", "Keep synchronisation paused"],
-            "Keep synchronisation paused",
+            ["Show details", "Resume syncing", "Leave it paused"],
+            "Leave it paused",
             undefined,
             "vertical"
         );

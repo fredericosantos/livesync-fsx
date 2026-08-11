@@ -82,7 +82,7 @@ export function planSetup(remote: RemoteObservation, local: LocalObservation): S
     if (!remote.reachable) {
         return {
             action: SETUP_UNREACHABLE,
-            headline: "The server did not answer.",
+            headline: "The server did not answer",
             detail:
                 remote.unreachableReason ??
                 "Check the address, the username and the password, then try again. Nothing has been changed.",
@@ -94,7 +94,7 @@ export function planSetup(remote: RemoteObservation, local: LocalObservation): S
     if (!remote.initialised) {
         return {
             action: SETUP_SEED,
-            headline: "The server is empty.",
+            headline: "Set up this vault on the server",
             detail: `${files(local.fileCount)} from this vault will be uploaded and become the copy that other devices download. Nothing on the server is overwritten, because there is nothing there yet.`,
             confirmLabel: "Upload this vault",
             isDestructive: false,
@@ -104,22 +104,20 @@ export function planSetup(remote: RemoteObservation, local: LocalObservation): S
     if (local.wasConfigured) {
         return {
             action: SETUP_RECONNECT,
-            headline: "Already connected to this vault.",
+            headline: "Save the connection",
             detail: "Only the connection settings change. Your files are left alone on both sides.",
             confirmLabel: "Save connection",
             isDestructive: false,
         };
     }
 
-    const held =
-        remote.documentCount === undefined ? "a vault" : `a vault of ${files(remote.documentCount)}`;
     return {
         action: SETUP_JOIN,
-        headline: `The server already holds ${held}.`,
+        headline: "Download this vault from the server",
         detail:
             local.fileCount === 0
-                ? "It will be downloaded into this vault."
-                : `It will be downloaded into this vault. The ${files(local.fileCount)} already here are kept: where the same file exists on both sides, the two versions are merged, and anything that cannot be merged is kept as a second copy.`,
+                ? "The server already holds a vault. It will be downloaded into this one."
+                : `The server already holds a vault. It will be downloaded into this one, and the ${files(local.fileCount)} already here are kept: where the same file exists on both sides, the two versions are merged, and anything that cannot be merged is kept as a second copy.`,
         confirmLabel: "Download the vault",
         isDestructive: local.fileCount > 0,
     };

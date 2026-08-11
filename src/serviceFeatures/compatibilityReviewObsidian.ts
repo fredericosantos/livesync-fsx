@@ -11,10 +11,10 @@ import {
     compatibilityReviewSummaryMarkdown,
 } from "./compatibilityReviewMarkdown.ts";
 
-const REVIEW_DETAILS = "Review compatibility details";
-const KEEP_PAUSED = "Keep synchronisation paused";
-const RESUME = "Resume synchronisation";
-const BACK = "Back to compatibility review";
+const REVIEW_DETAILS = "Show details";
+const KEEP_PAUSED = "Leave it paused";
+const RESUME = "Resume syncing";
+const BACK = "Back";
 
 export class ObsidianCompatibilityReviewUi implements CompatibilityReviewUi {
     private reminder: Notice | undefined;
@@ -26,7 +26,7 @@ export class ObsidianCompatibilityReviewUi implements CompatibilityReviewUi {
             ? ([REVIEW_DETAILS, KEEP_PAUSED] as const)
             : ([REVIEW_DETAILS, RESUME, KEEP_PAUSED] as const);
         const result = await this.confirm.confirmWithMessage(
-            "Synchronisation paused for compatibility review",
+            "Why syncing is held back",
             compatibilityReviewSummaryMarkdown(pause),
             [...buttons],
             KEEP_PAUSED,
@@ -41,7 +41,7 @@ export class ObsidianCompatibilityReviewUi implements CompatibilityReviewUi {
 
     async showDetails(pause: CompatibilityPause): Promise<CompatibilityReviewDetailsAction> {
         const result = await this.confirm.confirmWithMessage(
-            "Compatibility review details",
+            "The details",
             compatibilityReviewDetailsMarkdown(pause),
             [BACK],
             BACK,

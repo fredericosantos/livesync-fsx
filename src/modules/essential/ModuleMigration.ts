@@ -11,7 +11,7 @@ import {
 } from "@/common/events.ts";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
 import { HOLD_INSECURE_CHUNKS, syncHold } from "@/common/syncHold.ts";
-import { performDoctorConsultation, RebuildOptions } from "@vrtmrz/livesync-commonlib/compat/common/configForDoc";
+import { checkUnsuitableValues } from "@vrtmrz/livesync-commonlib/compat/common/configForDoc";
 import { isValidPath } from "@/common/utils.ts";
 import { isMetaEntry } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import {
@@ -48,24 +48,48 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
         super(core);
     }
 
+    /**
+     * Brings the settings up to date with the current recommendations.
+     *
+     * This was an interview. It opened with "Hi! Config Doctor has been
+     * activated because of updated! ... Shall we get started?", listed the
+     * settings it was about to raise, then asked once per setting — showing the
+     * current value, the ideal value, a severity level and a paragraph of
+     * reasoning — with "Fix", "Fix but no rebuild" and "Skip" as the answers,
+     * and a "Dismiss for this version" escape at the top.
+     *
+     * Every one of those questions had a right answer that the plug-in already
+     * knew: the rule carries the value it wants. So the values are applied, and
+     * what changed is written to the log. The one thing that is not decided
+     * here is a rebuild, because that touches data rather than settings — it
+     * stays exactly as it was, scheduled when the caller allows it.
+     */
     async migrateUsingDoctor(skipRebuild: boolean = false, activateReason = "updated", forceRescan = false) {
-        const { shouldRebuild, shouldRebuildLocal, isModified, settings } = await performDoctorConsultation(
-            {
-                confirm: this.core.confirm,
-                translate: this.services.context.translate,
-            },
-            this.settings,
-            {
-                localRebuild: skipRebuild ? RebuildOptions.SkipEvenIfRequired : RebuildOptions.AutomaticAcceptable,
-                remoteRebuild: skipRebuild ? RebuildOptions.SkipEvenIfRequired : RebuildOptions.AutomaticAcceptable,
-                activateReason,
-                forceRescan,
-            }
-        );
-        if (isModified) {
-            this.settings = settings;
-            await this.saveSettings();
+        const found = checkUnsuitableValues(this.settings);
+        if (!forceRescan && found.version == this.settings.doctorProcessedVersion) {
+            return true;
         }
+        const issues = Object.entries(found.rules) as [
+            string,
+            { value: unknown; requireRebuild?: boolean; requireRebuildLocal?: boolean },
+        ][];
+
+        let shouldRebuild = false;
+        let shouldRebuildLocal = false;
+        const applied: string[] = [];
+        for (const [key, rule] of issues) {
+            Reflect.set(this.settings, key, rule.value);
+            applied.push(`${key} → ${String(rule.value)}`);
+            if (rule.requireRebuild) shouldRebuild = true;
+            if (rule.requireRebuildLocal) shouldRebuildLocal = true;
+        }
+        this.settings.doctorProcessedVersion = found.version;
+        await this.saveSettings();
+
+        if (applied.length > 0) {
+            this._log(`Settings brought up to date (${activateReason}): ${applied.join(", ")}`, LOG_LEVEL_INFO);
+        }
+
         if (!skipRebuild) {
             if (shouldRebuild) {
                 await this.core.rebuilder.scheduleRebuild();

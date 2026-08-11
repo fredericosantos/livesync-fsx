@@ -25,7 +25,7 @@ export async function copySetupURI(host: SetupFeatureHost, log: LogFunction, str
         [...((stripExtra ? ["pluginSyncExtendedSetting"] : []) as (keyof ObsidianLiveSyncSettings)[])],
         true
     );
-    if (await host.services.UI.promptCopyToClipboard("Setup URI", encryptedURI)) {
+    if (await host.services.UI.promptCopyToClipboard("setup link", encryptedURI)) {
         log("Setup URI copied to clipboard", LOG_LEVEL_NOTICE);
     }
 }
@@ -39,7 +39,7 @@ export async function copySetupURIFull(host: SetupFeatureHost, log: LogFunction)
         [],
         false
     );
-    if (await host.services.UI.promptCopyToClipboard("Setup URI", encryptedURI)) {
+    if (await host.services.UI.promptCopyToClipboard("setup link", encryptedURI)) {
         log("Setup URI copied to clipboard", LOG_LEVEL_NOTICE);
     }
 }

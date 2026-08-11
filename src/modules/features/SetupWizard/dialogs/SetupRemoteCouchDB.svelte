@@ -141,7 +141,7 @@
     );
 </script>
 
-<DialogHeader title={translateMessage("CouchDB Configuration")} />
+<DialogHeader title={translateMessage("Connect to your server")} />
 <Guidance>{translateMessage("Please enter the CouchDB server information below.")}</Guidance>
 <InputRow label={translateMessage("URL")}>
     <input

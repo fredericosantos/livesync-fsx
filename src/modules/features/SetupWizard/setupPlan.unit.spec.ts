@@ -34,10 +34,12 @@ describe("planSetup", () => {
         expect(plan.detail).toContain("653 files");
     });
 
-    it("joins an initialised server, reporting what is already there", () => {
+    it("joins an initialised server", () => {
         const plan = planSetup(remote({ documentCount: 653 }), local());
         expect(plan.action).toBe(SETUP_JOIN);
-        expect(plan.headline).toContain("653 files");
+        // The headline names the action, not the situation: it is a title.
+        expect(plan.headline).toBe("Download this vault from the server");
+        expect(plan.detail).toContain("The server already holds a vault");
     });
 
     it("only changes settings when this vault was already synchronising", () => {
@@ -64,14 +66,21 @@ describe("planSetup", () => {
     });
 
     describe("wording", () => {
-        it("singularises a lone file on both sides", () => {
+        it("singularises a lone file", () => {
             expect(planSetup(remote({ initialised: false }), local({ fileCount: 1 })).detail).toContain("1 file from");
-            expect(planSetup(remote({ documentCount: 1 }), local()).headline).toContain("1 file");
+            expect(planSetup(remote(), local({ fileCount: 1 })).detail).toContain("1 file already here");
         });
 
-        it("stays vague rather than wrong when the server reports no count", () => {
-            const plan = planSetup(remote({ documentCount: undefined }), local());
-            expect(plan.headline).toBe("The server already holds a vault.");
+        it("never ends a title with a full stop", () => {
+            const plans = [
+                planSetup(remote({ reachable: false }), local()),
+                planSetup(remote({ initialised: false }), local()),
+                planSetup(remote(), local()),
+                planSetup(remote(), local({ wasConfigured: true })),
+            ];
+            for (const plan of plans) {
+                expect(plan.headline, plan.headline).not.toMatch(/\.$/);
+            }
         });
 
         it("labels every button with the verb it performs", () => {
