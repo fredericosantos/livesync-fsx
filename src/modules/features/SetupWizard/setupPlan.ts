@@ -60,6 +60,20 @@ export interface SetupPlan {
     readonly isDestructive: boolean;
 }
 
+/**
+ * Whether a CouchDB database already holds a vault.
+ *
+ * By document count, never by size. A freshly created CouchDB database is not
+ * zero bytes — it reports roughly 16 kB of its own bookkeeping — so a size test
+ * calls every database initialised, makes {@link SETUP_SEED} unreachable, and
+ * tells someone setting up their first device that they are joining a vault
+ * that does not exist.
+ */
+export function isRemoteInitialised(status: false | { readonly doc_count?: number; readonly [key: string]: unknown }): boolean {
+    if (status === false) return false;
+    return (status.doc_count ?? 0) > 0;
+}
+
 function files(count: number): string {
     return count === 1 ? "1 file" : `${count} files`;
 }
@@ -105,7 +119,7 @@ export function planSetup(remote: RemoteObservation, local: LocalObservation): S
         detail:
             local.fileCount === 0
                 ? "It will be downloaded into this vault."
-                : `It will be downloaded into this vault. The ${files(local.fileCount)} already here are kept, but any that also exist on the server will be reported as conflicts for you to resolve.`,
+                : `It will be downloaded into this vault. The ${files(local.fileCount)} already here are kept: where the same file exists on both sides, the two versions are merged, and anything that cannot be merged is kept as a second copy.`,
         confirmLabel: "Download the vault",
         isDestructive: local.fileCount > 0,
     };

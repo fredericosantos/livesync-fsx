@@ -17,6 +17,7 @@ import ConfirmSetupPlan from "./SetupWizard/dialogs/ConfirmSetupPlan.svelte";
 import {
     SETUP_RECONNECT,
     SETUP_SEED,
+    isRemoteInitialised,
     planSetup,
     type RemoteObservation,
     type SetupAction,
@@ -156,9 +157,15 @@ export class SetupManager extends AbstractModule {
     /**
      * Asks the server what it already holds.
      *
+     * By document count, not by size. An empty CouchDB database is not zero
+     * bytes — a fresh one reports about 16 kB of its own bookkeeping — so a
+     * size test called every database initialised, the "server is empty" plan
+     * was unreachable, and a first setup was told it was joining a vault that
+     * did not exist.
+     *
      * `doc_count` counts chunks as well as files, so it is deliberately not
-     * reported as a file count — it is used only to tell an empty database from
-     * one that must not be seeded over.
+     * reported to the user as a file count. It is used only to tell an empty
+     * database from one that must not be seeded over.
      */
     private async observeRemote(settings: ObsidianLiveSyncSettings): Promise<RemoteObservation> {
         const replicator = await this.services.replicator.getNewReplicator(settings);
@@ -170,8 +177,7 @@ export class SetupManager extends AbstractModule {
             return { reachable: false, initialised: false, unreachableReason: probe.reason };
         }
         const status = await replicator.getRemoteStatus(settings);
-        const estimatedSize = status === false ? 0 : (status.estimatedSize ?? 0);
-        return { reachable: true, initialised: estimatedSize > 0 };
+        return { reachable: true, initialised: isRemoteInitialised(status) };
     }
 
     /**

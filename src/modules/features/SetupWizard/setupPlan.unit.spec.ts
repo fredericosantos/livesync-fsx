@@ -4,6 +4,7 @@ import {
     SETUP_RECONNECT,
     SETUP_SEED,
     SETUP_UNREACHABLE,
+    isRemoteInitialised,
     planSetup,
     type LocalObservation,
     type RemoteObservation,
@@ -51,13 +52,14 @@ describe("planSetup", () => {
             // before they agree rather than discover it afterwards.
             const plan = planSetup(remote(), local({ fileCount: 12 }));
             expect(plan.isDestructive).toBe(true);
-            expect(plan.detail).toContain("conflicts");
+            expect(plan.detail).toContain("merged");
+            expect(plan.detail).toContain("12 files");
         });
 
         it("does not warn when there is nothing to lose", () => {
             const plan = planSetup(remote(), local({ fileCount: 0 }));
             expect(plan.isDestructive).toBe(false);
-            expect(plan.detail).not.toContain("conflicts");
+            expect(plan.detail).not.toContain("merged");
         });
     });
 
@@ -83,5 +85,23 @@ describe("planSetup", () => {
                 expect(plan.detail.length).toBeGreaterThan(0);
             }
         });
+    });
+});
+
+describe("isRemoteInitialised", () => {
+    it("treats a freshly created database as empty despite its size", () => {
+        // What CouchDB actually reports for a database created seconds ago and
+        // never written to. Reading `sizes.file` here made every setup look
+        // like joining an existing vault.
+        expect(isRemoteInitialised({ doc_count: 0, sizes: { file: 16692, active: 0, external: 0 } })).toBe(false);
+    });
+
+    it("treats a database holding documents as initialised", () => {
+        expect(isRemoteInitialised({ doc_count: 35301, sizes: { file: 310956472 } })).toBe(true);
+    });
+
+    it("treats an unanswered status as empty rather than guessing", () => {
+        expect(isRemoteInitialised(false)).toBe(false);
+        expect(isRemoteInitialised({})).toBe(false);
     });
 });
