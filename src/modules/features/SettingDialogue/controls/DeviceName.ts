@@ -1,7 +1,8 @@
 import { LiveSyncSetting as Setting } from "@/modules/features/SettingDialogue/LiveSyncSetting.ts";
 import type { ObsidianLiveSyncSettingTab } from "@/modules/features/SettingDialogue/ObsidianLiveSyncSettingTab.ts";
 import { validateDeviceName } from "./deviceNameRules.ts";
-import { suggestDeviceName } from "./suggestDeviceName.ts";
+import { readSystemHostName, suggestDeviceName } from "./suggestDeviceName.ts";
+import { usedDeviceNames } from "@/features/ConfigSync/deviceNames.ts";
 import { Platform } from "@/deps.ts";
 
 /**
@@ -13,6 +14,10 @@ import { Platform } from "@/deps.ts";
  * the fact means cleaning up bad keys.
  */
 export function renderDeviceName(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
+    // Names found in the database, added to as soon as the scan returns. Held
+    // outside `report` so a later answer applies to what the user has typed by
+    // then, not to what they had typed when the scan started.
+    let namesInUse: readonly string[] = [];
     const setting = new Setting(el)
         .setName("Device name")
         .setDesc("Shown on your other devices. Must be unique among them.");
@@ -22,7 +27,7 @@ export function renderDeviceName(tab: ObsidianLiveSyncSettingTab, el: HTMLElemen
 
     const report = () => {
         const value = tab.editingSettings.deviceAndVaultName ?? "";
-        const verdict = validateDeviceName(value, knownDeviceNames(tab));
+        const verdict = validateDeviceName(value, [...knownDeviceNames(tab), ...namesInUse]);
         // Being nameless only matters once something depends on the name. The
         // message says which thing, at the field that can fix it, instead of a
         // permanent caveat printed under the toggle that caused it.
@@ -43,7 +48,8 @@ export function renderDeviceName(tab: ObsidianLiveSyncSettingTab, el: HTMLElemen
         tab.editingSettings.deviceAndVaultName = suggestDeviceName(
             Platform,
             tab.plugin.app.vault.getName(),
-            knownDeviceNames(tab)
+            knownDeviceNames(tab),
+            readSystemHostName()
         );
     }
 
@@ -68,6 +74,15 @@ export function renderDeviceName(tab: ObsidianLiveSyncSettingTab, el: HTMLElemen
     // flags the field immediately rather than at the next redraw.
     tab.controlledElementFunc.push(report);
     report();
+
+    // The database knows every name that has ever stored customisations. It is
+    // read here rather than on every keystroke because the answer does not
+    // change while the page is open.
+    void usedDeviceNames(tab.core).then((names) => {
+        const own = (tab.initialSettings?.deviceAndVaultName ?? "").trim().toLowerCase();
+        namesInUse = names.filter((name) => name.trim().toLowerCase() !== own);
+        report();
+    });
 }
 
 /**
