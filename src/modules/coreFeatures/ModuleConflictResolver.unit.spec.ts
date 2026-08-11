@@ -67,7 +67,7 @@ function createModule(files: FilePathWithPrefix[] = []) {
 }
 
 describe("ModuleConflictResolver bulk newest resolution", () => {
-    it("retains the success notice for a non-bulk newest resolution", async () => {
+    it("merges without telling anyone, whether or not it was asked to be quiet", async () => {
         const { module } = createModule();
         const path = "example.md" as FilePathWithPrefix;
         module.core.databaseFileAccess.fetchEntryMeta = vi.fn(
@@ -91,7 +91,9 @@ describe("ModuleConflictResolver bulk newest resolution", () => {
 
         await (module as any)._anyResolveConflictByNewest(path);
 
-        expect(module._log).toHaveBeenLastCalledWith(`${path} has been merged automatically`, LOG_LEVEL_NOTICE);
+        // A merge that succeeded is the feature working. Interrupting the
+        // reader to say so is the thing this fork removed.
+        expect(module._log).toHaveBeenLastCalledWith(`${path} has been merged automatically`, LOG_LEVEL_INFO);
     });
 
     it("logs a successful bulk newest resolution without displaying a notice", async () => {

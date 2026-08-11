@@ -53,8 +53,10 @@ export class ModuleConflictResolver extends AbstractModule {
             this._log(`Could not write the resolved content to the storage: ${path}`, LOG_LEVEL_NOTICE);
             return MISSING_OR_ERROR;
         }
-        const level = subTitle.indexOf("same") !== -1 || !showNotice ? LOG_LEVEL_INFO : LOG_LEVEL_NOTICE;
-        this._log(`${path} has been merged automatically`, level);
+        // Not a notice. A merge that succeeded is the feature working: text
+        // edited in two places is combined and nobody is interrupted. Telling
+        // the reader every time turns the quiet path into the noisy one.
+        this._log(`${path} has been merged automatically`, LOG_LEVEL_INFO);
         return AUTO_MERGED;
     }
 
@@ -151,9 +153,12 @@ export class ModuleConflictResolver extends AbstractModule {
             if (this.settings.showMergeDialogOnlyOnActive) {
                 const af = this.services.vault.getActiveFilePath();
                 if (af && af != filename) {
+                    // Deferring until the file is opened is the configured
+                    // behaviour, not an event worth a toast in the corner of
+                    // the screen while the reader is writing something else.
                     this._log(
-                        `[conflict] ${filename} is conflicted. Merging process has been postponed to the file have got opened.`,
-                        LOG_LEVEL_NOTICE
+                        `[conflict] ${filename} is conflicted; the merge waits until the file is opened.`,
+                        LOG_LEVEL_INFO
                     );
                     return;
                 }
@@ -222,7 +227,7 @@ export class ModuleConflictResolver extends AbstractModule {
                 );
             await this._anyResolveConflictByNewest(file, false);
         }
-        this._log(`Done!`, LOG_LEVEL_NOTICE, "resolveAllConflictedFilesByNewerOnes");
+        this._log(`Conflicts resolved.`, LOG_LEVEL_NOTICE, "resolveAllConflictedFilesByNewerOnes");
     }
 
     override onBindFunction(core: LiveSyncCore, services: InjectableServiceHub): void {
