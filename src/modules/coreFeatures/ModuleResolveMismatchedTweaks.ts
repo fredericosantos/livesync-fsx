@@ -205,7 +205,7 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
             if (rebuildRequired) {
                 await this.core.rebuilder.$rebuildRemote();
             }
-            Logger($msg("TweakMismatchResolve.Message.remoteUpdated"), LOG_LEVEL_NOTICE);
+            Logger("Settings taken from the server.", LOG_LEVEL_INFO);
             return "CHECKAGAIN";
         }
         if (conf) {
@@ -222,7 +222,7 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
             if (rebuildRequired) {
                 await this.core.rebuilder.$fetchLocal();
             }
-            Logger($msg("TweakMismatchResolve.Message.mineUpdated"), LOG_LEVEL_NOTICE);
+            Logger("Settings from this device sent to the server.", LOG_LEVEL_INFO);
             return "CHECKAGAIN";
         }
         return "IGNORE";
@@ -320,7 +320,7 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
         }
 
         if (differenceCount === 0) {
-            this._log("The settings in the remote database are the same as the local database.", LOG_LEVEL_NOTICE);
+            this._log("The server settings already match this device.", LOG_LEVEL_INFO);
             return { result: false, requireFetch: false };
         }
         // Setup reads the server's settings so the new device matches it. That

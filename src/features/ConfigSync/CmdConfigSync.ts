@@ -869,7 +869,7 @@ export class ConfigSync extends LiveSyncCommands {
                 if (delR) {
                     this._log(`Deleted ${v1Path} successfully`, LOG_LEVEL_INFO);
                 } else {
-                    this._log(`Failed to delete ${v1Path}`, LOG_LEVEL_NOTICE);
+                    this._log(`Could not delete ${v1Path}`, LOG_LEVEL_INFO);
                 }
             }
         }
@@ -931,7 +931,7 @@ export class ConfigSync extends LiveSyncCommands {
         if (!fileA || !fileB) {
             this._log(
                 `Could not load ${dataA.name} for comparison: ${!fileA ? dataA.term : ""}${!fileB ? dataB.term : ""}`,
-                LOG_LEVEL_NOTICE
+                LOG_LEVEL_INFO
             );
             return false;
         }
@@ -1061,7 +1061,7 @@ export class ConfigSync extends LiveSyncCommands {
                 }
             }
         } catch (ex) {
-            this._log(`Applying ${data.displayName || data.name}.. Failed`, LOG_LEVEL_NOTICE);
+            this._log(`Could not apply ${data.displayName || data.name}`, LOG_LEVEL_NOTICE);
             this._log(ex, LOG_LEVEL_VERBOSE);
             return false;
         }
@@ -1149,14 +1149,11 @@ export class ConfigSync extends LiveSyncCommands {
                 await Promise.allSettled(p);
                 // await this.deleteConfigOnDatabase(data.documentPath);
                 // await this.updatePluginList(false, data.documentPath);
-                this._log(
-                    `Deleted: ${data.category}/${data.name} of ${data.category} (${delList.length} items)`,
-                    LOG_LEVEL_NOTICE
-                );
+                this._log(`Deleted: ${data.category}/${data.name} (${delList.length} items)`, LOG_LEVEL_INFO);
             }
             return true;
         } catch (ex) {
-            this._log(`Failed to delete: ${data.documentPath}`, LOG_LEVEL_NOTICE);
+            this._log(`Could not delete ${data.documentPath}`, LOG_LEVEL_NOTICE);
             this._log(ex, LOG_LEVEL_VERBOSE);
             return false;
         }
@@ -1660,10 +1657,7 @@ export class ConfigSync extends LiveSyncCommands {
 
     private _allSuspendExtraSync(): Promise<boolean> {
         if (this.core.settings.usePluginSync || this.core.settings.autoSweepPlugins) {
-            this._log(
-                "Customisation sync have been temporarily disabled. Please enable them after the fetching, if you need them.",
-                LOG_LEVEL_NOTICE
-            );
+            this._log("Customisation Sync is paused while the database is rebuilt.", LOG_LEVEL_INFO);
             this.core.settings.usePluginSync = false;
             this.core.settings.autoSweepPlugins = false;
         }

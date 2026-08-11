@@ -11,7 +11,6 @@ import {
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { ConflictResolveModal, POSTPONED } from "./InteractiveConflictResolving/ConflictResolveModal.ts";
 import { AbstractObsidianModule } from "@/modules/AbstractObsidianModule.ts";
-import { displayRev } from "@/common/utils.ts";
 import { fireAndForget } from "octagonal-wheels/promises";
 import { serialized } from "octagonal-wheels/concurrency/lock";
 import type { LiveSyncCore } from "@/main.ts";
@@ -157,8 +156,8 @@ export class ModuleInteractiveConflictResolver extends AbstractObsidianModule {
                     MISSING_OR_ERROR
                 ) {
                     this._log(
-                        `Concatenated saved, but cannot delete conflicted revisions: ${filename}, (${displayRev(delRev)})`,
-                        LOG_LEVEL_NOTICE
+                        `Saved the combined version of ${filename}, but the older ones could not be removed`,
+                        LOG_LEVEL_INFO
                     );
                     return false;
                 }

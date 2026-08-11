@@ -2,12 +2,13 @@ import { App, Component, PluginSettingTab, SettingGroup } from "@/deps.ts";
 import {
     type ObsidianLiveSyncSettings,
     type RemoteDBSettings,
+    LOG_LEVEL_INFO,
     LOG_LEVEL_NOTICE,
     FLAGMD_REDFLAG2_HR,
     FLAGMD_REDFLAG3_HR,
     REMOTE_COUCHDB,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
-import { delay, isObjectDifferent, sizeToHumanReadable } from "@vrtmrz/livesync-commonlib/compat/common/utils";
+import { delay, isObjectDifferent } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { Logger } from "@vrtmrz/livesync-commonlib/compat/common/logger";
 import { checkSyncInfo } from "@vrtmrz/livesync-commonlib/compat/pouchdb/negotiation";
 import { testCrypt } from "octagonal-wheels/encryption/encryption";
@@ -267,27 +268,6 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         });
     }
 
-    async testConnection(settingOverride: Partial<ObsidianLiveSyncSettings> = {}): Promise<void> {
-        const trialSetting = { ...this.editingSettings, ...settingOverride };
-        const replicator = await this.services.replicator.getNewReplicator(trialSetting);
-        if (!replicator) {
-            Logger("No replicator available for the current settings.", LOG_LEVEL_NOTICE);
-            return;
-        }
-        await replicator.tryConnectRemote(trialSetting);
-        const status = await replicator.getRemoteStatus(trialSetting);
-        if (status) {
-            if (status.estimatedSize) {
-                Logger(
-                    $msg("obsidianLiveSyncSettingTab.logEstimatedSize", {
-                        size: sizeToHumanReadable(status.estimatedSize),
-                    }),
-                    LOG_LEVEL_NOTICE
-                );
-            }
-        }
-    }
-
     closeSetting() {
         closeObsidianSettings(this.plugin.app);
     }
@@ -496,7 +476,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         await this.services.setting.suspendExtraSync();
         this.reloadAllSettings();
         this.editingSettings.isConfigured = true;
-        Logger("Syncing is paused while the database is rebuilt.", LOG_LEVEL_NOTICE);
+        Logger("Syncing is paused while the database is rebuilt.", LOG_LEVEL_INFO);
         await this.saveAllDirtySettings();
         this.closeSetting();
         await delay(2000);

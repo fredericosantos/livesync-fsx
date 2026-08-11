@@ -2,7 +2,6 @@ import { fireAndForget } from "octagonal-wheels/promises";
 import { HOLD_SUSPENDED, syncHold } from "@/common/syncHold.ts";
 import {
     LOG_LEVEL_INFO,
-    LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
     type ObsidianLiveSyncSettings,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
@@ -42,7 +41,7 @@ export class ModuleLiveSyncMain extends AbstractModule {
         fireAndForget(async () => {
             this._log($msg("moduleLiveSyncMain.logAdditionalSafetyScan"), LOG_LEVEL_VERBOSE);
             if (!(await this.services.appLifecycle.onScanningStartupIssues())) {
-                this._log($msg("moduleLiveSyncMain.logSafetyScanFailed"), LOG_LEVEL_NOTICE);
+                this._log("A start-up check did not complete.", LOG_LEVEL_INFO);
             } else {
                 this._log($msg("moduleLiveSyncMain.logSafetyScanCompleted"), LOG_LEVEL_VERBOSE);
             }
@@ -78,14 +77,14 @@ export class ModuleLiveSyncMain extends AbstractModule {
         eventHub.emitEvent(EVENT_PLUGIN_LOADED);
         this._log($msg("moduleLiveSyncMain.logLoadingPlugin"));
         if (!(await this.services.appLifecycle.onInitialise())) {
-            this._log($msg("moduleLiveSyncMain.logPluginInitCancelled"), LOG_LEVEL_NOTICE);
+            this._log("Start-up stopped before synchronisation began.", LOG_LEVEL_INFO);
             return false;
         }
         // this.addUIs();
         this._log($msg("moduleLiveSyncMain.logPluginVersion", { manifestVersion, packageVersion }));
         await this.services.setting.loadSettings();
         if (!(await this.services.appLifecycle.onSettingLoaded())) {
-            this._log($msg("moduleLiveSyncMain.logPluginInitCancelled"), LOG_LEVEL_NOTICE);
+            this._log("Start-up stopped before synchronisation began.", LOG_LEVEL_INFO);
             return false;
         }
         await this.services.database.openDatabase({

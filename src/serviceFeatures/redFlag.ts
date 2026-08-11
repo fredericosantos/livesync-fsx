@@ -96,7 +96,7 @@ async function askAndActivateRemoteDatabase(host: NecessaryServices<"UI" | "sett
                 log(`Activated remote configuration: ${selectedConfig.name}`, LOG_LEVEL_INFO);
                 return true;
             } else {
-                log(`Failed to activate remote configuration: ${selectedConfig.name}`, LOG_LEVEL_NOTICE);
+                log(`Could not switch to the server profile ${selectedConfig.name}.`, LOG_LEVEL_NOTICE);
                 return false;
             }
         } else {
@@ -413,7 +413,7 @@ export function createSuspendFlagHandler(
             log,
             async () => {
                 log(
-                    "All operations are suspended as per SCRAM.\nLogs will be written to the file. This might be a performance impact.",
+                    "Everything is suspended: a stop file is present in the vault. Logs are being written to a file.",
                     LOG_LEVEL_NOTICE
                 );
                 await host.services.setting.applyPartial({ writeLogToTheFile: true }, true);

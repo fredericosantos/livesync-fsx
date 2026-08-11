@@ -685,7 +685,7 @@ export class DocumentHistoryModal extends Modal {
             e.addEventListener("click", () => {
                 fireAndForget(async () => {
                     await compatGlobal.navigator.clipboard.writeText(this.currentText);
-                    Logger(`Old content copied to clipboard`, LOG_LEVEL_NOTICE);
+                    Logger(`Copied to the clipboard.`, LOG_LEVEL_NOTICE);
                 });
             });
         });
@@ -695,7 +695,7 @@ export class DocumentHistoryModal extends Modal {
                 const leaf = this.plugin.app.workspace.getLeaf(false);
                 await leaf.openFile(targetFile);
             } else {
-                Logger("Unable to display the file in the editor", LOG_LEVEL_NOTICE);
+                Logger("Could not open that file.", LOG_LEVEL_NOTICE);
             }
         };
         buttons.createEl("button", { text: "Back to this revision" }, (e) => {

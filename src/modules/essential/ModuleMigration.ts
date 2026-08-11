@@ -252,11 +252,11 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
         const remote = this.services.replicator.getActiveReplicator();
         const remoteCompromised = this.services.API.isOnline ? await remote?.countCompromisedChunks() : 0;
         if (localCompromised === false) {
-            Logger(`Failed to count compromised chunks in local database`, LOG_LEVEL_NOTICE);
+            Logger(`Could not check this device for content encrypted with the old scheme.`, LOG_LEVEL_INFO);
             return false;
         }
         if (remoteCompromised === false) {
-            Logger(`Failed to count compromised chunks in remote database`, LOG_LEVEL_NOTICE);
+            Logger(`Could not check the server for content encrypted with the old scheme.`, LOG_LEVEL_INFO);
             return false;
         }
         if (remoteCompromised === 0 && localCompromised === 0) {
