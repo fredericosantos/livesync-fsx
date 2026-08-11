@@ -94,6 +94,9 @@ export default defineConfig({
         }),
     ],
     resolve: {
+        // The same single-runtime requirement the plugin build enforces: a
+        // second copy of Svelte breaks context and lifecycle silently.
+        dedupe: ["svelte"],
         alias: {
             "@": path.resolve(__dirname, "./src"),
             src: path.resolve(__dirname, "./src"),

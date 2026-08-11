@@ -30,6 +30,36 @@ if (PATH_TEST_INSTALL) {
     );
 }
 
+/**
+ * One Svelte runtime for the whole bundle.
+ *
+ * `@vrtmrz/livesync-commonlib` is linked from a sibling checkout that has its
+ * own `node_modules/svelte`, so ordinary Node resolution gave it a second copy.
+ * Svelte tracks the currently-initialising component in a module-level
+ * variable, so with two copies `getContext`, `setContext` and `onMount` called
+ * from commonlib see no component at all. Every dialogue in the plugin opened
+ * as an empty window and threw `lifecycle_outside_component`.
+ */
+const singleSveltePlugin = {
+    name: "single-svelte",
+    setup(build) {
+        const root = path.resolve(".");
+        build.onResolve({ filter: /^svelte($|\/)/ }, async (args) => {
+            // Svelte resolving its own subpaths, and our own re-entry, are left
+            // alone; only importers outside the runtime get redirected.
+            if (args.pluginData?.singleSvelte) return null;
+            if (args.resolveDir.includes(`${path.sep}node_modules${path.sep}svelte`)) return null;
+            const resolved = await build.resolve(args.path, {
+                kind: args.kind,
+                resolveDir: root,
+                pluginData: { singleSvelte: true },
+            });
+            if (resolved.errors.length > 0) return null;
+            return resolved;
+        });
+    },
+};
+
 const moduleAliasPlugin = {
     name: "module-alias",
     setup(build) {
@@ -204,6 +234,7 @@ const context = await esbuild.context({
     dropLabels: prod && !keepTest ? ["TEST", "DEV"] : [],
     // keepNames: true,
     plugins: [
+        singleSveltePlugin,
         moduleAliasPlugin,
         inlineWorkerPlugin({
             external: externals,
@@ -218,8 +249,25 @@ const context = await esbuild.context({
     ],
 });
 
+/**
+ * A second copy of the Svelte runtime is invisible until a dialogue silently
+ * fails to open, so the build refuses to produce one.
+ */
+function assertSingleSvelteRuntime(bundlePath) {
+    const source = fs.readFileSync(bundlePath, "utf-8");
+    const copies = [...source.matchAll(/^\/\/ (.*node_modules\/svelte)\/src\//gm)].map((match) => match[1]);
+    const distinct = [...new Set(copies)];
+    if (distinct.length > 1) {
+        throw new Error(
+            `Bundled ${distinct.length} copies of the Svelte runtime:\n  ${distinct.join("\n  ")}\n` +
+                "Context and lifecycle functions do not work across copies. See singleSveltePlugin."
+        );
+    }
+}
+
 if (prod) {
     await context.rebuild();
+    assertSingleSvelteRuntime("main_org.js");
     process.exit(0);
 } else {
     await context.watch();
