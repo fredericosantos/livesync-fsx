@@ -8,14 +8,13 @@ import {
     type DocumentID,
     type EntryDoc,
     type EntryLeaf,
-    type FilePathWithPrefix,
     type MetaEntry,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { getNoFromRev } from "@vrtmrz/livesync-commonlib/compat/pouchdb/LiveSyncLocalDB";
 import { LiveSyncCommands } from "@/features/LiveSyncCommands";
 import { serialized } from "octagonal-wheels/concurrency/lock_v2";
 import { arrayToChunkedArray } from "octagonal-wheels/collection";
-import { EVENT_ANALYSE_DB_USAGE, EVENT_REQUEST_PERFORM_GC_V3, eventHub } from "@/common/events";
+import { EVENT_REQUEST_PERFORM_GC_V3, eventHub } from "@/common/events";
 import type { LiveSyncCouchDBReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/couchdb/LiveSyncReplicator";
 import { delay } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { isNotFoundError } from "@vrtmrz/livesync-commonlib/compat/common/utils.doc";
@@ -36,24 +35,12 @@ export class LocalDatabaseMaintenance extends LiveSyncCommands {
     onload(): void | Promise<void> {
         // NO OP.
         this.plugin.addCommand({
-            id: "analyse-database",
-            name: "Analyse Database Usage (advanced)",
-            icon: "database-search",
-            checkCallback: (checking) => {
-                if (!this.settings.useAdvancedMode || !this._isDatabaseReady()) return false;
-                if (!checking) {
-                    void this.analyseDatabase();
-                }
-                return true;
-            },
-        });
-        this.plugin.addCommand({
             id: "gc-v3",
-            name: "Garbage Collection V3 (advanced, beta)",
+            name: "Free up space on the server",
             icon: "trash-2",
             checkCallback: (checking) => {
                 const isApplicableRemote = this.settings.remoteType === REMOTE_COUCHDB;
-                if (!this.settings.useEdgeCaseMode || !this._isDatabaseReady() || !isApplicableRemote) {
+                if (!this._isDatabaseReady() || !isApplicableRemote) {
                     return false;
                 }
                 if (!checking) {
@@ -62,7 +49,6 @@ export class LocalDatabaseMaintenance extends LiveSyncCommands {
                 return true;
             },
         });
-        eventHub.onEvent(EVENT_ANALYSE_DB_USAGE, () => this.analyseDatabase());
         eventHub.onEvent(EVENT_REQUEST_PERFORM_GC_V3, () => this.gcv3());
     }
     async allChunks(includeDeleted: boolean = false) {
@@ -525,217 +511,6 @@ Success: ${successCount}, Errored: ${errored}`;
     }
 
     // Analyse the database and report chunk usage.
-    async analyseDatabase() {
-        if (!(await this.ensureAvailable("Analyse Database Usage"))) return;
-        const db = this.localDatabase.localDatabase;
-        // Map of chunk ID to its info
-        type ChunkInfo = {
-            id: DocumentID;
-            refCount: number;
-            length: number;
-        };
-        const chunkMap = new Map<DocumentID, Set<ChunkInfo>>();
-        // Map of document ID to its info
-        type DocumentInfo = {
-            id: DocumentID;
-            rev: Rev;
-            chunks: Set<ChunkID>;
-            uniqueChunks: Set<ChunkID>;
-            sharedChunks: Set<ChunkID>;
-            path: FilePathWithPrefix;
-        };
-        const docMap = new Map<DocumentID, Set<DocumentInfo>>();
-        const info = await db.info();
-        // Total number of revisions to process (approximate)
-        const maxSeq = Number.parseInt(`${info.update_seq ?? 0}`, 10);
-        let processed = 0;
-        let read = 0;
-        let errored = 0;
-        // Fetch Tasks
-        const ft = [] as ReturnType<typeof fetchRevision>[];
-        // Fetch a specific revision of a document and make note of its chunks, or add chunk info.
-        const fetchRevision = async (id: DocumentID, rev: Rev, seq: string | number) => {
-            try {
-                processed++;
-                const doc = await db.get(id, { rev: rev });
-                if (doc) {
-                    if ("children" in doc) {
-                        const id = doc._id;
-                        const rev = doc._rev;
-                        const children = (doc.children || []) as DocumentID[];
-                        const set = docMap.get(id) || new Set();
-                        set.add({
-                            id,
-                            rev,
-                            chunks: new Set(children),
-                            uniqueChunks: new Set(),
-                            sharedChunks: new Set(),
-                            path: doc.path,
-                        });
-                        docMap.set(id, set);
-                    } else if (doc.type === EntryTypes.CHUNK) {
-                        const id = doc._id;
-                        if (chunkMap.has(id)) {
-                            return;
-                        }
-                        if (doc._deleted) {
-                            // Deleted chunk, skip (possibly resurrected later)
-                            return;
-                        }
-                        const length = doc.data.length;
-                        const set = chunkMap.get(id) || new Set();
-                        set.add({ id, length, refCount: 0 });
-                        chunkMap.set(id, set);
-                    }
-                    read++;
-                } else {
-                    this._log(`Analysing Database: not found: ${id} / ${rev}`);
-                    errored++;
-                }
-            } catch (error) {
-                this._log(`Error fetching document ${id} / ${rev}: $`, LOG_LEVEL_NOTICE);
-                this._log(error, LOG_LEVEL_VERBOSE);
-                errored++;
-            }
-            if (processed % 100 == 0) {
-                this._log(`Analysing database: ${read} (${errored}) / ${maxSeq} `, LOG_LEVEL_NOTICE, "db-analyse");
-            }
-        };
-
-        // Enumerate all documents and their revisions.
-        const IDs = this.localDatabase.findEntryNames("", "", {});
-        for await (const id of IDs) {
-            const revList = await this.localDatabase.getRaw(id as DocumentID, {
-                revs: true,
-                revs_info: true,
-                conflicts: true,
-            });
-            const revInfos = revList._revs_info || [];
-            for (const revInfo of revInfos) {
-                // All available revisions should be processed.
-                // If the revision is not available, it means the revision is already tombstoned.
-                if (revInfo.status == "available") {
-                    // Schedule fetch task
-                    ft.push(fetchRevision(id as DocumentID, revInfo.rev, 0));
-                }
-            }
-        }
-        // Wait for all fetch tasks to complete.
-        await Promise.all(ft);
-        // Reference count marking and unique/shared chunk classification.
-        for (const [, docRevs] of docMap) {
-            for (const docRev of docRevs) {
-                for (const chunkId of docRev.chunks) {
-                    const chunkInfos = chunkMap.get(chunkId);
-                    if (chunkInfos) {
-                        for (const chunkInfo of chunkInfos) {
-                            if (chunkInfo.refCount === 0) {
-                                docRev.uniqueChunks.add(chunkId);
-                            } else {
-                                docRev.sharedChunks.add(chunkId);
-                            }
-                            chunkInfo.refCount++;
-                        }
-                    }
-                }
-            }
-        }
-        // Prepare results
-        const result = [];
-        // Calculate total size of chunks in the given set.
-        const getTotalSize = (ids: Set<DocumentID>) => {
-            return [...ids].reduce((acc, chunkId) => {
-                const chunkInfos = chunkMap.get(chunkId);
-                if (chunkInfos) {
-                    for (const chunkInfo of chunkInfos) {
-                        acc += chunkInfo.length;
-                    }
-                }
-                return acc;
-            }, 0);
-        };
-
-        // Compile results for each document revision
-        for (const doc of docMap.values()) {
-            for (const rev of doc) {
-                const title = `${rev.path} (${rev.rev})`;
-                const id = rev.id;
-                const revStr = `${getNoFromRev(rev.rev)}`;
-                const revHash = rev.rev.split("-")[1].substring(0, 6);
-                const path = rev.path;
-                const uniqueChunkCount = rev.uniqueChunks.size;
-                const sharedChunkCount = rev.sharedChunks.size;
-                const uniqueChunkSize = getTotalSize(rev.uniqueChunks);
-                const sharedChunkSize = getTotalSize(rev.sharedChunks);
-                result.push({
-                    title,
-                    path,
-                    rev: revStr,
-                    revHash,
-                    id,
-                    uniqueChunkCount: uniqueChunkCount,
-                    sharedChunkCount,
-                    uniqueChunkSize: uniqueChunkSize,
-                    sharedChunkSize: sharedChunkSize,
-                });
-            }
-        }
-
-        const titleMap = {
-            title: "Title",
-            id: "Document ID",
-            path: "Path",
-            rev: "Revision No",
-            revHash: "Revision Hash",
-            uniqueChunkCount: "Unique Chunk Count",
-            sharedChunkCount: "Shared Chunk Count",
-            uniqueChunkSize: "Unique Chunk Size",
-            sharedChunkSize: "Shared Chunk Size",
-        } as const;
-        // Enumerate orphan chunks (not referenced by any document)
-        const orphanChunks = [...chunkMap.entries()].filter(([chunkId, infos]) => {
-            const totalRefCount = [...infos].reduce((acc, info) => acc + info.refCount, 0);
-            return totalRefCount === 0;
-        });
-        const orphanChunkSize = orphanChunks.reduce((acc, [chunkId, infos]) => {
-            for (const info of infos) {
-                acc += info.length;
-            }
-            return acc;
-        }, 0);
-        result.push({
-            title: "__orphan",
-            id: "__orphan",
-            path: "__orphan",
-            rev: "1",
-            revHash: "xxxxx",
-            uniqueChunkCount: orphanChunks.length,
-            sharedChunkCount: 0,
-            uniqueChunkSize: orphanChunkSize,
-            sharedChunkSize: 0,
-        } as const);
-
-        const csvSrc = result.map((e) => {
-            return [
-                `${e.title.replace(/"/g, '""')}"`,
-                `${e.id}`,
-                `${e.path}`,
-                `${e.rev}`,
-                `${e.revHash}`,
-                `${e.uniqueChunkCount}`,
-                `${e.sharedChunkCount}`,
-                `${e.uniqueChunkSize}`,
-                `${e.sharedChunkSize}`,
-            ].join("\t");
-        });
-        // Add title row
-        csvSrc.unshift(Object.values(titleMap).join("\t"));
-        const csv = csvSrc.join("\n");
-
-        // Prompt to copy to clipboard
-        await this.services.UI.promptCopyToClipboard("Database Analysis data (TSV):", csv);
-    }
-
     async compactDatabase() {
         const replicator = this.core.replicator as LiveSyncCouchDBReplicator;
         const remote = await replicator.connectRemoteCouchDBWithSetting(this.settings, false, false, true);
@@ -863,24 +638,13 @@ Success: ${successCount}, Errored: ${errored}`;
                 infoMissingNodes.push(node);
             }
         }
-        if (infoMissingNodes.length > 0) {
-            const message = `The following accepted nodes are missing its node information:\n- ${infoMissingNodes.join("\n- ")}\n\nThis indicates that they have not been connected for some time or have been left on an older version.
-It is preferable to update all devices if possible. If you have any devices that are no longer in use, you can clear all accepted nodes by locking the remote once.`;
-
-            const OPTION_IGNORE = "Ignore and Proceed";
-            // const OPTION_DELETE = "Delete them and proceed";
-            const buttons = [OPTION_CANCEL, OPTION_IGNORE] as const;
-            const result = await this.core.confirm.askSelectStringDialogue(message, buttons, {
-                title: "Node Information Missing",
-                defaultAction: OPTION_CANCEL,
-            });
-            if (result === OPTION_CANCEL) {
-                this._notice("Garbage Collection cancelled by user.");
-                return;
-            } else if (result === OPTION_IGNORE) {
-                this._notice("Proceeding with Garbage Collection, ignoring missing nodes.");
-            }
-        }
+        // Everything below used to be shown to the reader: a dialogue about
+        // "accepted nodes missing node information", then a second one with a
+        // callout listing each device's node id, Obsidian version, plug-in
+        // version and replication progress. Both were asking one question —
+        // is every device up to date with the server? — in the vocabulary of
+        // the implementation. The plug-in can answer it, so it answers it.
+        const devicesBehind = infoMissingNodes.length > 0;
 
         //2. Check whether the progress values in NodeData are roughly the same (only the numerical part is needed).
         const progressValues = Object.values(node_info).map((entry) => {
@@ -891,37 +655,19 @@ It is preferable to update all devices if possible. If you have any devices that
             this._notice("No connected device information found. Cancelling Garbage Collection.");
             return;
         }
-        const maxProgress = Math.max(...progressValues);
-        const minProgress = Math.min(...progressValues);
-        const progressDifference = maxProgress - minProgress;
-        const OPTION_PROCEED = "Proceed Garbage Collection";
-        //   - If they differ significantly, the node may not have completed synchronisation, potentially causing conflicts. Display a confirmation dialog as a precaution.
-        // - If they are not significantly different, display the standard confirmation dialogue message.
+        const progressDifference = Math.max(...progressValues) - Math.min(...progressValues);
+        const notAllCaughtUp = devicesBehind || progressDifference !== 0;
 
-        const detail = `> [!INFO]- The connected devices have been detected as follows:
-${Object.entries(node_info)
-    .map(
-        ([nodeId, nodeData]) =>
-            `> - Device: ${nodeData.device_name} (Node ID: ${nodeId})
->   - Obsidian version: ${nodeData.app_version}
->   - Plug-in version: ${nodeData.plugin_version}
->   - Progress: ${nodeData.progress.split("-")[0]}`
-    )
-    .join("\n")}
-`;
-        const message =
-            progressDifference != 0
-                ? `Some devices have differing progress values (max: ${maxProgress}, min: ${minProgress}).
-This may indicate that some devices have not completed synchronisation, which could lead to conflicts. Strongly recommend confirming that all devices are synchronised before proceeding.`
-                : `All devices have the same progress value (${maxProgress}). Your devices seem to be synchronised. And be able to proceed with Garbage Collection.`;
-        const buttons = [OPTION_PROCEED, OPTION_CANCEL] as const;
-        const defaultAction = progressDifference != 0 ? OPTION_CANCEL : OPTION_PROCEED;
-        const result = await this.core.confirm.askSelectStringDialogue(message + "\n\n" + detail, buttons, {
-            title: "Garbage Collection Confirmation",
-            defaultAction,
+        const OPTION_PROCEED = "Free up space";
+        const message = notAllCaughtUp
+            ? "Some of your devices have not finished syncing with the server. Freeing up space now can lose whatever they have not sent yet. Open Obsidian on each of them, let it finish, then try again."
+            : `Content no longer referenced by any file will be removed from the server. All ${progressValues.length} devices are up to date, so nothing in use will be lost.`;
+        const result = await this.core.confirm.askSelectStringDialogue(message, [OPTION_PROCEED, OPTION_CANCEL], {
+            title: "Free up space on the server",
+            defaultAction: notAllCaughtUp ? OPTION_CANCEL : OPTION_PROCEED,
         });
         if (result !== OPTION_PROCEED) {
-            this._notice("Garbage Collection cancelled by user.");
+            this._notice("Freeing up space cancelled.");
             return;
         }
         this._notice("Proceeding with Garbage Collection.");

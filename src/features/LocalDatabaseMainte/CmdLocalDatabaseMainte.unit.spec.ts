@@ -60,20 +60,12 @@ function createPrerequisites(settingsOverride: Partial<typeof DEFAULT_SETTINGS> 
 }
 
 describe("LocalDatabaseMaintenance prerequisites", () => {
-    it("shows database analysis in Advanced mode and Garbage Collection only in applicable Edge Case mode", () => {
+    it("offers to free up space on CouchDB, and only on CouchDB", () => {
         const commands: Array<{
             id: string;
             checkCallback?: (checking: boolean) => boolean | void;
         }> = [];
-        const settings: {
-            useAdvancedMode: boolean;
-            useEdgeCaseMode: boolean;
-            remoteType: string;
-        } = {
-            useAdvancedMode: false,
-            useEdgeCaseMode: false,
-            remoteType: REMOTE_COUCHDB,
-        };
+        const settings: { remoteType: string } = { remoteType: REMOTE_COUCHDB };
         const maintenance = Object.create(LocalDatabaseMaintenance.prototype) as LocalDatabaseMaintenance;
         Object.assign(maintenance, {
             plugin: {
@@ -87,16 +79,9 @@ describe("LocalDatabaseMaintenance prerequisites", () => {
 
         maintenance.onload();
 
-        const analyse = commands.find(({ id }) => id === "analyse-database");
+        // No tier gate: `useEdgeCaseMode` no longer exists in this fork, so the
+        // command it hid behind could never appear in the palette at all.
         const garbageCollect = commands.find(({ id }) => id === "gc-v3");
-        expect(analyse?.checkCallback?.(true)).toBe(false);
-        expect(garbageCollect?.checkCallback?.(true)).toBe(false);
-
-        settings.useAdvancedMode = true;
-        expect(analyse?.checkCallback?.(true)).toBe(true);
-        expect(garbageCollect?.checkCallback?.(true)).toBe(false);
-
-        settings.useEdgeCaseMode = true;
         expect(garbageCollect?.checkCallback?.(true)).toBe(true);
 
         settings.remoteType = REMOTE_P2P;
@@ -294,7 +279,7 @@ describe("LocalDatabaseMaintenance Garbage Collection V3", () => {
                 },
                 replicator,
                 confirm: {
-                    askSelectStringDialogue: vi.fn(async () => "Proceed Garbage Collection"),
+                    askSelectStringDialogue: vi.fn(async () => "Free up space"),
                 },
             },
             localDatabase: {
@@ -393,7 +378,7 @@ describe("LocalDatabaseMaintenance Garbage Collection V3", () => {
                 },
                 replicator,
                 confirm: {
-                    askSelectStringDialogue: vi.fn(async () => "Proceed Garbage Collection"),
+                    askSelectStringDialogue: vi.fn(async () => "Free up space"),
                 },
             },
             localDatabase,
