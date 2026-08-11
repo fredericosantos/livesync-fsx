@@ -32,14 +32,14 @@
     }
 </script>
 
-<DialogHeader title={translateMessage("Replace this device's copy")} />
+<DialogHeader title={translateMessage("Replace files on this device")} />
 <Guidance>
     {translateMessage(
-        "This device's database is rebuilt from the server. Any change made here that has not reached the server yet will be kept as a second copy of the file, not lost."
+        "The remote vault will overwrite this vault. Any changes made here that have not synced to the server are kept as a second copy of the file."
     )}
 </Guidance>
 
 <UserDecisions>
-    <Decision title={translateMessage("Replace this device's copy")} important commit={() => commit()} />
+    <Decision title={translateMessage("Replace files on this device")} important commit={() => commit()} />
     <Decision title={translateMessage("Cancel")} commit={() => setResult(TYPE_CANCEL)} />
 </UserDecisions>

@@ -22,25 +22,24 @@ export class CmdRecovery extends LiveSyncCommands {
     onload(): void {
         this.plugin.addCommand({
             id: "livesync-fsx-rebuild-remote",
-            name: "Repair sync: replace the server's copy with this device",
+            name: "Repair sync: replace files on server",
             callback: () => {
                 void this.confirmAndRebuild(
                     "remoteOnly",
-                    "Everything on the server will be replaced by the files on this device. " +
-                        "Other devices will download the result. Changes made only on another " +
-                        "device, and not yet received here, will be lost."
+                    "This vault will overwrite the remote vault. Any changes made on other " +
+                        "devices that have not synced to this device will be lost."
                 );
             },
         });
 
         this.plugin.addCommand({
             id: "livesync-fsx-fetch-local",
-            name: "Repair sync: replace this device with the server's copy",
+            name: "Repair sync: replace files on this device",
             callback: () => {
                 void this.confirmAndRebuild(
                     "localOnly",
-                    "The files on this device will be replaced by the server's copy. " +
-                        "Changes made only here, and not yet sent, will be lost."
+                    "The remote vault will overwrite this vault. Any changes made here that " +
+                        "have not synced to the server are kept as a second copy of the file."
                 );
             },
         });

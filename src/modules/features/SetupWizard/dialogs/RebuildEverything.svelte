@@ -27,14 +27,14 @@
     }
 </script>
 
-<DialogHeader title={msg("Replace the server's copy")} />
+<DialogHeader title={msg("Replace files on server")} />
 <Guidance>
     {msg(
-        "Everything on the server is deleted and rebuilt from this device. Other devices will download the result, and any change made on one of them that has not reached this device yet will be lost."
+        "This vault will overwrite the remote vault. Any changes made on other devices that have not synced to this device will be lost."
     )}
 </Guidance>
 
 <UserDecisions>
-    <Decision title={msg("Replace the server's copy")} important commit={() => commit()} />
+    <Decision title={msg("Replace files on server")} important commit={() => commit()} />
     <Decision title={msg("Cancel")} commit={() => setResult(TYPE_CANCEL)} />
 </UserDecisions>
