@@ -5,7 +5,7 @@ import {
     pickEncryptionSettings,
 } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { getConfig, type AllSettingItemKey } from "./settingConstants";
-import { LOG_LEVEL_NOTICE, Logger } from "octagonal-wheels/common/logger";
+import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE, Logger } from "octagonal-wheels/common/logger";
 import { isNotFoundError } from "@vrtmrz/livesync-commonlib/compat/common/utils.doc";
 import type PouchDB from "pouchdb-core";
 import type {} from "pouchdb-replication";
@@ -88,14 +88,14 @@ type PouchDBOpenFunction = () => Promise<PouchDB.Database> | PouchDB.Database;
 export async function migrateDatabases(operationName: string, from: PouchDB.Database, openTo: PouchDBOpenFunction) {
     const dbTo = await openTo();
     await dbTo.info(); // ensure created
-    Logger(`Opening destination database for migration: ${operationName}.`, LOG_LEVEL_NOTICE, "migration");
+    Logger(`Opening destination database for migration: ${operationName}.`, LOG_LEVEL_INFO);
     // destroy existing data
     await dbTo.destroy();
-    Logger(`Destroyed existing destination database for migration: ${operationName}.`, LOG_LEVEL_NOTICE, "migration");
+    Logger(`Destroyed existing destination database for migration: ${operationName}.`, LOG_LEVEL_INFO);
 
     const dbTo2 = await openTo();
     await dbTo2.info(); // ensure created
-    Logger(`Re-created destination database for migration: ${operationName}.`, LOG_LEVEL_NOTICE, "migration");
+    Logger(`Re-created destination database for migration: ${operationName}.`, LOG_LEVEL_INFO);
 
     const info = await from.info();
     const totalDocs = info.doc_count || 0;

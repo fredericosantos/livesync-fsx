@@ -50,7 +50,7 @@ export class ModuleConflictResolver extends AbstractModule {
         }
         // If no conflicts were found, write the resolved content to the storage.
         if (!(await this.core.fileHandler.dbToStorage(path, stripAllPrefixes(path), true))) {
-            this._log(`Could not write the resolved content to the storage: ${path}`, LOG_LEVEL_NOTICE);
+            this._log(`Could not write the resolved content of ${path}`, LOG_LEVEL_INFO);
             return MISSING_OR_ERROR;
         }
         // Not a notice. A merge that succeeded is the feature working: text
@@ -72,7 +72,7 @@ export class ModuleConflictResolver extends AbstractModule {
             // Merged content is coming.
             // 1. Store the merged content to the storage
             if (!(await this.core.databaseFileAccess.storeContent(path, p))) {
-                this._log(`Merged content cannot be stored:${path}`, LOG_LEVEL_NOTICE);
+                this._log(`Could not store the merged content of ${path}`, LOG_LEVEL_INFO);
                 return MISSING_OR_ERROR;
             }
             // 2. As usual, delete the conflicted revision and if there are no conflicts, write the resolved content to the storage.
@@ -84,14 +84,14 @@ export class ModuleConflictResolver extends AbstractModule {
         // should be one or more conflicts;
         if (leftLeaf == false) {
             // what's going on..
-            this._log(`could not get current revisions:${path}`, LOG_LEVEL_NOTICE);
+            this._log(`Could not read the current revisions of ${path}`, LOG_LEVEL_INFO);
             return MISSING_OR_ERROR;
         }
         if (rightLeaf == false) {
             // A locally unreadable conflict leaf may still be recoverable from another
             // replica or backup. Keep it visible for explicit repair instead of treating
             // missing chunks as evidence that the branch is obsolete.
-            this._log(`could not read conflicted revision ${rightRev}:${path}`, LOG_LEVEL_NOTICE);
+            this._log(`Could not read conflicted revision ${rightRev} of ${path}`, LOG_LEVEL_INFO);
             return MISSING_OR_ERROR;
         }
 
@@ -212,7 +212,7 @@ export class ModuleConflictResolver extends AbstractModule {
         return true;
     }
     private async _resolveAllConflictedFilesByNewerOnes() {
-        this._log(`Resolving conflicts by newer ones`, LOG_LEVEL_NOTICE);
+        this._log(`Resolving conflicts by keeping the newer file.`, LOG_LEVEL_NOTICE);
 
         const files = await this.core.storageAccess.getFileNames();
 

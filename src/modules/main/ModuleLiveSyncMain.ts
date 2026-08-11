@@ -1,6 +1,7 @@
 import { fireAndForget } from "octagonal-wheels/promises";
 import { HOLD_SUSPENDED, syncHold } from "@/common/syncHold.ts";
 import {
+    LOG_LEVEL_INFO,
     LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
     type ObsidianLiveSyncSettings,
@@ -62,7 +63,7 @@ export class ModuleLiveSyncMain extends AbstractModule {
                     }
                     eventHub.emitEvent(EVENT_REQUEST_RELOAD_SETTING_TAB);
                 } catch (e) {
-                    this._log(`Error in Setting Save Event`, LOG_LEVEL_NOTICE);
+                    this._log(`Error in Setting Save Event`, LOG_LEVEL_INFO);
                     this._log(e, LOG_LEVEL_VERBOSE);
                 }
             });
