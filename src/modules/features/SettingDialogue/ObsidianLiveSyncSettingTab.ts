@@ -455,25 +455,25 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             true
         );
         if (typeof db === "string") {
-            Logger($msg("obsidianLiveSyncSettingTab.logCheckPassphraseFailed", { db }), LOG_LEVEL_NOTICE);
+            Logger(`Could not check the passphrase against the server: ${db}`, LOG_LEVEL_NOTICE);
             return false;
         } else {
             if (await checkSyncInfo(db.db)) {
                 // Logger($msg("obsidianLiveSyncSettingTab.logDatabaseConnected"), LOG_LEVEL_NOTICE);
                 return true;
             } else {
-                Logger($msg("obsidianLiveSyncSettingTab.logPassphraseNotCompatible"), LOG_LEVEL_NOTICE);
+                Logger("This passphrase cannot read what is already on the server.", LOG_LEVEL_NOTICE);
                 return false;
             }
         }
     };
     isPassphraseValid = async () => {
         if (this.editingSettings.encrypt && this.editingSettings.passphrase == "") {
-            Logger($msg("obsidianLiveSyncSettingTab.logEncryptionNoPassphrase"), LOG_LEVEL_NOTICE);
+            Logger("Encryption needs a passphrase.", LOG_LEVEL_NOTICE);
             return false;
         }
         if (this.editingSettings.encrypt && !(await testCrypt())) {
-            Logger($msg("obsidianLiveSyncSettingTab.logEncryptionNoSupport"), LOG_LEVEL_NOTICE);
+            Logger("This device cannot encrypt: its browser engine has no Web Crypto support.", LOG_LEVEL_NOTICE);
             return false;
         }
         return true;
@@ -481,11 +481,11 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
     rebuildDB = async (method: "localOnly" | "remoteOnly" | "rebuildBothByThisDevice" | "localOnlyWithChunks") => {
         if (this.editingSettings.encrypt && this.editingSettings.passphrase == "") {
-            Logger($msg("obsidianLiveSyncSettingTab.logEncryptionNoPassphrase"), LOG_LEVEL_NOTICE);
+            Logger("Encryption needs a passphrase.", LOG_LEVEL_NOTICE);
             return;
         }
         if (this.editingSettings.encrypt && !(await testCrypt())) {
-            Logger($msg("obsidianLiveSyncSettingTab.logEncryptionNoSupport"), LOG_LEVEL_NOTICE);
+            Logger("This device cannot encrypt: its browser engine has no Web Crypto support.", LOG_LEVEL_NOTICE);
             return;
         }
         if (!this.editingSettings.encrypt) {
@@ -496,62 +496,62 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         await this.services.setting.suspendExtraSync();
         this.reloadAllSettings();
         this.editingSettings.isConfigured = true;
-        Logger($msg("obsidianLiveSyncSettingTab.logRebuildNote"), LOG_LEVEL_NOTICE);
+        Logger("Syncing is paused while the database is rebuilt.", LOG_LEVEL_NOTICE);
         await this.saveAllDirtySettings();
         this.closeSetting();
         await delay(2000);
         await this.core.rebuilder.$performRebuildDB(method);
     };
+    /**
+     * Applies a change that cannot take effect without rebuilding a database.
+     *
+     * This used to be a four-button dialogue whose message embedded a markdown
+     * table legend — "| ⇔ | Up to Date |", "At a glance: 📄 ⇒¹ 💻 ⇒² 🛰️ ⇢ⁿ 💻 ⇄ⁿ⁺¹ 📄" —
+     * and one of the four, "(Danger) Save Only Settings", was described in its
+     * own help text as possibly leading to data corruption.
+     *
+     * The question it asked has an answer the plug-in can work out. Only
+     * encryption reaches here, and `checkWorkingPassphrase` already tests the
+     * new passphrase against the server: if the server's contents can be read
+     * with it, this device is joining something that already exists and should
+     * take it; if they cannot, this device holds the only readable copy and the
+     * server has to be rebuilt from it.
+     */
     async confirmRebuild() {
         if (!(await this.isPassphraseValid())) {
-            Logger(`Passphrase is not valid, please fix it.`, LOG_LEVEL_NOTICE);
+            Logger("That passphrase cannot be used. Correct it and try again.", LOG_LEVEL_NOTICE);
             return;
         }
-        const OPTION_FETCH = $msg("obsidianLiveSyncSettingTab.optionFetchFromRemote");
-        const OPTION_REBUILD_BOTH = $msg("obsidianLiveSyncSettingTab.optionRebuildBoth");
-        const OPTION_ONLY_SETTING = $msg("obsidianLiveSyncSettingTab.optionSaveOnlySettings");
-        const OPTION_CANCEL = $msg("obsidianLiveSyncSettingTab.optionCancel");
-        const title = $msg("obsidianLiveSyncSettingTab.titleRebuildRequired");
-        const note = $msg("obsidianLiveSyncSettingTab.msgRebuildRequired", {
-            OPTION_REBUILD_BOTH,
-            OPTION_FETCH,
-            OPTION_ONLY_SETTING,
-        });
-        const buttons = [
-            OPTION_FETCH,
-            OPTION_REBUILD_BOTH, // OPTION_REBUILD_REMOTE,
-            OPTION_ONLY_SETTING,
-            OPTION_CANCEL,
-        ];
-        const result = await this.core.confirm.confirmWithMessage(title, note, buttons, OPTION_CANCEL);
-        if (result == OPTION_CANCEL) return;
-        if (result == OPTION_FETCH) {
-            if (!(await this.checkWorkingPassphrase())) {
-                if (
-                    (await this.core.confirm.askYesNoDialog($msg("obsidianLiveSyncSettingTab.msgAreYouSureProceed"), {
-                        defaultOption: "No",
-                    })) != "yes"
-                )
-                    return;
-            }
-        }
+
+        const serverIsReadable = await this.checkWorkingPassphrase();
+        const PROCEED = serverIsReadable ? "Replace files on this device" : "Replace files on server";
+        const CANCEL = $msg("obsidianLiveSyncSettingTab.optionCancel");
+        const message = serverIsReadable
+            ? "The remote vault can be read with these settings, so it will overwrite this vault. " +
+              "Any changes made here that have not synced to the server are kept as a second copy of the file."
+            : "The remote vault cannot be read with these settings, so this vault will overwrite it. " +
+              "Any changes made on other devices that have not synced to this device will be lost, " +
+              "and each of them will download the result.";
+
+        const result = await this.core.confirm.confirmWithMessage(
+            "This change rebuilds the database",
+            message,
+            [PROCEED, CANCEL],
+            CANCEL
+        );
+        if (result !== PROCEED) return;
+
         if (!this.editingSettings.encrypt) {
             this.editingSettings.passphrase = "";
         }
         await this.saveAllDirtySettings();
         await Promise.resolve(this.applyAllSettings());
-        if (result == OPTION_FETCH) {
-            await this.core.storageAccess.writeFileAuto(FLAGMD_REDFLAG3_HR, "");
-            this.services.appLifecycle.scheduleRestart();
-            this.closeSetting();
-            // await rebuildDB("localOnly");
-        } else if (result == OPTION_REBUILD_BOTH) {
-            await this.core.storageAccess.writeFileAuto(FLAGMD_REDFLAG2_HR, "");
-            this.services.appLifecycle.scheduleRestart();
-            this.closeSetting();
-        } else if (result == OPTION_ONLY_SETTING) {
-            await this.services.setting.saveSettingData();
-        }
+        await this.core.storageAccess.writeFileAuto(
+            serverIsReadable ? FLAGMD_REDFLAG3_HR : FLAGMD_REDFLAG2_HR,
+            ""
+        );
+        this.services.appLifecycle.scheduleRestart();
+        this.closeSetting();
     }
 
     override display(): void {

@@ -57,7 +57,6 @@ import { tryGetFilePath } from "@vrtmrz/livesync-commonlib/compat/common/utils.d
 import { configureHiddenFileSyncMode, type ConfigureHiddenFileSyncResult } from "./configureHiddenFileSyncMode.ts";
 import type { OptionalSyncFeatureMode } from "@/features/optionalSyncFeatures.ts";
 import { getObsidianCommunityPluginManager } from "@/common/obsidianCommunityPlugins.ts";
-import { $msg } from "@/common/translation";
 type SyncDirection = "push" | "pull" | "safe" | "pullForce" | "pushForce";
 
 type HiddenFileInitialisationProgress = {
@@ -277,7 +276,7 @@ export class HiddenFileSync extends LiveSyncCommands {
                     return true;
                 }
                 if (!(await this.processReplicationResult(doc))) {
-                    this._log(`Failed to process sync file:${unprefixedPath}`, LOG_LEVEL_NOTICE);
+                    this._log(`Could not synchronise the hidden file ${unprefixedPath}`, LOG_LEVEL_INFO);
                     // Do not yield false, this file had been processed.
                 }
             }
@@ -1261,18 +1260,10 @@ Offline Changed files: ${files.length}`;
                         label: `Reload ${updatePluginName}`,
                         onSelect: () => {
                             fireAndForget(async () => {
-                                this._log(
-                                    `Unloading plugin: ${updatePluginName}`,
-                                    LOG_LEVEL_NOTICE,
-                                    "plugin-reload-" + updatePluginId
-                                );
+                                this._log(`Unloading plugin: ${updatePluginName}`, LOG_LEVEL_INFO);
                                 await pluginManager.unloadPlugin(updatePluginId);
                                 await pluginManager.loadPlugin(updatePluginId);
-                                this._log(
-                                    `Plugin reloaded: ${updatePluginName}`,
-                                    LOG_LEVEL_NOTICE,
-                                    "plugin-reload-" + updatePluginId
-                                );
+                                this._log(`Plugin reloaded: ${updatePluginName}`, LOG_LEVEL_INFO);
                                 noticeGroups.removeItem(HIDDEN_FILE_NOTICE_GROUP, itemKey);
                             });
                         },
@@ -1544,7 +1535,7 @@ Offline Changed files: ${files.length}`;
         if (!selected || selected._rev !== revision || !liveRevisions.has(revision)) {
             this._log(
                 `Could not use hidden-file revision ${revision} of ${stripAllPrefixes(prefixedFileName)}; the selected revision is no longer live`,
-                LOG_LEVEL_NOTICE
+                LOG_LEVEL_INFO
             );
             return false;
         }
@@ -1634,7 +1625,7 @@ Offline Changed files: ${files.length}`;
                 if (!createIfDifferent) {
                     this._log(
                         `Could not mark hidden file ${storeFilePath} as revision ${baseRevision}; the storage content differs`,
-                        LOG_LEVEL_NOTICE
+                        LOG_LEVEL_INFO
                     );
                     return false;
                 }
@@ -1906,12 +1897,7 @@ Offline Changed files: ${files.length}`;
 
     private _allSuspendExtraSync(): Promise<boolean> {
         if (this.core.settings.syncInternalFiles) {
-            this._log(
-                $msg(
-                    "Hidden file synchronization have been temporarily disabled. Please enable them after the fetching, if you need them."
-                ),
-                LOG_LEVEL_NOTICE
-            );
+            this._log("Hidden-file sync is paused while the database is rebuilt.", LOG_LEVEL_INFO);
             this.core.settings.syncInternalFiles = false;
         }
         return Promise.resolve(true);
