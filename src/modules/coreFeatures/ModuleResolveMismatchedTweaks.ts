@@ -1,4 +1,4 @@
-import { Logger, LOG_LEVEL_NOTICE } from "octagonal-wheels/common/logger";
+import { Logger, LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "octagonal-wheels/common/logger";
 import { extractObject } from "octagonal-wheels/object";
 import {
     TweakValuesShouldMatchedTemplate,
@@ -259,7 +259,7 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
     async _fetchRemotePreferredTweakValues(trialSetting: RemoteDBSettings): Promise<TweakValues | false> {
         const replicator = await this.services.replicator.getNewReplicator(trialSetting);
         if (!replicator) {
-            this._log("The remote type is not supported for fetching preferred tweak values.", LOG_LEVEL_NOTICE);
+            this._log("This kind of server does not store shared settings.", LOG_LEVEL_VERBOSE);
             return false;
         }
         if (await replicator.tryConnectRemote(trialSetting)) {
@@ -267,10 +267,14 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
             if (preferred) {
                 return preferred;
             }
-            this._log("Failed to get the preferred tweak values from the remote server.", LOG_LEVEL_NOTICE);
+            // Connected, and there is nothing stored. That is not a failure:
+            // it is what a database that has never been synchronised looks
+            // like. Reporting it as an error told a first-time user that
+            // something had gone wrong while everything was going right.
+            this._log("The server has no shared settings yet.", LOG_LEVEL_VERBOSE);
             return false;
         }
-        this._log("Failed to connect to the remote server.", LOG_LEVEL_NOTICE);
+        this._log("Could not reach the server to read its shared settings.", LOG_LEVEL_NOTICE);
         return false;
     }
 

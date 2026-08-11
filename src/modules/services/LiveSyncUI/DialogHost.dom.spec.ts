@@ -26,7 +26,7 @@ describe("DialogHost", () => {
                 setResult: (value: any) => (seen = value),
                 getInitialData: () => "initial",
                 mountComponent: Guest,
-                onSetupContext: (props: any) => setupDialogContext({ ...props, context: {}, services: {} } as any),
+                onSetupContext: (props: any) => setupDialogContext({ ...props, context: {}, services: {} }),
             } as any,
         });
 

@@ -42,6 +42,8 @@ export interface StatusInput {
     conflicts: number;
     /** A restart is required before settings take effect. */
     restartRequired: boolean;
+    /** Synchronisation is held back pending a compatibility review. */
+    compatibilityPaused?: boolean;
     /** Milliseconds the current burst of work has been in flight. */
     activeForMs: number;
 }
@@ -86,6 +88,16 @@ export function presentStatus(input: StatusInput): StatusPresentation {
             icon: ICON_DECIDE,
             text: "Restart required",
             detail: "Obsidian must be restarted before the new settings take effect.",
+        };
+    }
+    if (input.compatibilityPaused) {
+        return {
+            level: STATUS_ATTENTION,
+            icon: ICON_DECIDE,
+            text: "Sync held back",
+            detail:
+                "This device is running a different version from the one that last used this server. " +
+                "Run \"Review why synchronisation is paused\" to see the details.",
         };
     }
     if (input.conflicts > 0) {

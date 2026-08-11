@@ -1,4 +1,5 @@
 import { fireAndForget } from "octagonal-wheels/promises";
+import { reactiveSource } from "octagonal-wheels/dataobject/reactive";
 import { VER } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import type { LiveSyncCore } from "@/main.ts";
 import {
@@ -17,10 +18,18 @@ export type CompatibilityReviewDetailsAction = "back" | false;
 // handler which stops start-up also prevents this dialogue from competing with it.
 export const COMPATIBILITY_REVIEW_LAYOUT_PRIORITY = 30;
 
+/**
+ * Whether synchronisation is being held back for a compatibility review.
+ *
+ * Read by the status bar, which is where a state that lasts belongs. Exported
+ * as a source rather than passed through the service graph because the pause
+ * has exactly one consumer and one producer.
+ */
+export const compatibilityPaused = reactiveSource(false);
+
 export interface CompatibilityReviewUi {
     showSummary(pause: CompatibilityPause): Promise<CompatibilityReviewSummaryAction>;
     showDetails(pause: CompatibilityPause): Promise<CompatibilityReviewDetailsAction>;
-    showReminder(openReview: () => void): void;
     clearReminder(): void;
 }
 
@@ -71,6 +80,7 @@ export class CompatibilityReviewController {
         // Genuinely new Vaults still initialise their marker below.
         if (settings.isConfigured !== true && migrationState?.isNewVault !== true) {
             this.pause = undefined;
+            compatibilityPaused.value = false;
             this.ui.clearReminder();
             this._initialised = true;
             return true;
@@ -85,6 +95,7 @@ export class CompatibilityReviewController {
         });
 
         this.pause = evaluation.pause;
+        compatibilityPaused.value = this.pause !== undefined;
         if (evaluation.initialiseAcknowledgedVersion) {
             setting.setSmallConfig(DATABASE_COMPATIBILITY_VERSION_KEY, `${this.currentVersion}`);
             this._initialised = true;
@@ -120,6 +131,7 @@ export class CompatibilityReviewController {
         const legacyKey = legacyDatabaseCompatibilityVersionKey(this.core.services.vault.getVaultName());
         setting.deleteDeviceLocalConfig(legacyKey);
         this.pause = undefined;
+        compatibilityPaused.value = false;
         this.ui.clearReminder();
         await this.core.services.control.applySettings();
     }
@@ -138,11 +150,6 @@ export class CompatibilityReviewController {
             }
             break;
         }
-        if (this.pause && !this.disposed) {
-            this.ui.showReminder(() => {
-                fireAndForget(() => this.openReview());
-            });
-        }
     }
 
     openReview(): Promise<void> {
@@ -158,6 +165,7 @@ export class CompatibilityReviewController {
     dispose(): void {
         this.disposed = true;
         this.pause = undefined;
+        compatibilityPaused.value = false;
         this.ui.clearReminder();
     }
 }
@@ -165,10 +173,11 @@ export class CompatibilityReviewController {
 export function useCompatibilityReview(core: LiveSyncCore, ui: CompatibilityReviewUi): CompatibilityReviewController {
     const controller = new CompatibilityReviewController(core, ui);
     core.services.appLifecycle.onSettingLoaded.addHandler(() => controller.initialise());
-    core.services.appLifecycle.onLayoutReady.addHandler(() => {
-        fireAndForget(() => controller.openReview());
-        return Promise.resolve(true);
-    }, COMPATIBILITY_REVIEW_LAYOUT_PRIORITY);
+    // Nothing opens on its own. A pause is a state, not an interruption: the
+    // status bar shows it for as long as it lasts, and the command below opens
+    // the explanation when the reader decides to look. Three paragraphs in a
+    // modal at start-up, in front of a vault that was working a moment ago,
+    // are read by nobody and dismissed by everybody.
     core.services.appLifecycle.onUnload.addHandler(() => {
         controller.dispose();
         return Promise.resolve(true);

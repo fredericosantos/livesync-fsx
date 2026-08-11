@@ -6,6 +6,7 @@ import {
 } from "@/common/databaseCompatibility.ts";
 import {
     CompatibilityReviewController,
+    compatibilityPaused,
     type CompatibilityReviewUi,
     useCompatibilityReview,
 } from "./compatibilityReview.ts";
@@ -65,7 +66,6 @@ function createFixture(
     const ui: CompatibilityReviewUi = {
         showSummary: vi.fn().mockResolvedValue("keep-paused"),
         showDetails: vi.fn().mockResolvedValue(false),
-        showReminder: vi.fn(),
         clearReminder: vi.fn(),
     };
     const controller = new CompatibilityReviewController(core, ui, 12);
@@ -145,10 +145,10 @@ describe("compatibility review controller", () => {
         expect(fixture.settings.versionUpFlash).toBe(COMPATIBILITY_PAUSE_SETTING_MESSAGE);
         expect(fixture.local.get(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe("13");
         expect(fixture.applySettings).not.toHaveBeenCalled();
-        expect(fixture.ui.showReminder).toHaveBeenCalledOnce();
+        expect(compatibilityPaused.value).toBe(true);
     });
 
-    it("returns from details to the reason dialogue and leaves a persistent reminder", async () => {
+    it("returns from details to the reason dialogue and keeps the pause showing", async () => {
         const fixture = createFixture({ marker: "11" });
         vi.mocked(fixture.ui.showSummary).mockResolvedValueOnce("details").mockResolvedValueOnce("keep-paused");
         vi.mocked(fixture.ui.showDetails).mockResolvedValue("back");
@@ -158,7 +158,9 @@ describe("compatibility review controller", () => {
 
         expect(fixture.ui.showSummary).toHaveBeenCalledTimes(2);
         expect(fixture.ui.showDetails).toHaveBeenCalledOnce();
-        expect(fixture.ui.showReminder).toHaveBeenCalledOnce();
+        // The pause stays visible in the status bar rather than as a Notice
+        // the reader has to dismiss again.
+        expect(compatibilityPaused.value).toBe(true);
         expect(fixture.local.get(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe("11");
     });
 
@@ -197,25 +199,28 @@ describe("compatibility review controller", () => {
         expect(fixture.ui.clearReminder).toHaveBeenCalledOnce();
     });
 
-    it("runs the review after the ordered red flag recovery handlers", () => {
+    it("never opens the review on its own", () => {
         const onSettingLoaded = { addHandler: vi.fn() };
         const onLayoutReady = { addHandler: vi.fn() };
         const onUnload = { addHandler: vi.fn() };
+        const addCommand = vi.fn();
         const core = {
             services: {
                 appLifecycle: { onSettingLoaded, onLayoutReady, onUnload },
-                API: { addCommand: vi.fn() },
+                API: { addCommand },
             },
-        } as never;
+        } as unknown as Parameters<typeof useCompatibilityReview>[0];
         const ui: CompatibilityReviewUi = {
             showSummary: vi.fn(),
             showDetails: vi.fn(),
-            showReminder: vi.fn(),
-            clearReminder: vi.fn(),
+                clearReminder: vi.fn(),
         };
 
         useCompatibilityReview(core, ui);
 
-        expect(onLayoutReady.addHandler).toHaveBeenCalledWith(expect.any(Function), 30);
+        // A pause is a state, not an interruption. It is shown in the status
+        // bar and explained by a command, never by a dialogue at start-up.
+        expect(onLayoutReady.addHandler).not.toHaveBeenCalled();
+        expect(addCommand).toHaveBeenCalled();
     });
 });

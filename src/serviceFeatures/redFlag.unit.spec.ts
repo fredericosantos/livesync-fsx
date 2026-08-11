@@ -1035,11 +1035,16 @@ describe("Red Flag Feature", () => {
                     [key]: differentValue,
                 };
                 host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce(differentConfig as any);
-                host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("OK");
+                const log = createLoggerMock();
 
-                await adjustSettingToRemote(host as any, createLoggerMock(), config);
-                expect(host.mocks.ui.confirm.askSelectStringDialogue).toHaveBeenCalled();
+                await adjustSettingToRemote(host as any, log, config);
+
                 expect(host.mocks.setting.applyExternalSettings).toHaveBeenCalled();
+                // Reconciling settings is something the plug-in does, not
+                // something it asks permission for; it is reported, naming what
+                // changed, and nothing blocks.
+                expect(host.mocks.ui.confirm.askSelectStringDialogue).not.toHaveBeenCalled();
+                expect(log).toHaveBeenCalledWith(expect.stringContaining(key), expect.anything());
             }
         );
         const mismatchAcceptedKeys = Object.keys(TweakValuesRecommendedTemplate).filter(
@@ -1062,7 +1067,6 @@ describe("Red Flag Feature", () => {
                     [key]: differentValue,
                 };
                 host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce(differentConfig as any);
-                host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("OK");
 
                 await adjustSettingToRemote(host as any, createLoggerMock(), config);
 
@@ -1071,32 +1075,21 @@ describe("Red Flag Feature", () => {
             }
         );
 
-        it("should show dialog when remote fetch fails", async () => {
+        it("proceeds without asking when the server has no settings stored", async () => {
+            // The ordinary state of a database nobody has synchronised yet.
+            // This used to stop setup with an error and two buttons, one of
+            // them labelled "recommended".
             const host = createHostMock();
             const log = createLoggerMock();
             const config = { batchSave: true } as any;
 
             host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce(null);
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Skip and proceed");
 
             await adjustSettingToRemote(host as any, log, config);
 
-            expect(host.mocks.ui.confirm.askSelectStringDialogue).toHaveBeenCalled();
-        });
-
-        it("should retry when user selects retry option", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const config = { batchSave: true } as any;
-
-            host.mocks.tweakValue.fetchRemotePreferred
-                .mockResolvedValueOnce(null)
-                .mockResolvedValueOnce({ batchSave: false } as any);
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Retry (recommended)");
-
-            await adjustSettingToRemote(host as any, log, config);
-
-            expect(host.mocks.tweakValue.fetchRemotePreferred).toHaveBeenCalledTimes(2);
+            expect(host.mocks.ui.confirm.askSelectStringDialogue).not.toHaveBeenCalled();
+            expect(host.mocks.setting.applyExternalSettings).not.toHaveBeenCalled();
+            expect(host.mocks.tweakValue.fetchRemotePreferred).toHaveBeenCalledTimes(1);
         });
 
         it("should log when no changes needed", async () => {

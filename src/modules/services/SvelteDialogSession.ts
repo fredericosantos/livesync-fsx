@@ -106,8 +106,9 @@ export class SvelteDialogSession<
         try {
             this.mountedDialog = this.mountDialog();
         } catch (error) {
-            Logger(`This dialogue could not be opened: ${error}`, LOG_LEVEL_NOTICE);
-            Logger(error instanceof Error ? (error.stack ?? "") : `${error}`, LOG_LEVEL_VERBOSE);
+            const described = error instanceof Error ? error.message : String(error);
+            Logger(`This dialogue could not be opened: ${described}`, LOG_LEVEL_NOTICE);
+            Logger(error instanceof Error ? (error.stack ?? described) : described, LOG_LEVEL_VERBOSE);
             this.surface.close();
         }
     }

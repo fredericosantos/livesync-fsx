@@ -222,55 +222,43 @@ export async function adjustSettingToRemote(
     log: LogFunction,
     config: ObsidianLiveSyncSettings
 ) {
-    // Fetch remote configuration unless prevented.
-    const SKIP_FETCH = "Skip and proceed";
-    const RETRY_FETCH = "Retry (recommended)";
-    let canProceed = false;
-    do {
-        const remoteTweaks = await host.services.tweakValue.fetchRemotePreferred(config);
-        if (!remoteTweaks) {
-            const choice = await host.services.UI.confirm.askSelectStringDialogue(
-                "Could not fetch configuration from remote. If you are new to the Self-hosted LiveSync, this might be expected. If not, you should check your network or server settings.",
-                [SKIP_FETCH, RETRY_FETCH] as const,
-                {
-                    defaultAction: RETRY_FETCH,
-                    timeout: 0,
-                    title: "Fetch Remote Configuration Failed",
-                }
-            );
-            if (choice === SKIP_FETCH) {
-                canProceed = true;
-            }
-        } else {
-            const necessary = extractObject(TweakValuesShouldMatchedTemplate, remoteTweaks);
-            // Check if any necessary tweak value is different from current config.
-            const differentItems = Object.entries(necessary).filter(([key, value]) => {
-                return config[key as keyof ObsidianLiveSyncSettings] !== value;
-            });
-            if (differentItems.length === 0) {
-                log("Remote configuration matches local configuration. No changes applied.", LOG_LEVEL_NOTICE);
-            } else {
-                await host.services.UI.confirm.askSelectStringDialogue(
-                    "Your settings differed slightly from the server's. The plug-in has supplemented the incompatible parts with the server settings!",
-                    ["OK"] as const,
-                    {
-                        defaultAction: "OK",
-                        timeout: 0,
-                    }
-                );
-            }
+    const remoteTweaks = await host.services.tweakValue.fetchRemotePreferred(config);
+    if (!remoteTweaks) {
+        // The server has no shared settings to adopt. For a database that has
+        // never been synchronised — the ordinary case when setting up the first
+        // device — that is the expected answer, not a failure, and this used to
+        // stop the flow with an error offering "Skip and proceed" or "Retry
+        // (recommended)". Neither the question nor the recommendation belonged
+        // to the reader: a genuine mismatch is detected on every replication by
+        // the tweak resolver, which is where it is handled.
+        log("The server has no shared settings yet; this device's settings will be used.", LOG_LEVEL_INFO);
+        return;
+    }
 
-            config = {
-                ...config,
-                ...(Object.fromEntries(differentItems) as Partial<ObsidianLiveSyncSettings>),
-            } satisfies ObsidianLiveSyncSettings;
-            await host.services.setting.applyExternalSettings(config, true);
-            log("Remote configuration applied.", LOG_LEVEL_NOTICE);
-            canProceed = true;
-            const updatedConfig = host.services.setting.currentSettings();
-            return updatedConfig;
-        }
-    } while (!canProceed);
+    const necessary = extractObject(TweakValuesShouldMatchedTemplate, remoteTweaks);
+    const differentItems = Object.entries(necessary).filter(
+        ([key, value]) => config[key as keyof ObsidianLiveSyncSettings] !== value
+    );
+    if (differentItems.length === 0) {
+        log("Remote configuration matches local configuration. No changes applied.", LOG_LEVEL_INFO);
+    } else {
+        // Reported, not asked: the settings have already been reconciled, and a
+        // dialogue whose only button is "OK" is a notice wearing a modal.
+        log(
+            `Some settings had to match the server and have been adjusted here: ${differentItems
+                .map(([key]) => key)
+                .join(", ")}.`,
+            LOG_LEVEL_NOTICE
+        );
+    }
+
+    config = {
+        ...config,
+        ...(Object.fromEntries(differentItems) as Partial<ObsidianLiveSyncSettings>),
+    } satisfies ObsidianLiveSyncSettings;
+    await host.services.setting.applyExternalSettings(config, true);
+    log("Remote configuration applied.", LOG_LEVEL_INFO);
+    return host.services.setting.currentSettings();
 }
 
 /**

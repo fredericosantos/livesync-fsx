@@ -17,6 +17,7 @@ import { serialized } from "octagonal-wheels/concurrency/lock";
 import { $msg } from "@/common/translation";
 import { P2PLogCollector } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/P2PLogCollector";
 import { STATUS_ACTIVITY, STATUS_ATTENTION, presentStatus, type StatusLevel } from "./StatusPresentation.ts";
+import { compatibilityPaused } from "@/serviceFeatures/compatibilityReview.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
@@ -119,6 +120,7 @@ export class ModuleLog extends AbstractObsidianModule {
                 queued,
                 conflicts: this.services.conflict.conflictProcessQueueCount.value,
                 restartRequired: this.services.appLifecycle.isReloadingScheduled(),
+                compatibilityPaused: compatibilityPaused.value,
                 activeForMs: activeForMs(busy),
             });
         });
