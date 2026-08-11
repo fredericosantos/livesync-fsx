@@ -234,7 +234,7 @@ export class ReplicateResultProcessor {
                 // Incompatible version, stop replication.
                 this.core.replicator.closeReplication();
                 this.log(
-                    `Remote database updated to incompatible version. update your Self-hosted LiveSync plugin.`,
+                    `Another device is using a newer version of the plug-in. Update this one before syncing again.`,
                     LOG_LEVEL_NOTICE
                 );
             }
@@ -416,10 +416,10 @@ export class ReplicateResultProcessor {
                 const size = change.size;
                 // Note that this size check depends size that in metadata, not the actual content size.
                 if (this.services.vault.isFileSizeTooLarge(size)) {
-                    this.log(
-                        `Processing ${docPath} has been skipped due to file size exceeding the limit`,
-                        LOG_LEVEL_NOTICE
-                    );
+                    // Stays a notice: a file silently not syncing is the worst
+                    // failure this plug-in has, so the one case where it
+                    // happens on purpose has to be audible.
+                    this.log(`${docPath} was not synced: it is larger than the size limit.`, LOG_LEVEL_NOTICE);
                     return;
                 }
                 return await this.applyToDatabase(change);
@@ -453,7 +453,7 @@ export class ReplicateResultProcessor {
                 releaser = await this._semaphore.acquire();
                 await this._applyToDatabase(doc);
             } catch (e) {
-                this.log(`Error while processing replication result`, LOG_LEVEL_NOTICE);
+                this.log(`Could not apply a received change: ${e instanceof Error ? e.message : String(e)}`, LOG_LEVEL_INFO);
                 this.logError(e);
             } finally {
                 // Remove from processing queue (To remove from "in-progress" list, and snapshot will not include it)
@@ -486,7 +486,7 @@ export class ReplicateResultProcessor {
                 : await this.localDatabase.getDBEntryFromMeta({ ...dbDoc }, false, true);
             if (!doc) {
                 // Failed to gather content
-                this.log(`Failed to gather content of ${docNote}`, LOG_LEVEL_NOTICE);
+                this.log(`Could not assemble the content of ${docNote}`, LOG_LEVEL_INFO);
                 return;
             }
             // Check if other processor wants to process this document, if so, skip processing here.
@@ -554,7 +554,7 @@ export class ReplicateResultProcessor {
             } else {
                 this.log(
                     `Failed to get existing document for ${path} (${shortenId(dbDoc._id)}, ${shortenRev(dbDoc._rev)}) `,
-                    LOG_LEVEL_NOTICE
+                    LOG_LEVEL_INFO
                 );
                 this.logError(e);
                 return false;

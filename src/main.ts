@@ -28,7 +28,6 @@ import { setNoticeClass } from "@vrtmrz/livesync-commonlib/compat/mock_and_inter
 import type { ObsidianServiceContext } from "@/modules/services/ObsidianServiceContext";
 import { LiveSyncBaseCore } from "./LiveSyncBaseCore.ts";
 import { ModuleObsidianMenu } from "./modules/essentialObsidian/ModuleObsidianMenu.ts";
-import { ModuleObsidianSettingsAsMarkdown } from "./modules/features/ModuleObsidianSettingAsMarkdown.ts";
 import { SetupManager } from "./modules/features/SetupManager.ts";
 import { ModuleMigration } from "./modules/essential/ModuleMigration.ts";
 import { enableI18nFeature } from "./serviceFeatures/onLayoutReady/enablei18n.ts";
@@ -154,7 +153,6 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                     new ModuleObsidianEvents(this, core),
                     new ModuleObsidianSettingDialogue(this, core),
                     new ModuleObsidianMenu(core),
-                    new ModuleObsidianSettingsAsMarkdown(core),
                     new ModuleLog(this, core),
                     new ModuleObsidianDocumentHistory(this, core),
                     new ModuleInteractiveConflictResolver(this, core),

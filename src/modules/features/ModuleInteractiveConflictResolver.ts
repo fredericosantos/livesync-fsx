@@ -148,7 +148,7 @@ export class ModuleInteractiveConflictResolver extends AbstractObsidianModule {
                 const p = conflictCheckResult.diff.map((e) => e[1]).join("");
                 const delRev = conflictCheckResult.right.rev;
                 if (!(await this.core.databaseFileAccess.storeContent(filename, p))) {
-                    this._log(`Concatenated content cannot be stored:${filename}`, LOG_LEVEL_NOTICE);
+                    this._log(`The merged content of ${filename} could not be saved`, LOG_LEVEL_INFO);
                     return false;
                 }
                 // 2. As usual, delete the conflicted revision and if there are no conflicts, write the resolved content to the storage.
@@ -171,11 +171,11 @@ export class ModuleInteractiveConflictResolver extends AbstractObsidianModule {
                     (await this.services.conflict.resolveByDeletingRevision(filename, toDelete, "UI Selected")) ==
                     MISSING_OR_ERROR
                 ) {
-                    this._log(`Merge: Something went wrong: ${filename}, (${toDelete})`, LOG_LEVEL_NOTICE);
+                    this._log(`Could not complete the merge of ${filename} (${toDelete})`, LOG_LEVEL_INFO);
                     return false;
                 }
             } else {
-                this._log(`Merge: Something went wrong: ${filename}, (${String(toDelete)})`, LOG_LEVEL_NOTICE);
+                this._log(`Could not complete the merge of ${filename} (${String(toDelete)})`, LOG_LEVEL_INFO);
                 return false;
             }
             // In here, some merge has been processed.
@@ -254,7 +254,7 @@ export class ModuleInteractiveConflictResolver extends AbstractObsidianModule {
                 this._log(`There are no conflicting files`, LOG_LEVEL_VERBOSE);
             }
         } catch (e) {
-            this._log(`Error while scanning conflicted files...`, LOG_LEVEL_NOTICE);
+            this._log(`Could not finish checking for conflicted files.`, LOG_LEVEL_NOTICE);
             this._log(e, LOG_LEVEL_VERBOSE);
             return false;
         }

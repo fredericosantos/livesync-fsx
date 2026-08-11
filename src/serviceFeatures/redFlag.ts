@@ -192,7 +192,7 @@ export function createFetchAllFlagHandler(
             );
             await host.serviceModules.rebuilder.$fetchLocal(makeLocalChunkBeforeSync, !makeLocalFilesBeforeSync);
             await cleanupFlag();
-            log("Fetch everything operation completed. Vault files will be gradually synced.", LOG_LEVEL_NOTICE);
+            log("Done. Your files will arrive as they are downloaded.", LOG_LEVEL_NOTICE);
             return true;
         });
     };
@@ -278,7 +278,7 @@ export async function adjustSettingToRemoteIfNeeded(
     if (await adjustSettingToRemote(host, log, config)) {
         config = host.services.setting.currentSettings();
     } else {
-        log("Remote configuration not applied.", LOG_LEVEL_NOTICE);
+        log("Remote configuration not applied.", LOG_LEVEL_INFO);
     }
     // log(JSON.stringify(config), LOG_LEVEL_VERBOSE);
 }
@@ -305,12 +305,12 @@ export async function processVaultInitialisation(
             const result = await proc();
             return result;
         } catch (ex) {
-            log("Error during vault initialisation process.", LOG_LEVEL_NOTICE);
+            log("Something went wrong while preparing the vault.", LOG_LEVEL_NOTICE);
             log(ex, LOG_LEVEL_VERBOSE);
             return false;
         }
     } catch (ex) {
-        log("Error during vault initialisation.", LOG_LEVEL_NOTICE);
+        log("Something went wrong while preparing the vault.", LOG_LEVEL_NOTICE);
         log(ex, LOG_LEVEL_VERBOSE);
         return false;
     } finally {
@@ -376,7 +376,7 @@ export function createRebuildFlagHandler(
         return await processVaultInitialisation(host, log, async () => {
             await host.serviceModules.rebuilder.$rebuildEverything();
             await cleanupFlag();
-            log("Rebuild everything operation completed.", LOG_LEVEL_NOTICE);
+            log("Done. The server now holds this vault.", LOG_LEVEL_NOTICE);
             return true;
         });
     };
@@ -407,7 +407,7 @@ export function createSuspendFlagHandler(
 
     // Handle the suspend all scheduled operation
     const onScheduled = async () => {
-        log("SCRAM is detected. All operations are suspended.", LOG_LEVEL_NOTICE);
+        log("Everything is suspended: a stop file is present in the vault.", LOG_LEVEL_NOTICE);
         return await processVaultInitialisation(
             host,
             log,

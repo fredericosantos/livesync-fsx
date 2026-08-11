@@ -1,6 +1,7 @@
 import {
     type EncryptionSettings,
     type ObsidianLiveSyncSettings,
+    LOG_LEVEL_INFO,
     LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
     REMOTE_COUCHDB,
@@ -130,7 +131,7 @@ export class SetupManager extends AbstractModule {
             plan
         );
         if (confirmed !== "apply") {
-            this._log("Setup was not applied.", LOG_LEVEL_NOTICE);
+            this._log("Setup was not applied.", LOG_LEVEL_INFO);
             return false;
         }
 
@@ -210,7 +211,7 @@ export class SetupManager extends AbstractModule {
             setupURI
         );
         if (newSetting === "cancelled") {
-            this._log("Setup URI dialog cancelled.", LOG_LEVEL_NOTICE);
+            this._log("Setup URI dialog cancelled.", LOG_LEVEL_INFO);
             return false;
         }
         this._log("Setup URI dialog closed.", LOG_LEVEL_VERBOSE);
@@ -242,7 +243,7 @@ export class SetupManager extends AbstractModule {
                       : "settings",
         });
         if (couchConf === "cancelled") {
-            this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
+            this._log("Manual configuration cancelled.", LOG_LEVEL_INFO);
             return false;
         }
         const newSetting = {
@@ -270,7 +271,7 @@ export class SetupManager extends AbstractModule {
             currentSetting
         );
         if (e2eeConf === "cancelled") {
-            this._log("E2EE configuration cancelled.", LOG_LEVEL_NOTICE);
+            this._log("E2EE configuration cancelled.", LOG_LEVEL_INFO);
             return false;
         }
         const newSetting = {
@@ -292,7 +293,7 @@ export class SetupManager extends AbstractModule {
             originalSetting
         );
         if (e2eeConf === "cancelled") {
-            this._log("Manual configuration cancelled.", LOG_LEVEL_NOTICE);
+            this._log("Manual configuration cancelled.", LOG_LEVEL_INFO);
             return false;
         }
         const currentSetting = {
@@ -332,20 +333,20 @@ export class SetupManager extends AbstractModule {
         });
 
         if (isObjectDifferent(this.settings, newConf, true) === false) {
-            this._log("No changes in settings detected. Skipping applying settings from wizard.", LOG_LEVEL_NOTICE);
+            this._log("No changes in settings detected. Skipping applying settings from wizard.", LOG_LEVEL_INFO);
             return true;
         }
         if (!activate) {
             extra();
             const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
-            if (applied) this._log("Setting Applied", LOG_LEVEL_NOTICE);
+            if (applied) this._log("Setting Applied", LOG_LEVEL_INFO);
             return applied;
         }
         // A change that alters no stored value cannot need the database rebuilt.
         if (isObjectDifferent({ ...this.settings }, { ...newConf }, true) === false) {
             extra();
             const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
-            if (applied) this._log("Settings from wizard applied.", LOG_LEVEL_NOTICE);
+            if (applied) this._log("Settings from wizard applied.", LOG_LEVEL_INFO);
             return applied;
         }
 
@@ -365,7 +366,7 @@ export class SetupManager extends AbstractModule {
             plan
         );
         if (confirmed !== "apply") {
-            this._log("Setup was not applied.", LOG_LEVEL_NOTICE);
+            this._log("Setup was not applied.", LOG_LEVEL_INFO);
             return false;
         }
         extra();
