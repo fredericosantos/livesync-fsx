@@ -30,21 +30,10 @@ export async function ensureLocalDatabaseMaintenancePrerequisites({
 
     if (missing.length == 0) return true;
 
-    const APPLY = "Apply and continue";
-    const CANCEL = "Cancel";
-    const result = await askSelectStringDialogue(
-        `${operationName} requires the following settings:\n\n${missing.join(
-            "\n"
-        )}\n\nApply these settings and continue?`,
-        [APPLY, CANCEL],
-        {
-            title: `${operationName} prerequisites`,
-            defaultAction: CANCEL,
-        }
-    );
-
-    if (result !== APPLY) return false;
-
+    // Applied, not requested. Reading chunks on demand cannot be left on while
+    // the database is being reorganised, so "Apply and continue" against
+    // "Cancel" was a question with one workable answer — and the setting it
+    // asks about is not one this fork puts on the settings page at all.
     await applyPartial(requiredSettings, true);
     return true;
 }

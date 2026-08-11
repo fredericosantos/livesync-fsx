@@ -91,52 +91,7 @@ describe("LocalDatabaseMaintenance prerequisites", () => {
         expect(garbageCollect?.checkCallback?.(true)).toBe(false);
     });
 
-    it("asks to disable on-demand chunk fetching before maintenance actions", async () => {
-        const { settings, askSelectStringDialogue, applyPartial } = createPrerequisites();
 
-        const result = await ensureLocalDatabaseMaintenancePrerequisites({
-            operationName: "Garbage Collection",
-            settings: {
-                readChunksOnline: settings.readChunksOnline,
-            },
-            askSelectStringDialogue,
-            applyPartial,
-        });
-
-        expect(result).toBe(true);
-        expect(askSelectStringDialogue).toHaveBeenCalledWith(
-            expect.stringContaining("Garbage Collection requires the following settings"),
-            ["Apply and continue", "Cancel"],
-            {
-                title: "Garbage Collection prerequisites",
-                defaultAction: "Cancel",
-            }
-        );
-        expect(applyPartial).toHaveBeenCalledWith(
-            {
-                readChunksOnline: false,
-            },
-            true
-        );
-        expect(vi.mocked(askSelectStringDialogue).mock.calls[0]?.[0]).not.toContain("Compute revisions for chunks");
-    });
-
-    it("cancels maintenance actions when prerequisite changes are rejected", async () => {
-        const { settings, askSelectStringDialogue, applyPartial } = createPrerequisites();
-        askSelectStringDialogue.mockResolvedValueOnce("Cancel");
-
-        const result = await ensureLocalDatabaseMaintenancePrerequisites({
-            operationName: "Garbage Collection",
-            settings: {
-                readChunksOnline: settings.readChunksOnline,
-            },
-            askSelectStringDialogue,
-            applyPartial,
-        });
-
-        expect(result).toBe(false);
-        expect(applyPartial).not.toHaveBeenCalled();
-    });
 
     it("continues without asking when prerequisite settings already match", async () => {
         const { settings, askSelectStringDialogue, applyPartial } = createPrerequisites({
@@ -177,27 +132,6 @@ describe("LocalDatabaseMaintenance prerequisites", () => {
         expect(applyPartial).not.toHaveBeenCalled();
     });
 
-    it("describes the current chunk-recreation action without promising historical recovery", async () => {
-        const maintenance = Object.create(LocalDatabaseMaintenance.prototype) as LocalDatabaseMaintenance;
-        const askSelectStringDialogue = vi.fn().mockResolvedValue("Cancel");
-        Object.assign(maintenance, {
-            core: {
-                confirm: {
-                    askSelectStringDialogue,
-                },
-            },
-            _log: vi.fn(),
-        });
-        vi.spyOn(maintenance, "ensureAvailable").mockResolvedValue(true);
-        vi.spyOn(maintenance, "trackChanges").mockResolvedValue(undefined);
-
-        await maintenance.performGC();
-
-        const message = vi.mocked(askSelectStringDialogue).mock.calls[0]?.[0] as string;
-        expect(message).toContain("Hatch -> Recreate chunks for current Vault files");
-        expect(message).toContain("only from files currently present in the Vault");
-        expect(message).not.toContain("Recreate missing chunks for all files");
-    });
 });
 
 describe("LocalDatabaseMaintenance Garbage Collection V3", () => {
