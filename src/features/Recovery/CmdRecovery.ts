@@ -1,5 +1,6 @@
 import { LOG_LEVEL_NOTICE } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { LiveSyncCommands } from "@/features/LiveSyncCommands.ts";
+import { syncHold } from "@/common/syncHold.ts";
 
 /**
  * The two ways out when synchronisation has gone wrong.
@@ -44,6 +45,35 @@ export class CmdRecovery extends LiveSyncCommands {
             },
         });
 
+        this.plugin.addCommand({
+            id: "livesync-fsx-resume",
+            name: "Resume synchronisation",
+            checkCallback: (checking) => {
+                const suspended =
+                    this.settings.suspendFileWatching === true ||
+                    this.settings.suspendParseReplicationResult === true;
+                if (!suspended) return false;
+                if (!checking) void this.resume();
+                return true;
+            },
+        });
+    }
+
+    /**
+     * Ends a suspension.
+     *
+     * Start-up used to ask about this, offering "Keep LiveSync disabled" or
+     * "Resume and restart" in front of a vault the reader had just opened. The
+     * suspension is theirs and it persists; ending it is a thing they do, once,
+     * when they decide to.
+     */
+    private async resume(): Promise<void> {
+        this.settings.suspendFileWatching = false;
+        this.settings.suspendParseReplicationResult = false;
+        await this.core.services.setting.saveSettingData();
+        syncHold.value = undefined;
+        this._log("Synchronisation resumed. Restarting Obsidian.", LOG_LEVEL_NOTICE);
+        this.core.services.appLifecycle.scheduleRestart();
     }
 
     private async confirmAndRebuild(method: "localOnly" | "remoteOnly", consequence: string): Promise<void> {

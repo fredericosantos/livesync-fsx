@@ -1,4 +1,5 @@
 import { fireAndForget } from "octagonal-wheels/promises";
+import { HOLD_SUSPENDED, syncHold } from "@/common/syncHold.ts";
 import {
     LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
@@ -23,24 +24,11 @@ export class ModuleLiveSyncMain extends AbstractModule {
         if (!(await this.core.services.appLifecycle.onLayoutReady())) return false;
         eventHub.emitEvent(EVENT_LAYOUT_READY);
         if (this.settings.suspendFileWatching || this.settings.suspendParseReplicationResult) {
-            const ANSWER_KEEP = $msg("moduleLiveSyncMain.optionKeepLiveSyncDisabled");
-            const ANSWER_RESUME = $msg("moduleLiveSyncMain.optionResumeAndRestart");
-            const message = $msg("moduleLiveSyncMain.msgScramEnabled", {
-                fileWatchingStatus: this.settings.suspendFileWatching ? "suspended" : "active",
-                parseReplicationStatus: this.settings.suspendParseReplicationResult ? "suspended" : "active",
-            });
-            if (
-                (await this.core.confirm.askSelectStringDialogue(message, [ANSWER_KEEP, ANSWER_RESUME], {
-                    defaultAction: ANSWER_KEEP,
-                    title: $msg("moduleLiveSyncMain.titleScramEnabled"),
-                })) == ANSWER_RESUME
-            ) {
-                this.settings.suspendFileWatching = false;
-                this.settings.suspendParseReplicationResult = false;
-                await this.saveSettings();
-                this.services.appLifecycle.scheduleRestart();
-                return false;
-            }
+            // Suspension is a state the reader chose, so start-up does not
+            // re-litigate it with a dialogue offering "Keep LiveSync disabled"
+            // or "Resume and restart". It shows in the status bar for as long
+            // as it lasts, and the command below ends it.
+            syncHold.value = HOLD_SUSPENDED;
         }
         const isInitialized = await this.services.databaseEvents.initialiseDatabase(false, false);
         if (!isInitialized) {

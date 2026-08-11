@@ -1,6 +1,6 @@
 import { AbstractObsidianModule } from "@/modules/AbstractObsidianModule.ts";
 import { EVENT_FILE_RENAMED, EVENT_LEAF_ACTIVE_CHANGED, eventHub } from "@/common/events.js";
-import { LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "octagonal-wheels/common/logger";
+import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "octagonal-wheels/common/logger";
 import { scheduleTask } from "octagonal-wheels/concurrency/task";
 import type { TFile } from "@/deps.ts";
 import { fireAndForget } from "octagonal-wheels/promises";
@@ -301,25 +301,24 @@ export class ModuleObsidianEvents extends AbstractObsidianModule {
         return Promise.resolve(true);
     }
 
+    /**
+     * Schedules the restart a settings change needs.
+     *
+     * This used to ask, with three answers: restart now, restart once things
+     * settle, or "No, Leave it to me". Restarting immediately interrupts
+     * whatever the reader is writing; leaving it means the change they just
+     * made silently does not apply. The middle answer is the only one that is
+     * always right, so it is what happens — and the status bar already shows
+     * that a restart is pending, which is the part they needed to know.
+     */
     private _askReload(message?: string) {
         if (this.services.appLifecycle.isReloadingScheduled()) {
             this._log(`Reloading is already scheduled`, LOG_LEVEL_VERBOSE);
             return;
         }
-        scheduleTask("configReload", 250, async () => {
-            const RESTART_NOW = "Yes, restart immediately";
-            const RESTART_AFTER_STABLE = "Yes, schedule a restart after stabilisation";
-            const RETRY_LATER = "No, Leave it to me";
-            const ret = await this.core.confirm.askSelectStringDialogue(
-                message || "Do you want to restart and reload Obsidian now?",
-                [RESTART_AFTER_STABLE, RESTART_NOW, RETRY_LATER],
-                { defaultAction: RETRY_LATER }
-            );
-            if (ret == RESTART_NOW) {
-                this.__performAppReload();
-            } else if (ret == RESTART_AFTER_STABLE) {
-                this.services.appLifecycle.scheduleRestart();
-            }
+        scheduleTask("configReload", 250, () => {
+            this._log(message || "Obsidian will restart once the current work has settled.", LOG_LEVEL_INFO);
+            this.services.appLifecycle.scheduleRestart();
         });
     }
 
