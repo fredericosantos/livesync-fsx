@@ -53,6 +53,26 @@ export async function probeCouchDBConnection(
     return { ok: true };
 }
 
+/**
+ * Turns a connection failure into something the reader can act on.
+ *
+ * A browser refuses a cross-origin request before the server ever sees it, and
+ * reports it as an ordinary network error — indistinguishable, to the reader,
+ * from a server that is switched off. The old dialogue answered this with a
+ * "Use Internal API" checkbox, which asked the user to know what CORS is and to
+ * choose a non-standard transport to work around a server they can fix.
+ */
+export function explainConnectionFailure(reason: string): string {
+    const looksLikeBrowserRefusal = /failed to fetch|networkerror|load failed|cors/i.test(reason);
+    if (!looksLikeBrowserRefusal) return reason;
+    return (
+        `${reason}\n\n` +
+        "If the server works in a browser, it is probably refusing the request because it does not " +
+        "allow Obsidian as an origin. In CouchDB's configuration, enable CORS and list " +
+        "app://obsidian.md, and capacitor://localhost for mobile."
+    );
+}
+
 export function isValidCouchDBServerURL(value: string): boolean {
     try {
         const url = new URL(value);
