@@ -88,7 +88,7 @@ async function askAndActivateRemoteDatabase(host: NecessaryServices<"UI" | "sett
                 return true;
             }
             if (selectedConfig.id === "cancel") {
-                log(`Remote configuration selection cancelled.`, LOG_LEVEL_NOTICE);
+                log(`Remote configuration selection cancelled.`, LOG_LEVEL_INFO);
                 return false;
             }
             const activated = activateRemoteConfiguration(settings, selectedConfig.id);
@@ -101,7 +101,7 @@ async function askAndActivateRemoteDatabase(host: NecessaryServices<"UI" | "sett
                 return false;
             }
         } else {
-            log(`No remote configuration selected.`, LOG_LEVEL_NOTICE);
+            log(`No remote configuration selected.`, LOG_LEVEL_INFO);
             return false;
         }
     }
@@ -155,7 +155,7 @@ export function createFetchAllFlagHandler(
         const method =
             await host.services.UI.dialogManager.openWithExplicitCancel<FetchEverythingResult>(FetchEverything);
         if (method === "cancelled") {
-            log("Fetch everything cancelled by user.", LOG_LEVEL_NOTICE);
+            log("Fetch everything cancelled by user.", LOG_LEVEL_INFO);
             await cleanupFlag();
             host.services.appLifecycle.performRestart();
             return false;
@@ -330,15 +330,12 @@ export async function verifyAndUnlockSuspension(
     if (!host.services.setting.currentSettings().suspendFileWatching) {
         return true;
     }
-    if (
-        (await host.services.UI.confirm.askYesNoDialog(
-            "Do you want to resume file and database processing, and restart obsidian now?",
-            { defaultOption: "Yes", timeout: 15 }
-        )) != "yes"
-    ) {
-        // TODO: Confirm actually proceed to next process.
-        return true;
-    }
+    // Resumed, not asked about. File watching was suspended by the recovery
+    // that has just finished; leaving it suspended is a broken vault that looks
+    // like a working one. The question also carried a fifteen-second timeout,
+    // so the answer depended on whether the reader happened to be at the
+    // keyboard.
+    log("Recovery finished. Resuming file processing and restarting Obsidian.", LOG_LEVEL_NOTICE);
     await host.services.setting.applyPartial({ suspendFileWatching: false }, true);
     host.services.appLifecycle.performRestart();
     return false;
@@ -371,7 +368,7 @@ export function createRebuildFlagHandler(
             { isP2P: boolean }
         >(RebuildEverything, { isP2P: false });
         if (method === "cancelled") {
-            log("Rebuild everything cancelled by user.", LOG_LEVEL_NOTICE);
+            log("Rebuild everything cancelled by user.", LOG_LEVEL_INFO);
             await cleanupFlag();
             host.services.appLifecycle.performRestart();
             return false;

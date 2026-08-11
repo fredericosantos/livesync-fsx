@@ -1150,27 +1150,17 @@ describe("Red Flag Feature", () => {
             expect(result).toBe(true);
         });
 
-        it("should ask for confirmation when suspension is active", async () => {
+        it("resumes without asking, because a suspended vault looks like a working one", async () => {
             const host = createHostMock();
 
             await host.mocks.setting.applyPartial({ suspendFileWatching: true });
-
-            host.mocks.ui.confirm.askYesNoDialog.mockResolvedValueOnce("yes");
-
-            await verifyAndUnlockSuspension(host as any, createLoggerMock());
-
-            expect(host.mocks.ui.confirm.askYesNoDialog).toHaveBeenCalled();
-        });
-
-        it("should return true when user declines suspension unlock", async () => {
-            const host = createHostMock();
-
-            await host.mocks.setting.applyPartial({ suspendFileWatching: true });
-            host.mocks.ui.confirm.askYesNoDialog.mockResolvedValueOnce("no");
 
             const result = await verifyAndUnlockSuspension(host as any, createLoggerMock());
 
-            expect(result).toBe(true);
+            expect(host.mocks.ui.confirm.askYesNoDialog).not.toHaveBeenCalled();
+            expect(host.mocks.setting.applyPartial).toHaveBeenCalledWith({ suspendFileWatching: false }, true);
+            expect(host.mocks.appLifecycle.performRestart).toHaveBeenCalled();
+            expect(result).toBe(false);
         });
 
         it("should resume file watching and restart when user accepts", async () => {

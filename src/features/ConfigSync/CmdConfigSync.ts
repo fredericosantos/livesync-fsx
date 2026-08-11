@@ -1,7 +1,6 @@
 import { writable } from "svelte/store";
 import type PouchDB from "pouchdb-core";
 import {
-    Notice,
     type PluginManifest,
     parseYaml,
     normalizePath,
@@ -55,12 +54,8 @@ import { LiveSyncCommands } from "@/features/LiveSyncCommands.ts";
 import { stripAllPrefixes } from "@vrtmrz/livesync-commonlib/compat/string_and_binary/path";
 import {
     EVEN,
-    disposeMemoObject,
     isCustomisationSyncMetadata,
     isPluginMetadata,
-    memoIfNotExist,
-    memoObject,
-    retrieveMemoObject,
     scheduleTask,
 } from "@/common/utils.ts";
 import { PeriodicProcessor } from "@/common/PeriodicProcessor.ts";
@@ -74,6 +69,10 @@ import { Semaphore } from "octagonal-wheels/concurrency/semaphore";
 import { EVENT_REQUEST_OPEN_PLUGIN_SYNC_DIALOG, eventHub } from "@/common/events.ts";
 import { PluginDialogModal } from "./PluginDialogModal.ts";
 import { $msg } from "@/common/translation";
+import {
+    readSystemHostName,
+    suggestDeviceName,
+} from "@/modules/features/SettingDialogue/controls/suggestDeviceName.ts";
 import type { InjectableServiceHub } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableServiceHub";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
@@ -598,7 +597,7 @@ export class ConfigSync extends LiveSyncCommands {
                 // Failed to load
                 return [];
             } catch (ex) {
-                this._log(`Something happened at enumerating customization :${path}`, LOG_LEVEL_NOTICE);
+                this._log(`Could not read the customisation at ${path}`, LOG_LEVEL_INFO);
                 this._log(ex, LOG_LEVEL_VERBOSE);
             }
             return [];
@@ -632,7 +631,7 @@ export class ConfigSync extends LiveSyncCommands {
                 // Failed to load
                 return [];
             } catch (ex) {
-                this._log(`Something happened at enumerating customization :${path}`, LOG_LEVEL_NOTICE);
+                this._log(`Could not read the customisation at ${path}`, LOG_LEVEL_INFO);
                 this._log(ex, LOG_LEVEL_VERBOSE);
             }
             return [];
@@ -1113,18 +1112,10 @@ export class ConfigSync extends LiveSyncCommands {
                         manifest.dir == `${baseDir}/plugins/${data.name}`
                 );
                 if (pluginManifest) {
-                    this._log(
-                        `Unloading plugin: ${pluginManifest.name}`,
-                        LOG_LEVEL_NOTICE,
-                        "plugin-reload-" + pluginManifest.id
-                    );
+                    this._log(`Unloading plugin: ${pluginManifest.name}`, LOG_LEVEL_INFO);
                     await pluginManager.unloadPlugin(pluginManifest.id);
                     await pluginManager.loadPlugin(pluginManifest.id);
-                    this._log(
-                        `Plugin reloaded: ${pluginManifest.name}`,
-                        LOG_LEVEL_NOTICE,
-                        "plugin-reload-" + pluginManifest.id
-                    );
+                    this._log(`Plugin reloaded: ${pluginManifest.name}`, LOG_LEVEL_INFO);
                 }
             } else if (data.category == "CONFIG") {
                 this.services.appLifecycle.askRestart();
@@ -1178,46 +1169,15 @@ export class ConfigSync extends LiveSyncCommands {
                 (docs as AnyEntry).path ? (docs as AnyEntry).path : this.getPath(docs as AnyEntry)
             );
         }
-        if (this.isThisModuleEnabled() && this.core.settings.notifyPluginOrSettingUpdated) {
-            if (!this.pluginDialog || (this.pluginDialog && !this.pluginDialog.isOpened())) {
-                const fragment = createFragment((doc) => {
-                    doc.createSpan(undefined, (a) => {
-                        a.appendText(`Some configuration has been arrived, Press `);
-                        a.appendChild(
-                            a.createEl("a", undefined, (anchor) => {
-                                anchor.text = "HERE";
-                                anchor.addEventListener("click", () => {
-                                    this.showPluginSyncModal();
-                                });
-                            })
-                        );
-
-                        a.appendText(` to open the config sync dialog , or press elsewhere to dismiss this message.`);
-                    });
-                });
-
-                const updatedPluginKey = "popupUpdated-plugins";
-                scheduleTask(updatedPluginKey, 1000, async () => {
-                    const popup = await memoIfNotExist(updatedPluginKey, () => new Notice(fragment, 0));
-                    //@ts-ignore -- retained for compatibility with Obsidian versions before Notice.messageEl.
-                    const isShown = popup?.noticeEl?.isShown();
-                    if (!isShown) {
-                        memoObject(updatedPluginKey, new Notice(fragment, 0));
-                    }
-                    scheduleTask(updatedPluginKey + "-close", 20000, () => {
-                        const popup = retrieveMemoObject<Notice>(updatedPluginKey);
-                        if (!popup) return;
-                        //@ts-ignore -- retained for compatibility with Obsidian versions before Notice.messageEl.
-                        if (popup?.noticeEl?.isShown()) {
-                            popup.hide();
-                        }
-                        disposeMemoObject(updatedPluginKey);
-                    });
-                });
-            }
-        }
+        // Another device changed its plugins or settings. That is information,
+        // not an interruption: it used to raise a Notice containing a link,
+        // kept alive by a memo object and two timers, saying "Some
+        // configuration has been arrived, Press HERE". Nothing is lost by
+        // waiting to be asked — the list is in Settings, under Sync.
+        this._log("Customisations from another device have arrived.", LOG_LEVEL_INFO);
         return true;
     }
+
     async _everyRealizeSettingSyncMode(): Promise<boolean> {
         this.periodicPluginSweepProcessor?.disable();
         if (!this._isMainReady) return true;
@@ -1362,7 +1322,7 @@ export class ConfigSync extends LiveSyncCommands {
     async storeCustomizationFiles(path: FilePath, termOverRide?: string) {
         const term = termOverRide || this.services.setting.getDeviceAndVaultName();
         if (term == "") {
-            this._log($msg("We have to configure the device name"), LOG_LEVEL_NOTICE);
+            this._log("Customisation Sync needs a device name; set one in Settings.", LOG_LEVEL_NOTICE);
             return;
         }
         if (this.useV2) {
@@ -1552,7 +1512,7 @@ export class ConfigSync extends LiveSyncCommands {
             this._log("Scanning customizing files.", logLevel, "scan-all-config");
             const term = this.services.setting.getDeviceAndVaultName();
             if (term == "") {
-                this._log($msg("We have to configure the device name"), LOG_LEVEL_NOTICE);
+                this._log("Customisation Sync needs a device name; set one in Settings.", LOG_LEVEL_NOTICE);
                 return;
             }
             const filesAll = await this.scanInternalFiles();
@@ -1729,33 +1689,15 @@ export class ConfigSync extends LiveSyncCommands {
 
         if (mode == "CUSTOMIZE") {
             if (!this.services.setting.getDeviceAndVaultName()) {
-                let name = await this.core.confirm.askString(
-                    $msg("Device name"),
-                    $msg("Please set this device name"),
-                    `desktop`
+                // The same name the settings field would propose, rather than a
+                // prompt here and a different guess ("macos" plus four random
+                // characters) than the one shown there.
+                const name = suggestDeviceName(
+                    Platform,
+                    this.services.vault.getVaultName(),
+                    [],
+                    readSystemHostName()
                 );
-                if (!name) {
-                    if (Platform.isAndroidApp) {
-                        name = "android-app";
-                    } else if (Platform.isIosApp) {
-                        name = "ios";
-                    } else if (Platform.isMacOS) {
-                        name = "macos";
-                    } else if (Platform.isMobileApp) {
-                        name = "mobile-app";
-                    } else if (Platform.isMobile) {
-                        name = "mobile";
-                    } else if (Platform.isSafari) {
-                        name = "safari";
-                    } else if (Platform.isDesktop) {
-                        name = "desktop";
-                    } else if (Platform.isDesktopApp) {
-                        name = "desktop-app";
-                    } else {
-                        name = "unknown";
-                    }
-                    name = name + Math.random().toString(36).slice(-4);
-                }
                 this.services.setting.setDeviceAndVaultName(name);
             }
             // this.core.settings.usePluginSync = true;
