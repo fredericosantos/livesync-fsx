@@ -10,9 +10,6 @@ import { upsertRemoteConfigurationInPlace } from "@vrtmrz/livesync-commonlib/rem
 import { isObjectDifferent } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import ScanQRCode from "./SetupWizard/dialogs/ScanQRCode.svelte";
 import UseSetupURI from "./SetupWizard/dialogs/UseSetupURI.svelte";
-import OutroNewUser from "./SetupWizard/dialogs/OutroNewUser.svelte";
-import OutroExistingUser from "./SetupWizard/dialogs/OutroExistingUser.svelte";
-import OutroAskUserMode from "./SetupWizard/dialogs/OutroAskUserMode.svelte";
 import ConfirmSetupPlan from "./SetupWizard/dialogs/ConfirmSetupPlan.svelte";
 import {
     SETUP_RECONNECT,
@@ -28,10 +25,8 @@ import SetupRemoteE2EE from "./SetupWizard/dialogs/SetupRemoteE2EE.svelte";
 import { decodeSettingsFromQRCodeData } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
 import type {
-    OutroAskUserModeResultType,
-    OutroExistingUserResultType,
-    OutroNewUserResultType,
     ScanQRCodeResultType,
+    SetupPlanResultType,
     SetupRemoteCouchDBResultType,
     SetupRemoteCouchDBInitialData,
     SetupRemoteE2EEResultType,
@@ -130,10 +125,10 @@ export class SetupManager extends AbstractModule {
             fileCount: await this.countLocalFiles(),
             wasConfigured: isConfigured,
         });
-        const confirmed = await this.dialogManager.openWithExplicitCancel<
-            OutroExistingUserResultType,
-            typeof plan
-        >(ConfirmSetupPlan, plan);
+        const confirmed = await this.dialogManager.openWithExplicitCancel<SetupPlanResultType, typeof plan>(
+            ConfirmSetupPlan,
+            plan
+        );
         if (confirmed !== "apply") {
             this._log("Setup was not applied.", LOG_LEVEL_NOTICE);
             return false;
@@ -335,74 +330,46 @@ export class SetupManager extends AbstractModule {
             ...this.settings,
             ...newConf,
         });
-        let userMode = _userMode;
-        if (userMode === UserMode.Unknown) {
-            if (isObjectDifferent(this.settings, newConf, true) === false) {
-                this._log("No changes in settings detected. Skipping applying settings from wizard.", LOG_LEVEL_NOTICE);
-                return true;
-            }
-            // const patch = generatePatchObj(this.settings, newConf);
-            // console.log(`Changes:`);
-            // console.dir(patch);
-            if (!activate) {
-                extra();
-                const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
-                if (applied) this._log("Setting Applied", LOG_LEVEL_NOTICE);
-                return applied;
-            }
-            // Check virtual changes
-            const original = { ...this.settings } as ObsidianLiveSyncSettings;
-            const modified = { ...newConf } as ObsidianLiveSyncSettings;
-            const isOnlyVirtualChange = isObjectDifferent(original, modified, true) === false;
-            if (isOnlyVirtualChange) {
-                extra();
-                const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
-                if (applied) this._log("Settings from wizard applied.", LOG_LEVEL_NOTICE);
-                return applied;
-            } else {
-                const userModeResult =
-                    await this.dialogManager.openWithExplicitCancel<OutroAskUserModeResultType>(OutroAskUserMode);
-                if (userModeResult === "new-user") {
-                    userMode = UserMode.NewUser;
-                } else if (userModeResult === "existing-user") {
-                    userMode = UserMode.ExistingUser;
-                } else if (userModeResult === "compatible-existing-user") {
-                    extra();
-                    const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
-                    if (applied) this._log("Settings from wizard applied.", LOG_LEVEL_NOTICE);
-                    return applied;
-                } else if (userModeResult === "cancelled") {
-                    this._log("User cancelled applying settings from wizard.", LOG_LEVEL_NOTICE);
-                    return false;
-                }
-            }
+
+        if (isObjectDifferent(this.settings, newConf, true) === false) {
+            this._log("No changes in settings detected. Skipping applying settings from wizard.", LOG_LEVEL_NOTICE);
+            return true;
         }
-        const component = userMode === UserMode.NewUser ? OutroNewUser : OutroExistingUser;
-        const confirm = await this.dialogManager.openWithExplicitCancel<
-            OutroNewUserResultType | OutroExistingUserResultType,
-            { isP2P: boolean }
-        >(component, { isP2P: false });
-        if (confirm === "cancelled") {
-            this._log("User cancelled applying settings from wizard..", LOG_LEVEL_NOTICE);
+        if (!activate) {
+            extra();
+            const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
+            if (applied) this._log("Setting Applied", LOG_LEVEL_NOTICE);
+            return applied;
+        }
+        // A change that alters no stored value cannot need the database rebuilt.
+        if (isObjectDifferent({ ...this.settings }, { ...newConf }, true) === false) {
+            extra();
+            const applied = await this.applySettingAndScheduleFetchOnActivation(newConf, UserMode.ExistingUser);
+            if (applied) this._log("Settings from wizard applied.", LOG_LEVEL_NOTICE);
+            return applied;
+        }
+
+        // The wizard used to ask the reader to classify themselves here: new
+        // server, joining device, or "the configuration is compatible (or got
+        // compatible by this operation)" — a sentence nobody outside this
+        // codebase can evaluate, with data loss as the penalty for guessing.
+        // It is the same question setup answers by looking at the server, so it
+        // is answered the same way, whether the settings arrived by hand, by
+        // link, or by QR code.
+        const plan = planSetup(await this.observeRemote(newConf), {
+            fileCount: await this.countLocalFiles(),
+            wasConfigured: this.settings.isConfigured === true,
+        });
+        const confirmed = await this.dialogManager.openWithExplicitCancel<SetupPlanResultType, typeof plan>(
+            ConfirmSetupPlan,
+            plan
+        );
+        if (confirmed !== "apply") {
+            this._log("Setup was not applied.", LOG_LEVEL_NOTICE);
             return false;
         }
-        if (confirm) {
-            extra();
-            if (userMode === UserMode.NewUser) {
-                // Reserve Rebuild before enabling the imported settings, so
-                // the current runtime cannot begin ordinary processing first.
-                await applySettingsWithScheduledInitialisation(this.core.rebuilder, "rebuild", async () => {
-                    await this.applySetting(newConf, userMode);
-                });
-            } else {
-                // Existing data must be fetched before the ordinary startup scan.
-                await applySettingsWithScheduledInitialisation(this.core.rebuilder, "fetch", async () => {
-                    await this.applySetting(newConf, userMode);
-                });
-            }
-        }
-        // Settings applied, but may require rebuild to take effect.
-        return false;
+        extra();
+        return await this.applyPlannedSetup(newConf, plan.action);
     }
 
     /**

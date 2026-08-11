@@ -19,11 +19,6 @@ export const TYPE_NEW_USER = "new-user";
 export const TYPE_EXISTING_USER = "existing-user";
 export const TYPE_CANCELLED = "cancelled";
 
-// Outro ask user mode
-export const TYPE_EXISTING = "existing-user";
-export const TYPE_NEW = "new-user";
-export const TYPE_COMPATIBLE_EXISTING = "compatible-existing-user";
-
 // OutroExistingUser
 export const TYPE_APPLY = "apply";
 
@@ -70,15 +65,10 @@ export type RebuildEverythingResult =
 
 export type IntroResultType = typeof TYPE_NEW_USER | typeof TYPE_EXISTING_USER | typeof TYPE_CANCELLED;
 
-export type OutroAskUserModeResultType =
-    | typeof TYPE_EXISTING
-    | typeof TYPE_NEW
-    | typeof TYPE_COMPATIBLE_EXISTING
-    | typeof TYPE_CANCELLED;
 
-export type OutroExistingUserResultType = typeof TYPE_APPLY | typeof TYPE_CANCELLED;
+/** The answer to a setup plan: apply it, or do nothing. */
+export type SetupPlanResultType = typeof TYPE_APPLY | typeof TYPE_CANCELLED;
 
-export type OutroNewUserResultType = typeof TYPE_APPLY | typeof TYPE_CANCELLED;
 
 export type SelectMethodNewUserResultType =
     | typeof TYPE_USE_SETUP_URI

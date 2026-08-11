@@ -9,16 +9,10 @@ import { SettingService } from "@vrtmrz/livesync-commonlib/compat/services/base/
 import { ServiceContext } from "@vrtmrz/livesync-commonlib/context";
 import { createNewVaultSettings } from "@vrtmrz/livesync-commonlib/settings";
 
-vi.mock("./SetupWizard/dialogs/Intro.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SelectMethodNewUser.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SelectMethodExisting.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/ScanQRCode.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/UseSetupURI.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/OutroNewUser.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/OutroExistingUser.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/OutroAskUserMode.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/SetupRemoteCouchDB.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SetupRemoteP2P.svelte", () => ({ default: {} }));
+vi.mock("./SetupWizard/dialogs/ConfirmSetupPlan.svelte", () => ({ default: {} }));
 vi.mock("./SetupWizard/dialogs/SetupRemoteE2EE.svelte", () => ({ default: {} }));
 
 vi.mock("@vrtmrz/livesync-commonlib/compat/API/processSetting", () => ({
@@ -81,6 +75,18 @@ function createSetupManager() {
         openWithExplicitCancel: vi.fn(),
         open: vi.fn(),
     };
+    // Setup asks the server what it holds before proposing a plan; an empty
+    // one means the plan is to upload, which is what these tests exercise.
+    const remoteStatus = { doc_count: 0 };
+    const replicator = {
+        getNewReplicator: vi.fn(() =>
+            Promise.resolve({
+                isMobile: () => false,
+                connectRemoteCouchDBWithSetting: vi.fn(() => Promise.resolve({ db: {}, info: {} })),
+                getRemoteStatus: vi.fn(() => Promise.resolve(remoteStatus)),
+            })
+        ),
+    };
     const services = {
         API: {
             addLog: vi.fn(),
@@ -92,10 +98,14 @@ function createSetupManager() {
         UI: {
             dialogManager,
         },
+        replicator,
         setting,
     } as any;
     const core: any = {
         _services: services,
+        storageAccess: {
+            getFiles: vi.fn(() => Promise.resolve([])),
+        },
         rebuilder: {
             scheduleRebuild: vi.fn(async (prepareBeforeRestart?: () => Promise<void>) => {
                 await prepareBeforeRestart?.();
@@ -123,6 +133,7 @@ function createSetupManager() {
 
     return {
         manager: new SetupManager(core),
+        remoteStatus,
         setting,
         dialogManager,
         core,
@@ -139,7 +150,7 @@ describe("SetupManager", () => {
         const { manager, setting, dialogManager } = createSetupManager();
         dialogManager.openWithExplicitCancel
             .mockResolvedValueOnce(createLegacyRemoteSetting())
-            .mockResolvedValueOnce("compatible-existing-user");
+            .mockResolvedValueOnce("apply");
 
         const result = await manager.onUseSetupURI(UserMode.Unknown, "mock-config://settings");
 
@@ -153,7 +164,7 @@ describe("SetupManager", () => {
     it("compatibility: normalises imported flat remote settings from QR data before applying", async () => {
         const { manager, setting, dialogManager } = createSetupManager();
         vi.mocked(decodeSettingsFromQRCodeData).mockReturnValue(createLegacyRemoteSetting());
-        dialogManager.openWithExplicitCancel.mockResolvedValueOnce("compatible-existing-user");
+        dialogManager.openWithExplicitCancel.mockResolvedValueOnce("apply");
 
         const result = await manager.decodeQR("qr-data");
 
@@ -169,7 +180,7 @@ describe("SetupManager", () => {
         const { manager, setting, dialogManager, core } = createSetupManager();
         setting.settings = { ...setting.currentSettings(), isConfigured: false };
         const applyExternalSettings = vi.spyOn(setting, "applyExternalSettings");
-        dialogManager.openWithExplicitCancel.mockResolvedValueOnce(true);
+        dialogManager.openWithExplicitCancel.mockResolvedValueOnce("apply");
 
         await manager.onConfirmApplySettingsFromWizard(
             { ...createLegacyRemoteSetting(), isConfigured: true },
@@ -185,12 +196,14 @@ describe("SetupManager", () => {
 
 
     it("reserves Fetch when compatible imported settings activate an unconfigured device", async () => {
-        const { manager, setting, dialogManager, core } = createSetupManager();
+        const { manager, setting, dialogManager, core, remoteStatus } = createSetupManager();
         setting.settings = { ...setting.currentSettings(), isConfigured: false };
+        // The server already holds a vault, so the plan is to join it.
+        remoteStatus.doc_count = 4200;
         const applyExternalSettings = vi.spyOn(setting, "applyExternalSettings");
         dialogManager.openWithExplicitCancel
             .mockResolvedValueOnce({ ...createLegacyRemoteSetting(), isConfigured: true })
-            .mockResolvedValueOnce("compatible-existing-user");
+            .mockResolvedValueOnce("apply");
 
         await manager.onUseSetupURI(UserMode.Unknown, "mock-config://settings");
 
@@ -202,11 +215,12 @@ describe("SetupManager", () => {
     });
 
     it("applies compatible settings to an already configured device without scheduling Fetch", async () => {
-        const { manager, setting, dialogManager, core } = createSetupManager();
+        const { manager, setting, dialogManager, core, remoteStatus } = createSetupManager();
         setting.settings = { ...setting.currentSettings(), isConfigured: true };
+        remoteStatus.doc_count = 4200;
         dialogManager.openWithExplicitCancel
             .mockResolvedValueOnce({ ...createLegacyRemoteSetting(), isConfigured: true })
-            .mockResolvedValueOnce("compatible-existing-user");
+            .mockResolvedValueOnce("apply");
 
         await manager.onUseSetupURI(UserMode.Unknown, "mock-config://settings");
 
@@ -219,7 +233,7 @@ describe("SetupManager", () => {
         setting.settings = { ...setting.currentSettings(), isConfigured: false };
         const applyExternalSettings = vi.spyOn(setting, "applyExternalSettings");
         core.rebuilder.scheduleRebuild.mockResolvedValueOnce(false);
-        dialogManager.openWithExplicitCancel.mockResolvedValueOnce(true);
+        dialogManager.openWithExplicitCancel.mockResolvedValueOnce("apply");
 
         await manager.onConfirmApplySettingsFromWizard(
             { ...createLegacyRemoteSetting(), isConfigured: true },
@@ -253,7 +267,7 @@ describe("SetupManager", () => {
         } as ObsidianLiveSyncSettings;
         dialogManager.openWithExplicitCancel
             .mockResolvedValueOnce(imported)
-            .mockResolvedValueOnce("compatible-existing-user");
+            .mockResolvedValueOnce("apply");
 
         await manager.onUseSetupURI(UserMode.Unknown, "mock-config://modern-settings");
 
@@ -293,7 +307,8 @@ describe("SetupManager", () => {
                 jwtExpDuration: 5,
                 useRequestAPI: false,
             })
-            .mockResolvedValueOnce(true);
+            // ...then the plan the wizard proposes for the server.
+            .mockResolvedValueOnce("apply");
 
         await manager.onCouchDBManualSetup(UserMode.ExistingUser, setting.currentSettings());
 
