@@ -5,15 +5,13 @@ import {
     Logger,
 } from "@vrtmrz/livesync-commonlib/compat/common/logger";
 import {
-    EVENT_REQUEST_OPEN_P2P,
-    EVENT_REQUEST_OPEN_SETTING_WIZARD,
-    EVENT_REQUEST_OPEN_SETTINGS,
     EVENT_REQUEST_RUN_DOCTOR,
     EVENT_REQUEST_RUN_FIX_INCOMPLETE,
     eventHub,
 } from "@/common/events.ts";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
 import { $msg } from "@/common/translation";
+import { HOLD_INSECURE_CHUNKS, syncHold } from "@/common/syncHold.ts";
 import { performDoctorConsultation, RebuildOptions } from "@vrtmrz/livesync-commonlib/compat/common/configForDoc";
 import { isValidPath } from "@/common/utils.ts";
 import { isMetaEntry } from "@vrtmrz/livesync-commonlib/compat/common/types";
@@ -95,53 +93,6 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
     initialMessage() {
         const manager = this.core.getModule(SetupManager);
         showOnboardingInvitation(this.core, manager);
-        /*
-        const message = $msg("moduleMigration.msgInitialSetup", {
-            URI_DOC: $msg("moduleMigration.docUri"),
-        });
-        const USE_SETUP = $msg("moduleMigration.optionHaveSetupUri");
-        const NEXT = $msg("moduleMigration.optionNoSetupUri");
-
-        const ret = await this.core.confirm.askSelectStringDialogue(message, [USE_SETUP, NEXT], {
-            title: $msg("moduleMigration.titleWelcome"),
-            defaultAction: USE_SETUP,
-        });
-        if (ret === USE_SETUP) {
-            eventHub.emitEvent(EVENT_REQUEST_OPEN_SETUP_URI);
-            return false;
-        } else if (ret == NEXT) {
-            return true;
-        }
-        return false;
-        */
-    }
-
-    async askAgainForSetupURI() {
-        const message = $msg("moduleMigration.msgRecommendSetupUri", { URI_DOC: $msg("moduleMigration.docUri") });
-        const USE_MINIMAL = $msg("moduleMigration.optionSetupWizard");
-        const USE_P2P = $msg("moduleMigration.optionSetupViaP2P");
-        const USE_SETUP = $msg("moduleMigration.optionManualSetup");
-        const NEXT = $msg("moduleMigration.optionRemindNextLaunch");
-
-        const ret = await this.core.confirm.askSelectStringDialogue(message, [USE_MINIMAL, USE_SETUP, USE_P2P, NEXT], {
-            title: $msg("moduleMigration.titleRecommendSetupUri"),
-            defaultAction: USE_MINIMAL,
-        });
-        if (ret === USE_MINIMAL) {
-            eventHub.emitEvent(EVENT_REQUEST_OPEN_SETTING_WIZARD);
-            return false;
-        }
-        if (ret === USE_P2P) {
-            eventHub.emitEvent(EVENT_REQUEST_OPEN_P2P);
-            return false;
-        }
-        if (ret === USE_SETUP) {
-            eventHub.emitEvent(EVENT_REQUEST_OPEN_SETTINGS);
-            return false;
-        } else if (ret == NEXT) {
-            return false;
-        }
-        return false;
     }
 
     async hasIncompleteDocs(force: boolean = false): Promise<boolean> {
@@ -245,47 +196,38 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
             const unrecoverable = errorFiles.filter((e) => {
                 return e.recordedSize !== e.storageSize || e.isConflicted;
             });
-            const fileInfo = (e: (typeof errorFiles)[0]) => {
-                return `${e.path} (M: ${e.recordedSize}, A: ${e.actualSize}, S: ${e.storageSize}) ${e.isConflicted ? "(Conflicted)" : ""}`;
-            };
-            const messageUnrecoverable =
-                unrecoverable.length > 0
-                    ? $msg("moduleMigration.fix0256.messageUnrecoverable", {
-                          filesNotRecoverable: unrecoverable.map((e) => `- ${fileInfo(e)}`).join("\n"),
-                      })
-                    : "";
-
-            const message = $msg("moduleMigration.fix0256.message", {
-                files: recoverable.map((e) => `- ${fileInfo(e)}`).join("\n"),
-                messageUnrecoverable,
-            });
-            const CHECK_IT_LATER = $msg("moduleMigration.fix0256.buttons.checkItLater");
-            const FIX = $msg("moduleMigration.fix0256.buttons.fix");
-            const DISMISS = $msg("moduleMigration.fix0256.buttons.DismissForever");
-            const ret = await this.core.confirm.askSelectStringDialogue(message, [CHECK_IT_LATER, FIX, DISMISS], {
-                title: $msg("moduleMigration.fix0256.title"),
-                defaultAction: CHECK_IT_LATER,
-            });
-            if (ret == FIX) {
-                for (const file of recoverable) {
-                    // Overwrite the database with the files on the storage
-                    const stubFile = await this.core.storageAccess.getFileStub(file.path);
-                    if (stubFile == null) {
-                        Logger(`Could not find stub file for ${file.path}`, LOG_LEVEL_NOTICE);
-                        continue;
-                    }
-
-                    stubFile.stat.mtime = Date.now();
-                    const result = await this.core.fileHandler.storeFileToDB(stubFile, true, false);
-                    if (result) {
-                        Logger(`Successfully restored ${file.path} from storage`);
-                    } else {
-                        Logger(`Failed to restore ${file.path} from storage`, LOG_LEVEL_NOTICE);
-                    }
+            // Repaired, not reported. The "recoverable" filter above is the
+            // plug-in's own proof that overwriting is safe — the database and
+            // the file agree on size and nothing is conflicted — so a dialogue
+            // listing `(M: 1234, A: 1234, S: 1234)` for each file asked the
+            // reader to re-derive a conclusion already reached, in units only
+            // this codebase uses.
+            let restored = 0;
+            for (const file of recoverable) {
+                const stubFile = await this.core.storageAccess.getFileStub(file.path);
+                if (stubFile == null) {
+                    Logger(`Could not find ${file.path} to repair it`, LOG_LEVEL_INFO);
+                    continue;
                 }
-            } else if (ret === DISMISS) {
-                // User chose to dismiss the issue
-                await this.core.kvDB.set("checkIncompleteDocs", true);
+                stubFile.stat.mtime = Date.now();
+                const result = await this.core.fileHandler.storeFileToDB(stubFile, true, false);
+                if (result) {
+                    restored++;
+                    Logger(`Repaired ${file.path} from the copy in the vault`, LOG_LEVEL_INFO);
+                } else {
+                    Logger(`Could not repair ${file.path}`, LOG_LEVEL_INFO);
+                }
+            }
+            if (restored > 0) {
+                Logger(`Repaired ${restored} file(s) whose database record was incomplete.`, LOG_LEVEL_NOTICE);
+            }
+            if (unrecoverable.length > 0) {
+                // Left alone deliberately: these are resolved by replication
+                // from whichever device still holds the content.
+                Logger(
+                    `${unrecoverable.length} file(s) could not be repaired here and will be resolved by synchronisation.`,
+                    LOG_LEVEL_INFO
+                );
             }
 
             return Promise.resolve(true);
@@ -324,34 +266,13 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
             `Found compromised chunks : ${localCompromised} in local, ${remoteCompromised} in remote`,
             LOG_LEVEL_NOTICE
         );
-        const title = $msg("moduleMigration.insecureChunkExist.title");
-        const msg = $msg("moduleMigration.insecureChunkExist.message");
-        const REBUILD = $msg("moduleMigration.insecureChunkExist.buttons.rebuild");
-        const FETCH = $msg("moduleMigration.insecureChunkExist.buttons.fetch");
-        const DISMISS = $msg("moduleMigration.insecureChunkExist.buttons.later");
-        const buttons = [REBUILD, FETCH, DISMISS];
-        if (remoteCompromised != 0) {
-            buttons.splice(buttons.indexOf(FETCH), 1);
-        }
-        const result = await this.core.confirm.askSelectStringDialogue(msg, buttons, {
-            title,
-            defaultAction: DISMISS,
-            timeout: 0,
-        });
-        if (result === REBUILD) {
-            // Rebuild the database
-            await this.core.rebuilder.scheduleRebuild();
-            this.services.appLifecycle.performRestart();
-            return false;
-        } else if (result === FETCH) {
-            // Fetch the latest data from remote
-            await this.core.rebuilder.scheduleFetch();
-            this.services.appLifecycle.performRestart();
-            return false;
-        } else {
-            // User chose to dismiss the issue
-            this._log($msg("moduleMigration.insecureChunkExist.laterMessage"), LOG_LEVEL_NOTICE);
-        }
+        // A lasting condition, so it is shown as one. This used to be a modal
+        // at start-up offering "Rebuild", "Fetch" or "Later" — three answers to
+        // a question about cryptography, raised in front of a vault the reader
+        // had just opened to write in. The two repairs are the two commands
+        // that already exist, and the status bar says which one is needed for
+        // as long as it is needed.
+        syncHold.value = HOLD_INSECURE_CHUNKS;
         return true;
     }
 
