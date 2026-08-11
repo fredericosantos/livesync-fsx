@@ -39,7 +39,6 @@ import { useSetupProtocolFeature } from "./serviceFeatures/setupObsidian/setupPr
 import { useSetupQRCodeFeature } from "@/serviceFeatures/setupObsidian/qrCode";
 import { useSetupURIFeature } from "@/serviceFeatures/setupObsidian/setupUri";
 import { useSetupManagerHandlersFeature } from "./serviceFeatures/setupObsidian/setupManagerHandlers.ts";
-import { useReviewHarness } from "./serviceFeatures/useReviewHarness.ts";
 import { useCompatibilityReview } from "./serviceFeatures/compatibilityReview.ts";
 import { createObsidianCompatibilityReviewUi } from "./serviceFeatures/compatibilityReviewObsidian.ts";
 import { createFileReflectionProvenance } from "./serviceModules/FileReflectionProvenance.ts";
@@ -192,7 +191,6 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                     createObsidianCompatibilityReviewUi(core.confirm)
                 );
                 waitForCompatibilityReview = () => compatibilityReview.openReview();
-                useReviewHarness(core, this, compatibilityReview);
             }
         );
     }

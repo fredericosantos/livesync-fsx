@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { HOLD_TWEAKS_INCOMPATIBLE, syncHold } from "@/common/syncHold.ts";
 import {
     DEFAULT_SETTINGS,
     REMOTE_COUCHDB,
@@ -121,7 +122,7 @@ describe("ModuleResolvingMismatchedTweaks", () => {
         expect(askSelectStringDialogue).not.toHaveBeenCalled();
     });
 
-    it("should fallback to manual confirmation when mismatches are mixed on connect check", async () => {
+    it("holds synchronisation when the difference cannot be bridged, instead of asking", async () => {
         const { module, askSelectStringDialogue } = createModule({
             autoAcceptCompatibleTweak: true,
             hashAlg: "xxhash64",
@@ -140,15 +141,17 @@ describe("ModuleResolvingMismatchedTweaks", () => {
 
         expect(conf).toBe(false);
         expect(rebuild).toBe(false);
-        expect(askSelectStringDialogue).toHaveBeenCalledTimes(1);
+        expect(askSelectStringDialogue).not.toHaveBeenCalled();
+        expect(syncHold.value).toBe(HOLD_TWEAKS_INCOMPATIBLE);
     });
 
-    it("should fetch after applying a compatible remote setting when the user selects the rebuild option", async () => {
+    it("adopts the server's values for a difference the stored data can survive", async () => {
+        // The server is the authority on how content is stored; a device that
+        // disagrees cannot read what is there. There is nothing to ask.
         const { module, askSelectStringDialogue } = createModule({
             autoAcceptCompatibleTweak: false,
             hashAlg: "xxhash64",
         });
-        askSelectStringDialogue.mockResolvedValueOnce("Apply settings to this device, and fetch again");
 
         const preferred = {
             ...(DEFAULT_SETTINGS as unknown as TweakValues),
@@ -158,7 +161,8 @@ describe("ModuleResolvingMismatchedTweaks", () => {
         const [conf, rebuild] = await module._checkAndAskResolvingMismatchedTweaks(preferred);
 
         expect(conf).toEqual(preferred);
-        expect(rebuild).toBe(true);
+        expect(rebuild).toBe(false);
+        expect(askSelectStringDialogue).not.toHaveBeenCalled();
     });
 
     it("should auto-accept compatible mismatches on remote-config check using newer local tweakModified", async () => {

@@ -1,4 +1,4 @@
-import { Logger, LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "octagonal-wheels/common/logger";
+import { Logger, LOG_LEVEL_INFO, LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "octagonal-wheels/common/logger";
 import { extractObject } from "octagonal-wheels/object";
 import {
     TweakValuesShouldMatchedTemplate,
@@ -14,6 +14,7 @@ import {
 import { escapeMarkdownValue } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
 import { $msg } from "@/common/translation";
+import { HOLD_TWEAKS_INCOMPATIBLE, syncHold } from "@/common/syncHold.ts";
 import type { InjectableServiceHub } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableServiceHub";
 import type { LiveSyncCore } from "@/main.ts";
 import { REMOTE_P2P } from "@vrtmrz/livesync-commonlib/compat/common/models/setting.const";
@@ -121,7 +122,6 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
         }
         const items = Object.entries(TweakValuesShouldMatchedTemplate);
         let rebuildRequired = false;
-        let rebuildRecommended = false;
         // Making tables:
         // let table = `| Value name | This device | Configured | \n` + `|: --- |: --- :|: ---- :| \n`;
         const tableRows = [];
@@ -142,15 +142,10 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
                 const isToConditionMet = "to" in pattern ? pattern.to === preferred[key] : false;
                 // if either of them is true, it should require a rebuild, if the pattern is not a recommendation.
                 if (isFromConditionMet || isToConditionMet) {
-                    if (pattern.isRecommendation) {
-                        rebuildRecommended = true;
-                    } else {
-                        rebuildRequired = true;
-                    }
+                    // A recommendation is not a requirement: only
+                    // changes the stored data cannot survive force a repair.
+                    if (!pattern.isRecommendation) rebuildRequired = true;
                 }
-            }
-            if (CompatibleButLossyChanges.indexOf(key) !== -1) {
-                rebuildRecommended = true;
             }
 
             // table += `| ${confName(key)} | ${valueMine} | ${valuePreferred} | \n`;
@@ -163,58 +158,35 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
             );
         }
 
-        const additionalMessage =
-            rebuildRequired && this.core.settings.isConfigured
-                ? $msg("TweakMismatchResolve.Message.WarningIncompatibleRebuildRequired")
-                : "";
-        const additionalMessage2 =
-            rebuildRecommended && this.core.settings.isConfigured
-                ? $msg("TweakMismatchResolve.Message.WarningIncompatibleRebuildRecommended")
-                : "";
+        const differences = tableRows.length;
 
-        const table = $msg("TweakMismatchResolve.Table", { rows: tableRows.join("\n") });
-
-        const message = $msg("TweakMismatchResolve.Message.MainTweakResolving", {
-            table: table,
-            additionalMessage: [additionalMessage, additionalMessage2].filter((v) => v).join("\n"),
-        });
-
-        const CHOICE_USE_REMOTE = $msg("TweakMismatchResolve.Action.UseRemote");
-        const CHOICE_USE_REMOTE_WITH_REBUILD = $msg("TweakMismatchResolve.Action.UseRemoteWithRebuild");
-        const CHOICE_USE_REMOTE_PREVENT_REBUILD = $msg("TweakMismatchResolve.Action.UseRemoteAcceptIncompatible");
-        const CHOICE_USE_MINE = $msg("TweakMismatchResolve.Action.UseMine");
-        const CHOICE_USE_MINE_WITH_REBUILD = $msg("TweakMismatchResolve.Action.UseMineWithRebuild");
-        const CHOICE_USE_MINE_PREVENT_REBUILD = $msg("TweakMismatchResolve.Action.UseMineAcceptIncompatible");
-        const CHOICE_DISMISS = $msg("TweakMismatchResolve.Action.Dismiss");
-
-        const CHOICE_AND_VALUES = [] as [string, [result: TweakValues | boolean, rebuild: boolean]][];
-
-        if (rebuildRequired) {
-            CHOICE_AND_VALUES.push([CHOICE_USE_REMOTE_WITH_REBUILD, [preferred, true]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_MINE_WITH_REBUILD, [true, true]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_REMOTE_PREVENT_REBUILD, [preferred, false]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_MINE_PREVENT_REBUILD, [true, false]]);
-        } else if (rebuildRecommended) {
-            CHOICE_AND_VALUES.push([CHOICE_USE_REMOTE, [preferred, false]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_MINE, [true, false]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_REMOTE_WITH_REBUILD, [preferred, true]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_MINE_WITH_REBUILD, [true, true]]);
-        } else {
-            CHOICE_AND_VALUES.push([CHOICE_USE_REMOTE, [preferred, false]]);
-            CHOICE_AND_VALUES.push([CHOICE_USE_MINE, [true, false]]);
+        // The server decides. Every device has to agree on these values to read
+        // the same data, and there is exactly one authority for what they are.
+        //
+        // What stood here was a dialogue of up to seven options — use remote,
+        // use mine, either of those with a rebuild, either of those "accepting
+        // incompatible" — over a markdown table of internal setting names, with
+        // a sixty-second timeout that defaulted to dismissing it. Whichever way
+        // that was answered, the device that disagreed with the server stopped
+        // syncing until it agreed again.
+        if (!rebuildRequired) {
+            this._log(
+                `Adopted ${differences} setting(s) from the server so this device can read what is stored there.`,
+                LOG_LEVEL_INFO
+            );
+            return [preferred, false];
         }
-        CHOICE_AND_VALUES.push([CHOICE_DISMISS, [false, false]]);
-        const CHOICES = Object.fromEntries(CHOICE_AND_VALUES) as Record<
-            string,
-            [TweakValues | boolean, performRebuild: boolean]
-        >;
-        const retKey = await this.core.confirm.askSelectStringDialogue(message, Object.keys(CHOICES), {
-            title: $msg("TweakMismatchResolve.Title.TweakResolving"),
-            timeout: 60,
-            defaultAction: CHOICE_DISMISS,
-        });
-        if (!retKey) return [false, false];
-        return CHOICES[retKey];
+
+        // A difference the stored data cannot survive. Nothing is done to the
+        // vault behind the reader's back: the status bar says synchronisation
+        // is held, and the repair commands are how it is resolved — in the
+        // direction they choose, from the device holding the copy they want.
+        syncHold.value = HOLD_TWEAKS_INCOMPATIBLE;
+        this._log(
+            "This device and the server disagree on how content is stored, and the difference cannot be bridged.",
+            LOG_LEVEL_INFO
+        );
+        return [false, false];
     }
 
     async _askResolvingMismatchedTweaks(): Promise<"OK" | "CHECKAGAIN" | "IGNORE"> {
@@ -307,7 +279,6 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
 
         const items = Object.entries(TweakValuesShouldMatchedTemplate);
         let rebuildRequired = false;
-        let rebuildRecommended = false;
         // Making tables:
         // let table = `| Value name | This device | On Remote | \n` + `|: --- |: ---- :|: ---- :| \n`;
         let differenceCount = 0;
@@ -330,15 +301,10 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
                     const isToConditionMet = "to" in pattern ? pattern.to === preferred[key] : false;
                     // if either of them is true, it should require a rebuild, if the pattern is not a recommendation.
                     if (isFromConditionMet || isToConditionMet) {
-                        if (pattern.isRecommendation) {
-                            rebuildRecommended = true;
-                        } else {
-                            rebuildRequired = true;
-                        }
+                    // A recommendation is not a requirement: only
+                    // changes the stored data cannot survive force a repair.
+                    if (!pattern.isRecommendation) rebuildRequired = true;
                     }
-                }
-                if (CompatibleButLossyChanges.indexOf(key) !== -1) {
-                    rebuildRecommended = true;
                 }
             } else {
                 continue;
@@ -357,39 +323,14 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
             this._log("The settings in the remote database are the same as the local database.", LOG_LEVEL_NOTICE);
             return { result: false, requireFetch: false };
         }
-        const additionalMessage =
-            rebuildRequired && this.core.settings.isConfigured
-                ? $msg("TweakMismatchResolve.Message.UseRemote.WarningRebuildRequired")
-                : "";
-        const additionalMessage2 =
-            rebuildRecommended && this.core.settings.isConfigured
-                ? $msg("TweakMismatchResolve.Message.UseRemote.WarningRebuildRecommended")
-                : "";
-
-        const table = $msg("TweakMismatchResolve.Table", { rows: tableRows.join("\n") });
-
-        const message = $msg("TweakMismatchResolve.Message.Main", {
-            table: table,
-            additionalMessage: [additionalMessage, additionalMessage2].filter((v) => v).join("\n"),
-        });
-
-        const CHOICE_USE_REMOTE = $msg("TweakMismatchResolve.Action.UseConfigured");
-        const CHOICE_DISMISS = $msg("TweakMismatchResolve.Action.Dismiss");
-        // const CHOICE_AND_VALUES = [
-        //     [CHOICE_USE_REMOTE, preferred],
-        //     [CHOICE_DISMISS, false]]
-        const CHOICES = [CHOICE_USE_REMOTE, CHOICE_DISMISS];
-        const retKey = await this.core.confirm.askSelectStringDialogue(message, CHOICES, {
-            title: $msg("TweakMismatchResolve.Title.UseRemoteConfig"),
-            timeout: 0,
-            defaultAction: CHOICE_DISMISS,
-        });
-        if (!retKey) return { result: false, requireFetch: false };
-        if (retKey === CHOICE_DISMISS) return { result: false, requireFetch: false };
-        if (retKey === CHOICE_USE_REMOTE) {
-            return { result: { ...trialSetting, ...preferred }, requireFetch: rebuildRequired };
-        }
-        return { result: false, requireFetch: false };
+        // Setup reads the server's settings so the new device matches it. That
+        // is the only sensible outcome, so it is not offered as one of two
+        // buttons over a table of internal setting names.
+        this._log(
+            `Taking ${differenceCount} setting(s) from the server so this device matches it.`,
+            LOG_LEVEL_INFO
+        );
+        return { result: { ...trialSetting, ...preferred }, requireFetch: rebuildRequired };
     }
 
     override onBindFunction(core: LiveSyncCore, services: InjectableServiceHub): void {

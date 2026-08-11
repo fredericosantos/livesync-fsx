@@ -18,12 +18,14 @@ export const HOLD_COMPATIBILITY = "compatibility";
 export const HOLD_REMOTE_REBUILT = "remote-rebuilt";
 export const HOLD_INSECURE_CHUNKS = "insecure-chunks";
 export const HOLD_SUSPENDED = "suspended";
+export const HOLD_TWEAKS_INCOMPATIBLE = "tweaks-incompatible";
 
 export type SyncHoldReason =
     | typeof HOLD_COMPATIBILITY
     | typeof HOLD_REMOTE_REBUILT
     | typeof HOLD_INSECURE_CHUNKS
-    | typeof HOLD_SUSPENDED;
+    | typeof HOLD_SUSPENDED
+    | typeof HOLD_TWEAKS_INCOMPATIBLE;
 
 export const syncHold = reactiveSource<SyncHoldReason | undefined>(undefined);
 
@@ -41,6 +43,15 @@ export function describeSyncHold(reason: SyncHoldReason): SyncHoldPresentation {
                 "Another device replaced the files on the server, so this device's copy is out of date. " +
                 'Run "Repair sync: replace files on this device" to take the server\'s version. ' +
                 "Anything changed only here is kept as a second copy of the file.",
+        };
+    }
+    if (reason === HOLD_TWEAKS_INCOMPATIBLE) {
+        return {
+            text: "Sync held back",
+            detail:
+                "This device and the server disagree on how content is stored, and the difference cannot be bridged. " +
+                'Run "Repair sync: replace files on server" from the device holding the copy you want to keep, ' +
+                'or "Repair sync: replace files on this device" to take the server\'s version.',
         };
     }
     if (reason === HOLD_SUSPENDED) {
