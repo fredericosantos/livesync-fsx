@@ -6,10 +6,10 @@ import {
 } from "@/common/databaseCompatibility.ts";
 import {
     CompatibilityReviewController,
-    compatibilityPaused,
     type CompatibilityReviewUi,
     useCompatibilityReview,
 } from "./compatibilityReview.ts";
+import { HOLD_COMPATIBILITY, syncHold } from "@/common/syncHold.ts";
 
 function migrationState(overrides: Record<string, unknown> = {}) {
     return {
@@ -145,7 +145,7 @@ describe("compatibility review controller", () => {
         expect(fixture.settings.versionUpFlash).toBe(COMPATIBILITY_PAUSE_SETTING_MESSAGE);
         expect(fixture.local.get(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe("13");
         expect(fixture.applySettings).not.toHaveBeenCalled();
-        expect(compatibilityPaused.value).toBe(true);
+        expect(syncHold.value).toBe(HOLD_COMPATIBILITY);
     });
 
     it("returns from details to the reason dialogue and keeps the pause showing", async () => {
@@ -160,7 +160,7 @@ describe("compatibility review controller", () => {
         expect(fixture.ui.showDetails).toHaveBeenCalledOnce();
         // The pause stays visible in the status bar rather than as a Notice
         // the reader has to dismiss again.
-        expect(compatibilityPaused.value).toBe(true);
+        expect(syncHold.value).toBe(HOLD_COMPATIBILITY);
         expect(fixture.local.get(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe("11");
     });
 

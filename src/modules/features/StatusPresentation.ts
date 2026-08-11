@@ -9,6 +9,8 @@
  * See `docs/fork/01-design-principles.md`.
  */
 
+import { describeSyncHold, type SyncHoldReason } from "@/common/syncHold.ts";
+
 export const STATUS_IDLE = "idle";
 export const STATUS_ACTIVITY = "activity";
 export const STATUS_ATTENTION = "attention";
@@ -42,8 +44,8 @@ export interface StatusInput {
     conflicts: number;
     /** A restart is required before settings take effect. */
     restartRequired: boolean;
-    /** Synchronisation is held back pending a compatibility review. */
-    compatibilityPaused?: boolean;
+    /** Synchronisation is held back for a reason the user can act on. */
+    hold?: SyncHoldReason;
     /** Milliseconds the current burst of work has been in flight. */
     activeForMs: number;
 }
@@ -90,15 +92,8 @@ export function presentStatus(input: StatusInput): StatusPresentation {
             detail: "Obsidian must be restarted before the new settings take effect.",
         };
     }
-    if (input.compatibilityPaused) {
-        return {
-            level: STATUS_ATTENTION,
-            icon: ICON_DECIDE,
-            text: "Sync held back",
-            detail:
-                "This device is running a different version from the one that last used this server. " +
-                "Run \"Review why synchronisation is paused\" to see the details.",
-        };
+    if (input.hold) {
+        return { level: STATUS_ATTENTION, icon: ICON_DECIDE, ...describeSyncHold(input.hold) };
     }
     if (input.conflicts > 0) {
         return {

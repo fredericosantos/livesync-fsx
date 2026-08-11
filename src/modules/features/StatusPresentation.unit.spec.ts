@@ -1,3 +1,4 @@
+import { HOLD_COMPATIBILITY, HOLD_REMOTE_REBUILT } from "@/common/syncHold.ts";
 import { describe, expect, it } from "vitest";
 import {
     ACTIVITY_VISIBILITY_THRESHOLD_MS,
@@ -126,5 +127,25 @@ describe("presentStatus", () => {
             const result = presentStatus(busy({ pendingUpload: -5, pendingDownload: -1, processing: -2, queued: -3 }));
             expect(result.level).toBe(STATUS_IDLE);
         });
+    });
+});
+
+describe("a hold outranks everything else", () => {
+    it("shows why synchronisation is not running, even while work is in flight", () => {
+        // The two holds used to be modal dialogues. Whatever else is happening,
+        // the reason nothing is syncing is the thing worth the one slot there is.
+        const result = presentStatus(
+            busy({ pendingUpload: 9, hold: HOLD_REMOTE_REBUILT, activeForMs: 60_000 })
+        );
+        expect(result.level).toBe(STATUS_ATTENTION);
+        expect(result.text).toBe("Sync held back");
+        expect(result.detail).toContain("replace files on this device");
+    });
+
+    it("says something different for each reason", () => {
+        const rebuilt = presentStatus(busy({ hold: HOLD_REMOTE_REBUILT }));
+        const compatibility = presentStatus(busy({ hold: HOLD_COMPATIBILITY }));
+        expect(rebuilt.detail).not.toBe(compatibility.detail);
+        expect(compatibility.detail).toContain("different version");
     });
 });

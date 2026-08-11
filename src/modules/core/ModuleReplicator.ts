@@ -2,10 +2,7 @@ import type PouchDB from "pouchdb-core";
 import { fireAndForget } from "octagonal-wheels/promises";
 import { AbstractModule } from "@/modules/AbstractModule";
 import { Logger, LOG_LEVEL_NOTICE, LOG_LEVEL_INFO } from "octagonal-wheels/common/logger";
-import { skipIfDuplicated } from "octagonal-wheels/concurrency/lock";
-import { balanceChunkPurgedDBs } from "@vrtmrz/livesync-commonlib/compat/pouchdb/chunks";
-import { purgeUnreferencedChunks } from "@vrtmrz/livesync-commonlib/compat/pouchdb/chunks";
-import { LiveSyncCouchDBReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/couchdb/LiveSyncReplicator";
+import { HOLD_REMOTE_REBUILT, syncHold } from "@/common/syncHold.ts";
 import {
     type EntryDoc,
     type ObsidianLiveSyncSettings,
@@ -141,79 +138,11 @@ export class ModuleReplicator extends AbstractModule {
     async _everyBeforeReplicate(showMessage: boolean): Promise<boolean> {
         await this.processor.restoreFromSnapshotOnce();
         this.clearErrors();
+        // Clear only what this module put there. If the server is still holding
+        // this device back, the attempt about to run says so again; if it is
+        // not, the status bar must stop claiming otherwise.
+        if (syncHold.value === HOLD_REMOTE_REBUILT) syncHold.value = undefined;
         return true;
-    }
-
-    /**
-     * Reconciles local chunks when an older IndexedDB client reports that the remote database was cleaned.
-     * This compatibility path remains reachable while those clients can still set `remoteCleaned`.
-     * @deprecated v0.24.17
-     * @param showMessage If true, show message to the user.
-     */
-    async cleaned(showMessage: boolean) {
-        Logger(`The remote database has been cleaned.`, showMessage ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO);
-        await skipIfDuplicated("cleanup", async () => {
-            const count = await purgeUnreferencedChunks(this.localDatabase.localDatabase, true);
-            const message = `The remote database has been cleaned up.
-To synchronize, this device must be also cleaned up. ${count} chunk(s) will be erased from this device.
-However, If there are many chunks to be deleted, maybe fetching again is faster.
-We will lose the history of this device if we fetch the remote database again.
-Even if you choose to clean up, you will see this option again if you exit Obsidian and then synchronise again.`;
-            const CHOICE_FETCH = "Fetch again";
-            const CHOICE_CLEAN = "Cleanup";
-            const CHOICE_DISMISS = "Dismiss";
-            const ret = await this.core.confirm.confirmWithMessage(
-                "Cleaned",
-                message,
-                [CHOICE_FETCH, CHOICE_CLEAN, CHOICE_DISMISS],
-                CHOICE_DISMISS,
-                30
-            );
-            if (ret == CHOICE_FETCH) {
-                await this.core.rebuilder.$performRebuildDB("localOnly");
-            }
-            if (ret == CHOICE_CLEAN) {
-                await this.services.replicator.runBoundedRemoteActivity(
-                    async () => {
-                        const replicator = this.services.replicator.getActiveReplicator();
-                        if (!(replicator instanceof LiveSyncCouchDBReplicator)) return;
-                        const remoteDB = await replicator.connectRemoteCouchDBWithSetting(
-                            this.settings,
-                            this.services.API.isMobile(),
-                            true
-                        );
-                        if (typeof remoteDB == "string") {
-                            Logger(remoteDB, LOG_LEVEL_NOTICE);
-                            return false;
-                        }
-
-                        await purgeUnreferencedChunks(this.localDatabase.localDatabase, false);
-                        this.localDatabase.clearCaches();
-                        // Perform the synchronisation once.
-                        const replicated = await this.services.replicator.runFiniteReplicationActivity(
-                            () => this.core.replicator.openReplication(this.settings, false, showMessage, true),
-                            { label: "replication" }
-                        );
-                        if (replicated) {
-                            await balanceChunkPurgedDBs(this.localDatabase.localDatabase, remoteDB.db);
-                            await purgeUnreferencedChunks(this.localDatabase.localDatabase, false);
-                            this.localDatabase.clearCaches();
-                            await this.services.replicator.getActiveReplicator()?.markRemoteResolved(this.settings);
-                            Logger(
-                                "The local database has been cleaned up.",
-                                showMessage ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO
-                            );
-                        } else {
-                            Logger(
-                                "Replication has been cancelled. Please try it again.",
-                                showMessage ? LOG_LEVEL_NOTICE : LOG_LEVEL_INFO
-                            );
-                        }
-                    },
-                    { label: "database-cleanup" }
-                );
-            }
-        });
     }
 
     private async onReplicationFailed(showMessage: boolean = false): Promise<boolean> {
@@ -226,33 +155,21 @@ Even if you choose to clean up, you will see this option again if you exit Obsid
             await this.services.tweakValue.askResolvingMismatched(activeReplicator.preferredTweakValue);
         } else {
             if (activeReplicator.remoteLockedAndDeviceNotAccepted) {
-                if (activeReplicator.remoteCleaned && this.settings.useIndexedDBAdapter) {
-                    await this.cleaned(showMessage);
-                } else {
-                    const message = $msg("Replicator.Dialogue.Locked.Message");
-                    const CHOICE_FETCH = $msg("Replicator.Dialogue.Locked.Action.Fetch");
-                    const CHOICE_DISMISS = $msg("Replicator.Dialogue.Locked.Action.Dismiss");
-                    const CHOICE_UNLOCK = $msg("Replicator.Dialogue.Locked.Action.Unlock");
-                    const ret = await this.core.confirm.askSelectStringDialogue(
-                        message,
-                        [CHOICE_FETCH, CHOICE_UNLOCK, CHOICE_DISMISS],
-                        {
-                            title: $msg("Replicator.Dialogue.Locked.Title"),
-                            defaultAction: CHOICE_DISMISS,
-                            timeout: 60,
-                        }
-                    );
-                    if (ret == CHOICE_FETCH) {
-                        this._log($msg("Replicator.Dialogue.Locked.Message.Fetch"), LOG_LEVEL_NOTICE);
-                        await this.core.rebuilder.scheduleFetch();
-                        this.services.appLifecycle.scheduleRestart();
-                        return false;
-                    } else if (ret == CHOICE_UNLOCK) {
-                        await activeReplicator.markRemoteResolved(this.settings);
-                        this._log($msg("Replicator.Dialogue.Locked.Message.Unlocked"), LOG_LEVEL_NOTICE);
-                        return false;
-                    }
-                }
+                // Another device replaced the files on the server. That is a
+                // lasting condition, not a question to raise in the middle of a
+                // replication the reader did not start: it used to open a modal
+                // offering "Fetch", "Unlock" or "Dismiss", where "Unlock" means
+                // "carry on and diverge" — an answer no one can give safely
+                // without knowing what the other device did.
+                //
+                // The status bar carries it until it is dealt with, and the
+                // repair command does the one thing that resolves it.
+                syncHold.value = HOLD_REMOTE_REBUILT;
+                this._log(
+                    "Another device replaced the files on the server; this device is not synchronising until it takes that copy.",
+                    LOG_LEVEL_INFO
+                );
+                return false;
             }
         }
         // TODO: Check again and true/false return. This will be the result for performReplication.
