@@ -14,7 +14,6 @@ import type {
     FetchEverythingResult,
     RebuildEverythingResult,
 } from "@/modules/features/SetupWizard/dialogs/setupDialogTypes";
-import { askAndPerformFastSetupOnScheduledFetchAll } from "./redFlag.simpleFetch";
 import { ConnectionStringParser } from "@vrtmrz/livesync-commonlib/compat/common/ConnectionString";
 import { activateRemoteConfiguration } from "@vrtmrz/livesync-commonlib/remote-configurations";
 
@@ -145,13 +144,12 @@ export function createFetchAllFlagHandler(
             return false;
         }
 
-        // Ask user for use Fast Setup
-        const useFastSetup = await askAndPerformFastSetupOnScheduledFetchAll(host, log, cleanupFlag);
-        if (useFastSetup !== undefined) {
-            return useFastSetup;
-        }
-        // if useFastSetup is undefined, it means user choose to proceed with normal fetch process, so continue to ask for fetch method.
-
+        // There used to be a "fast setup" shortcut here: a two-stage wizard of
+        // seven options — newer-wins against remote-wins, then what to do with
+        // local files the remote has never seen — offered before the ordinary
+        // fetch flow, which is itself now a single button doing the thing that
+        // is never wrong. Two routes to one operation, one of them asking the
+        // reader to pick a merge policy this fork has already decided.
         const method =
             await host.services.UI.dialogManager.openWithExplicitCancel<FetchEverythingResult>(FetchEverything);
         if (method === "cancelled") {

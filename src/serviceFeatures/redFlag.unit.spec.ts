@@ -28,18 +28,6 @@ import {
     FullScanModes,
     synchroniseAllFilesBetweenDBandStorage,
 } from "@vrtmrz/livesync-commonlib/compat/serviceFeatures/offlineScanner";
-import {
-    SIMPLE_FETCH_STAGE1_DETAILED,
-    SIMPLE_FETCH_STAGE1_NEWER_WINS,
-    SIMPLE_FETCH_STAGE1_REMOTE_WINS,
-    SIMPLE_FETCH_STAGE2_NEWER_CLEANUP,
-    SIMPLE_FETCH_STAGE2_NEWER_SYNC_ALL,
-    SIMPLE_FETCH_STAGE2_REMOTE_DELETE_NONE,
-    SIMPLE_FETCH_STAGE2_REMOTE_DELETE_ALL,
-    STAGE2_ABORT,
-    askAndPerformFastSetupOnScheduledFetchAll,
-    askSimpleFetchMode,
-} from "./redFlag.simpleFetch";
 import { activateRemoteConfiguration } from "@vrtmrz/livesync-commonlib/remote-configurations";
 //Mock synchroniseAllFilesBetweenDBandStorage
 vi.mock("@vrtmrz/livesync-commonlib/compat/serviceFeatures/offlineScanner", async (importOriginal) => {
@@ -448,62 +436,12 @@ describe("Red Flag Feature", () => {
             expect(handler.priority).toBe(10);
         });
 
-        it("should use simplified remote-only mode and call performFullScan", async () => {
+        it("should cancel the fetch flow when the reader cancels it", async () => {
             const host = createHostMock();
             const log = createLoggerMock();
 
             host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            // Stage 1: Overwrite all with remote files
-            // Stage 2: Delete local files if not on remote (Clean overwrite)
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_REMOTE_DELETE_ALL);
-
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({
-                batchSave: false,
-            } as any);
-
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(true);
-            expect(host.mocks.rebuilder.$fetchLocalDBFast).toHaveBeenCalled();
-            expect(synchroniseAllFilesBetweenDBandStorage).toHaveBeenCalled();
-            const firstPrompt = host.mocks.ui.confirm.confirmWithMessage.mock.calls[0]?.[1];
-            expect(firstPrompt).toContain("data retrieved from this remote source");
-            expect(firstPrompt).not.toContain("remote server");
-            // We can't easily check performFullScan call here because it's imported,
-            // but we can verify rebuilder was called.
-        });
-
-        it("opens the detailed Fetch flow when requested", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_DETAILED);
-            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce({
-                vault: "identical",
-                backup: "backup_skipped",
-                extra: { preventFetchingConfig: false },
-            });
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({
-                batchSave: false,
-            } as any);
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(true);
-            expect(host.mocks.ui.dialogManager.openWithExplicitCancel).toHaveBeenCalled();
-            expect(host.mocks.rebuilder.$fetchLocal).toHaveBeenCalled();
-        });
-
-        it("should cancel fetch flow when first quick step is cancelled", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(false);
+            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce("cancelled");
 
             const handler = createFetchAllFlagHandler(host as any, log);
             host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({
@@ -514,26 +452,6 @@ describe("Red Flag Feature", () => {
             expect(result).toBe(false);
             expect(host.mocks.rebuilder.$fetchLocal).not.toHaveBeenCalled();
             expect(host.mocks.appLifecycle.performRestart).toHaveBeenCalled();
-        });
-
-        it("should use remote-authoritative quick mode for empty vault", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_REMOTE_DELETE_ALL);
-
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({
-                batchSave: false,
-            } as any);
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(true);
-            expect(host.mocks.rebuilder.$fetchLocalDBFast).toHaveBeenCalled();
-            expect(host.mocks.rebuilder.$fetchLocal).not.toHaveBeenCalledWith(false, true);
         });
 
         it("should keep current remote configuration when selected", async () => {
@@ -548,7 +466,7 @@ describe("Red Flag Feature", () => {
                 },
             });
             host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Use active remote");
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(false);
+            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce("cancelled");
 
             const handler = createFetchAllFlagHandler(host as any, log);
             const result = await handler.handle();
@@ -601,7 +519,7 @@ describe("Red Flag Feature", () => {
             host.mocks.ui.confirm.askSelectStringDialogue.mockImplementationOnce(
                 async (_message: string, selections: string[]) => selections.find((e) => e.startsWith("Beta -"))
             );
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(false);
+            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce("cancelled");
 
             const handler = createFetchAllFlagHandler(host as any, log);
             const result = await handler.handle();
@@ -654,222 +572,6 @@ describe("Red Flag Feature", () => {
 
             expect(result).toBe(false);
             expect(host.mocks.ui.confirm.confirmWithMessage).not.toHaveBeenCalled();
-        });
-    });
-
-    describe("askSimpleFetchMode", () => {
-        it("should return cancelled when stage1 is cancelled", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(false);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toBe("cancelled");
-        });
-
-        it("selects the detailed Fetch flow", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_DETAILED);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toEqual({ mode: "detailed", options: {} });
-        });
-
-        it("should return remote-only with keep-local option", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_REMOTE_DELETE_NONE);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toEqual({
-                mode: "remote-only",
-                options: {
-                    mode: FullScanModes.DB_APPLY,
-                    extraOnRemote: undefined,
-                },
-            });
-        });
-
-        it("should return cancelled when remote-only stage2 is cancelled", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(false);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toBe("cancelled");
-        });
-
-        it("should return aborted when remote-only stage2 aborts", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(STAGE2_ABORT);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toBe("aborted");
-        });
-
-        it("should return newer-wins cleanup option", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_NEWER_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_NEWER_CLEANUP);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toEqual({
-                mode: "newer-wins",
-                options: {
-                    mode: FullScanModes.NEWER_WINS,
-                    extraOnLocal: ExtraOnLocal.DELETE_DB_DELETED,
-                },
-            });
-        });
-
-        it("should return newer-wins keep-all option", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_NEWER_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_NEWER_SYNC_ALL);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toEqual({
-                mode: "newer-wins",
-                options: {
-                    mode: FullScanModes.NEWER_WINS,
-                    extraOnLocal: ExtraOnLocal.APPEND_STORAGE_ONLY,
-                },
-            });
-        });
-
-        it("should return cancelled when newer-wins stage2 is cancelled", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_NEWER_WINS)
-                .mockResolvedValueOnce(false);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toBe("cancelled");
-        });
-
-        it("should return aborted when newer-wins stage2 aborts", async () => {
-            const host = createHostMock();
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_NEWER_WINS)
-                .mockResolvedValueOnce(STAGE2_ABORT);
-
-            await expect(askSimpleFetchMode(host as any)).resolves.toBe("aborted");
-        });
-    });
-
-    describe("askAndPerformFastSetupOnScheduledFetchAll", () => {
-        it("should remember quick flow choices while the scheduled fetch is pending", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_NEWER_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_NEWER_CLEANUP);
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValue({ batchSave: false } as any);
-            host.mocks.rebuilder.$fetchLocalDBFast.mockRejectedValueOnce(new Error("offline"));
-
-            await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-            await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(host.mocks.ui.confirm.confirmWithMessage).toHaveBeenCalledTimes(2);
-            expect(host.mocks.rebuilder.$fetchLocalDBFast).toHaveBeenCalledTimes(2);
-        });
-
-        it("should clear remembered quick flow choices after completion", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_REMOTE_DELETE_ALL);
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValue({ batchSave: false } as any);
-
-            await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(host.mocks.setting.deleteSmallConfig).toHaveBeenCalledWith("simple-fetch-mode");
-        });
-
-        it("should return false and cleanup when quick flow is cancelled", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(false);
-
-            const result = await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(result).toBe(false);
-            expect(cleanupFlag).toHaveBeenCalled();
-            expect(host.mocks.appLifecycle.performRestart).toHaveBeenCalled();
-        });
-
-        it("should return false without cleanup when quick flow is aborted", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(STAGE2_ABORT);
-
-            const result = await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(result).toBe(false);
-            expect(cleanupFlag).not.toHaveBeenCalled();
-            expect(host.mocks.appLifecycle.performRestart).toHaveBeenCalled();
-        });
-
-        it("leaves the detailed Fetch flow to its existing handler", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_DETAILED);
-
-            const result = await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(result).toBeUndefined();
-            expect(host.mocks.rebuilder.$fetchLocalDBFast).not.toHaveBeenCalled();
-        });
-
-        it("should reboot and return false when sync has failures and user chooses rerun", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_REMOTE_DELETE_ALL);
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({ batchSave: false } as any);
-            (synchroniseAllFilesBetweenDBandStorage as any).mockResolvedValueOnce(false);
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Reboot to re-run the process");
-
-            const result = await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(result).toBe(false);
-            expect(host.mocks.appLifecycle.performRestart).toHaveBeenCalled();
-            expect(cleanupFlag).not.toHaveBeenCalled();
-            expect(host.mocks.rebuilder.finishRebuild).not.toHaveBeenCalled();
-        });
-
-        it("should continue and finalise when sync has failures but user releases flag", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            const cleanupFlag = vi.fn().mockResolvedValue(undefined);
-
-            host.mocks.ui.confirm.confirmWithMessage
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_REMOTE_WINS)
-                .mockResolvedValueOnce(SIMPLE_FETCH_STAGE2_REMOTE_DELETE_ALL);
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({ batchSave: false } as any);
-            (synchroniseAllFilesBetweenDBandStorage as any).mockResolvedValueOnce(false);
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce(
-                "Finalise the process and resume normal operation"
-            );
-
-            const result = await askAndPerformFastSetupOnScheduledFetchAll(host as any, log, cleanupFlag);
-
-            expect(result).toBe(true);
-            expect(host.mocks.rebuilder.finishRebuild).toHaveBeenCalled();
-            expect(cleanupFlag).toHaveBeenCalled();
         });
     });
 
@@ -1441,24 +1143,6 @@ describe("Red Flag Feature", () => {
             expect(result).toBe(true);
         });
 
-        it("should execute handle when flag exists and check returns true", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValueOnce({});
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_DETAILED);
-            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce("cancelled");
-
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const eventHandler = flagHandlerToEventHandler(handler);
-
-            await eventHandler();
-
-            // When dialog is cancelled, handle returns false
-            expect(host.mocks.ui.dialogManager.openWithExplicitCancel).toHaveBeenCalled();
-        });
-
         it("should return handle result when flag exists", async () => {
             const host = createHostMock();
             const log = createLoggerMock();
@@ -1521,26 +1205,6 @@ describe("Red Flag Feature", () => {
             }
         });
 
-        it("should handle fetchAll flag with flagHandlerToEventHandler identical", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-            host.mocks.tweakValue.fetchRemotePreferred.mockResolvedValue({
-                customChunkSize: 1,
-            } as any);
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            host.mocks.ui.confirm.confirmWithMessage.mockResolvedValueOnce(SIMPLE_FETCH_STAGE1_DETAILED);
-            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce({ vault: "identical", extra: {} });
-            host.mocks.rebuilder.$fetchLocal.mockResolvedValueOnce();
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const eventHandler = flagHandlerToEventHandler(handler);
-
-            await Promise.resolve(eventHandler());
-            await new Promise((resolve) => setTimeout(resolve, 10));
-            expect(host.mocks.rebuilder.$fetchLocal).toHaveBeenCalled();
-
-            expect(host.mocks.ui.dialogManager.openWithExplicitCancel).toHaveBeenCalled();
-        });
         it("should handle rebuildAll flag with flagHandlerToEventHandler", async () => {
             const host = createHostMock();
             const log = createLoggerMock();
