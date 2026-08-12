@@ -17,8 +17,17 @@ import type { ObsidianLiveSyncSettingTab } from "@/modules/features/SettingDialo
 import { getObsidianCommunityPluginManager } from "@/common/obsidianCommunityPlugins.ts";
 import { isPluginSelected } from "@/features/HiddenFileSync/configCategories.ts";
 
-/** This plug-in never carries itself: each device holds its own connection. */
-const SELF = "obsidian-livesync";
+/**
+ * This plug-in never carries itself: each device holds its own credentials, and
+ * a plug-in that replaced its own code mid-replication would be replacing the
+ * thing doing the replicating.
+ *
+ * Read from the manifest rather than written down. It was written down, as the
+ * *upstream* id, so the row this is meant to suppress appeared anyway.
+ */
+function ownPluginId(tab: ObsidianLiveSyncSettingTab): string {
+    return tab.plugin.manifest.id;
+}
 
 interface PluginRow {
     readonly id: string;
@@ -36,8 +45,9 @@ function installedPlugins(tab: ObsidianLiveSyncSettingTab): PluginRow[] {
         // better than showing an empty table that looks like "none installed".
         return [];
     }
+    const self = ownPluginId(tab);
     return manager.manifests
-        .filter((manifest) => manifest.id !== SELF)
+        .filter((manifest) => manifest.id !== self)
         .map((manifest) => ({
             id: manifest.id,
             name: manifest.name,

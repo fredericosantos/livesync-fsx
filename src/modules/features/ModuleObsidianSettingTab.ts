@@ -20,7 +20,10 @@ export class ModuleObsidianSettingDialogue extends AbstractObsidianModule {
     }
 
     openSetting() {
-        openObsidianSettings(this.app, "obsidian-livesync");
+        // The manifest's id, not the upstream one written down by hand. This
+        // fork's id is `livesync-fsx`, so "open the settings" was asking
+        // Obsidian to reveal a tab belonging to a different plug-in.
+        openObsidianSettings(this.app, this.plugin.manifest.id);
     }
 
     get appId() {
