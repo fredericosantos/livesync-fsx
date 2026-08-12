@@ -109,8 +109,18 @@ export class ModuleLog extends AbstractObsidianModule {
             const processing = this.services.fileProcessing.processing.value;
             const queued = this.services.fileProcessing.totalQueued.value;
             const busy = pendingUpload + pendingDownload + processing + queued > 0;
+            const settings = this.services.setting.currentSettings();
             return presentStatus({
                 connected: syncStatus !== "NOT_CONNECTED" && syncStatus !== "CLOSED",
+                anyTriggerEnabled:
+                    settings.isConfigured !== true ||
+                    settings.liveSync === true ||
+                    settings.periodicReplication === true ||
+                    settings.syncOnSave === true ||
+                    settings.syncOnEditorSave === true ||
+                    settings.syncOnStart === true ||
+                    settings.syncOnFileOpen === true ||
+                    settings.syncAfterMerge === true,
                 paused: syncStatus === "PAUSED",
                 errored: syncStatus === "ERRORED",
                 pendingUpload,

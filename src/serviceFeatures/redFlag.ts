@@ -289,12 +289,49 @@ export async function adjustSettingToRemoteIfNeeded(
  * @param keepSuspending  whether to keep suspending file watching after the process.
  * @returns result of the process, or false if error occurs.
  */
+/**
+ * The switches `suspendAllSync` turns off, so that they can be turned back on.
+ *
+ * Initialisation legitimately silences every trigger: seeding or fetching a
+ * whole Vault must not race with ordinary replication. What it did not do was
+ * put them back. The `finally` below restored `suspendFileWatching` and nothing
+ * else, so a Vault that had just been set up successfully — connected, remote
+ * database created, version marker written — ended with continuous sync off,
+ * sync-on-save off, sync-on-start off, and every other trigger off.
+ *
+ * Nothing then ever asked for replication, so nothing ever replicated, and the
+ * status bar reported a connection problem for a setup that had worked. The CLI
+ * carried a comment about this and worked around it locally; the plug-in did
+ * not.
+ */
+const SUSPENDED_BY_INITIALISATION = [
+    "liveSync",
+    "periodicReplication",
+    "syncOnSave",
+    "syncOnEditorSave",
+    "syncOnStart",
+    "syncOnFileOpen",
+    "syncAfterMerge",
+    "batchSave",
+] as const;
+
+type SuspendedSwitches = Pick<ObsidianLiveSyncSettings, (typeof SUSPENDED_BY_INITIALISATION)[number]>;
+
+function captureSyncSwitches(settings: ObsidianLiveSyncSettings): SuspendedSwitches {
+    return Object.fromEntries(
+        SUSPENDED_BY_INITIALISATION.map((key) => [key, settings[key]])
+    ) as unknown as SuspendedSwitches;
+}
+
 export async function processVaultInitialisation(
     host: NecessaryServices<"setting", never>,
     log: LogFunction,
     proc: () => Promise<boolean>,
     keepSuspending = false
 ) {
+    // Read before anything is suspended: this is the only record of what the
+    // user had chosen, and `suspendAllSync` overwrites it in place.
+    const chosenSwitches = captureSyncSwitches(host.services.setting.currentSettings());
     try {
         // Disable batch saving and file watching during initialisation.
         await host.services.setting.applyPartial({ batchSave: false }, false);
@@ -314,10 +351,13 @@ export async function processVaultInitialisation(
         log(ex, LOG_LEVEL_VERBOSE);
         return false;
     } finally {
-        if (!keepSuspending) {
-            // Re-enable file watching after initialisation.
-            await host.services.setting.applyPartial({ suspendFileWatching: false }, true);
-        }
+        // Restored even when the initialisation failed. A half-finished setup
+        // that still syncs is recoverable; one that has silently stopped
+        // syncing looks exactly like one that is working.
+        await host.services.setting.applyPartial(
+            keepSuspending ? chosenSwitches : { ...chosenSwitches, suspendFileWatching: false },
+            true
+        );
     }
 }
 

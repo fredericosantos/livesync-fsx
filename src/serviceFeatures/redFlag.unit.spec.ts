@@ -76,6 +76,15 @@ const createSettingServiceMock = () => {
         suspendFileWatching: false,
         writeLogToTheFile: false,
         remoteType: "CouchDB",
+        // The switches a real `suspendAllSync` clears. They start on, as they
+        // are for any Vault that is actually synchronising.
+        liveSync: true,
+        periodicReplication: true,
+        syncOnSave: true,
+        syncOnEditorSave: true,
+        syncOnStart: true,
+        syncOnFileOpen: true,
+        syncAfterMerge: true,
     };
     const smallConfig = new Map<string, string>();
     return {
@@ -89,7 +98,21 @@ const createSettingServiceMock = () => {
             Object.assign(settings, partial);
             return Promise.resolve();
         }),
-        suspendAllSync: vi.fn(() => Promise.resolve()),
+        // Mirrors the real implementation, which clears every trigger. A mock
+        // that merely recorded the call could not have caught the fact that
+        // nothing ever turned them back on.
+        suspendAllSync: vi.fn(() => {
+            Object.assign(settings, {
+                liveSync: false,
+                periodicReplication: false,
+                syncOnSave: false,
+                syncOnEditorSave: false,
+                syncOnStart: false,
+                syncOnFileOpen: false,
+                syncAfterMerge: false,
+            });
+            return Promise.resolve();
+        }),
         suspendExtraSync: vi.fn(() => Promise.resolve()),
         getSmallConfig: vi.fn((key: string) => smallConfig.get(key) ?? ""),
         setSmallConfig: vi.fn((key: string, value: string) => {
@@ -297,6 +320,61 @@ describe("Red Flag Feature", () => {
 
             expect(host.mocks.setting.suspendAllSync).toHaveBeenCalled();
             expect(host.mocks.setting.suspendExtraSync).toHaveBeenCalled();
+        });
+
+        // The bug this exists to prevent: setting up a Vault connected to the
+        // server, created the remote database and wrote the version marker, and
+        // then left every trigger off. Nothing asked for replication ever
+        // again, so nothing replicated, and the status bar reported a
+        // connection problem for a setup that had worked perfectly.
+        it("gives back every sync trigger it took away", async () => {
+            const host = createHostMock();
+            const log = createLoggerMock();
+            const triggers = [
+                "liveSync",
+                "periodicReplication",
+                "syncOnSave",
+                "syncOnEditorSave",
+                "syncOnStart",
+                "syncOnFileOpen",
+                "syncAfterMerge",
+            ] as const;
+
+            await processVaultInitialisation(host as any, log, () => {
+                for (const trigger of triggers) {
+                    expect(host.mocks.setting.currentSettings()[trigger], `${trigger} during`).toBe(false);
+                }
+                return Promise.resolve(true);
+            });
+
+            for (const trigger of triggers) {
+                expect(host.mocks.setting.currentSettings()[trigger], `${trigger} after`).toBe(true);
+            }
+            expect(host.mocks.setting.currentSettings().batchSave).toBe(true);
+        });
+
+        it("gives them back even when the initialisation failed", async () => {
+            const host = createHostMock();
+            const log = createLoggerMock();
+
+            const result = await processVaultInitialisation(host as any, log, () => {
+                throw new Error("seeding blew up");
+            });
+
+            expect(result).toBe(false);
+            // A half-finished setup that still synchronises is recoverable; one
+            // that has silently stopped looks exactly like one that works.
+            expect(host.mocks.setting.currentSettings().liveSync).toBe(true);
+        });
+
+        it("keeps file watching suspended on request, but still restores the triggers", async () => {
+            const host = createHostMock();
+            const log = createLoggerMock();
+
+            await processVaultInitialisation(host as any, log, () => Promise.resolve(true), true);
+
+            expect(host.mocks.setting.currentSettings().suspendFileWatching).toBe(true);
+            expect(host.mocks.setting.currentSettings().liveSync).toBe(true);
         });
 
         it("should resume file watching after initialisation completes", async () => {

@@ -26,6 +26,13 @@ export const ACTIVITY_VISIBILITY_THRESHOLD_MS = 1_000;
 export interface StatusInput {
     /** True once a remote connection has been established at least once. */
     connected: boolean;
+    /**
+     * At least one thing is set to cause replication — continuous sync, a
+     * periodic timer, or one of the on-save/on-open triggers. When nothing is,
+     * "not connected" is true but says the wrong thing: no connection was
+     * attempted, and none ever will be.
+     */
+    anyTriggerEnabled: boolean;
     /** Replication is deliberately suspended. */
     paused: boolean;
     /** Replication stopped because of an error. */
@@ -117,6 +124,17 @@ export function presentStatus(input: StatusInput): StatusPresentation {
             icon: ICON_STOPPED,
             text: "Sync paused",
             detail: "Synchronisation is suspended. Resume it from the settings pane.",
+        };
+    }
+    // Nothing will ever ask for replication, so the connection is never even
+    // attempted. Reporting that as "Not connected" blames the network for a
+    // decision in the settings, and sends the reader to check their server.
+    if (!input.anyTriggerEnabled) {
+        return {
+            level: STATUS_ATTENTION,
+            icon: ICON_STOPPED,
+            text: "Sync is switched off",
+            detail: "This vault is connected to a server, but nothing is set to synchronise with it.",
         };
     }
     if (!input.connected) {

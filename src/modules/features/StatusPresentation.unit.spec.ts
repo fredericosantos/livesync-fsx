@@ -13,6 +13,7 @@ import {
 function healthy(overrides: Partial<StatusInput> = {}): StatusInput {
     return {
         connected: true,
+        anyTriggerEnabled: true,
         paused: false,
         errored: false,
         pendingUpload: 0,
@@ -108,6 +109,17 @@ describe("presentStatus", () => {
 
         it("reports a missing connection", () => {
             expect(presentStatus(healthy({ connected: false })).text).toBe("Not connected");
+        });
+
+        // A Vault whose triggers are all off never attempts a connection, so it
+        // is also "not connected" — and saying so sends the reader to check
+        // their server, their password and their firewall for a state that has
+        // nothing to do with any of them.
+        it("does not blame the network when nothing was ever going to sync", () => {
+            const result = presentStatus(healthy({ connected: false, anyTriggerEnabled: false }));
+
+            expect(result.text).toBe("Sync is switched off");
+            expect(result.detail).toContain("connected to a server");
         });
 
         it("singularises a lone conflict", () => {
