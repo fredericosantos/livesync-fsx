@@ -71,11 +71,36 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
     {
         id: "sync",
         title: "Sync",
-        // `deviceAndVaultName` is required before Customisation Sync will
-        // activate at all, and the single most common reason it silently does
-        // nothing — so it leads.
-        keys: ["deviceAndVaultName", "syncInternalFiles", "usePluginSync"],
-        extra: "plugin-sync-dialog",
+        keys: ["syncInternalFiles"],
+    },
+    {
+        // Obsidian's own Sync names these categories, in these words, and a
+        // reader who has seen that screen should recognise this one. What is
+        // added beyond it is the plug-in table: Obsidian has a single switch
+        // for all community plug-ins, so a plug-in wanted only on the desktop
+        // costs you the whole category.
+        //
+        // This replaced Customisation Sync, which stored one document *per
+        // device* and asked the reader to choose whose copy to apply, per item,
+        // by hand, in a pane of its own. That is a manual transfer with a
+        // filing system, not synchronisation, and it obliged a second mechanism
+        // to exist inside Hidden File Sync purely to keep the two from fighting
+        // over the same file.
+        id: "config-categories",
+        title: "App settings and plugins",
+        requires: "configured",
+        shownWhen: { key: "syncInternalFiles", is: true },
+        keys: [
+            "syncConfigApp",
+            "syncConfigAppearance",
+            "syncConfigThemesAndSnippets",
+            "syncConfigHotkeys",
+            "syncConfigCorePluginList",
+            "syncConfigCorePluginSettings",
+            "syncConfigCommunityPluginList",
+            "syncConfigCommunityPluginSettings",
+        ],
+        extra: "plugin-table",
     },
     {
         // The one heading that carries information rather than repeating it:

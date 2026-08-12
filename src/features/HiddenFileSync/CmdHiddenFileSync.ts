@@ -6,8 +6,6 @@ import {
     LOG_LEVEL_INFO,
     LOG_LEVEL_NOTICE,
     LOG_LEVEL_VERBOSE,
-    MODE_SELECTIVE,
-    MODE_PAUSED,
     type SavingEntry,
     type DocumentID,
     type UXFileInfo,
@@ -17,6 +15,7 @@ import {
     type UXDataWriteOptions,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { type InternalFileInfo, ICHeader, ICHeaderEnd } from "@/common/types.ts";
+import { isConfigPathSynchronised } from "./configCategories.ts";
 import {
     readAsBlob,
     isDocContentSame,
@@ -169,7 +168,6 @@ export class HiddenFileSync extends LiveSyncCommands {
     }
 
     updateSettingCache() {
-        this.cacheCustomisationSyncIgnoredFiles.clear();
         this.cacheFileRegExps.clear();
     }
 
@@ -959,40 +957,9 @@ Offline Changed files: ${processFiles.length}`;
         return true;
     }
 
-    cacheCustomisationSyncIgnoredFiles = new Map<string, string[]>();
-    /**
-     * Gets the list of files ignored for customization synchronization.
-     * @returns An array of ignored file paths (lowercase).
-     */
-    getCustomisationSynchronizationIgnoredFiles(): string[] {
-        const configDir = this.services.API.getSystemConfigDir();
-        const key =
-            JSON.stringify(this.settings.pluginSyncExtendedSetting) + `||${this.settings.usePluginSync}||${configDir}`;
-        if (this.cacheCustomisationSyncIgnoredFiles.has(key)) {
-            return this.cacheCustomisationSyncIgnoredFiles.get(key)!;
-        }
-        this.cacheCustomisationSyncIgnoredFiles.clear();
-        const synchronisedInConfigSync = !this.settings.usePluginSync
-            ? []
-            : Object.values(this.settings.pluginSyncExtendedSetting)
-                  .filter((e) => e.mode == MODE_SELECTIVE || e.mode == MODE_PAUSED)
-                  .map((e) => e.files)
-                  .flat()
-                  .map((e) => `${configDir}/${e}`.toLowerCase());
-        this.cacheCustomisationSyncIgnoredFiles.set(key, synchronisedInConfigSync);
-        return synchronisedInConfigSync;
-    }
-    /**
-     * Checks if the given path is not ignored by customization synchronization.
-     * @param path The file path to check.
-     * @returns True if the path is not ignored; otherwise, false.
-     */
-    isNotIgnoredByCustomisationSync(path: string): boolean {
-        const ignoredFiles = this.getCustomisationSynchronizationIgnoredFiles();
-        const result = !ignoredFiles.some((e) => path.startsWith(e));
-        // console.warn(`Assertion: isNotIgnoredByCustomisationSync(${path}) = ${result}`);
-        return result;
-    }
+    // `isNotIgnoredByCustomisationSync` was here: a method whose only job was
+    // to hide paths from this module because a second module was carrying them
+    // instead. Needing it was the argument against having two.
 
     isHiddenFileSyncHandlingPath(path: FilePath): boolean {
         const result = path.startsWith(".") && !path.startsWith(".trash");
@@ -1000,11 +967,21 @@ Offline Changed files: ${processFiles.length}`;
         return result;
     }
 
+    /**
+     * Whether the categories chosen in Settings carry this path.
+     *
+     * Anything outside the configuration folder — a stray dot-file at the root
+     * of the Vault — is not a category and is carried as before.
+     */
+    private isChosenCategory(path: FilePath): boolean {
+        const configDir = this.services.API.getSystemConfigDir();
+        if (!path.startsWith(`${configDir}/`)) return true;
+        return isConfigPathSynchronised(this.core.settings, path.slice(configDir.length + 1));
+    }
+
     async isTargetFile(path: FilePath): Promise<boolean> {
         const result =
-            this.isTargetFileInPatterns(path) &&
-            this.isNotIgnoredByCustomisationSync(path) &&
-            this.isHiddenFileSyncHandlingPath(path);
+            this.isTargetFileInPatterns(path) && this.isChosenCategory(path) && this.isHiddenFileSyncHandlingPath(path);
         // console.warn(`Assertion: isTargetFile(${path}) : ${result ? "yes" : "no"}`);
         if (!result) {
             return false;

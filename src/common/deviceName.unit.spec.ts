@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanHostName, describeDevice, suggestDeviceName, type DevicePlatform } from "./suggestDeviceName.ts";
-import { validateDeviceName } from "./deviceNameRules.ts";
+import { cleanHostName, describeDevice, suggestDeviceName, type DevicePlatform } from "./deviceName.ts";
 
 const platform = (over: Partial<DevicePlatform> = {}): DevicePlatform => ({
     isPhone: false,
@@ -78,11 +77,16 @@ describe("suggestDeviceName", () => {
         expect(suggestDeviceName(mac, "Notes", ["Mac — Notes", "Mac — Notes 2"])).toBe("Mac — Notes 3");
     });
 
-    it("never proposes a name its own validator would reject", () => {
+    // Nobody types this any more, so there is no field to reject a bad answer
+    // in. The name is still interpolated into document keys, so what used to be
+    // a validator's job is now this function's: it must never *produce* one.
+    it("never produces a name that could not be used as a key", () => {
         for (const vault of ["a/b", "100%", "  ", "Notes"]) {
             for (const host of ["", "a/b.local", "Fredericos-MacBook-Pro.local"]) {
                 const suggested = suggestDeviceName(platform({ isPhone: true, isIosApp: true }), vault, [], host);
-                expect(validateDeviceName(suggested).ok, `${vault} + ${host} -> ${suggested}`).toBe(true);
+                expect(suggested, `${vault} + ${host}`).not.toMatch(/[/%]/);
+                expect(suggested.trim(), `${vault} + ${host}`).not.toBe("");
+                expect(suggested.length, `${vault} + ${host}`).toBeLessThanOrEqual(50);
             }
         }
     });

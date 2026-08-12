@@ -1,17 +1,19 @@
 /**
- * A first guess at what to call this device.
+ * What this device calls itself.
  *
- * The field used to be blank with a placeholder reading "MacBook Air", which is
- * wrong twice over: it names a machine the reader may not own, and a
- * placeholder is not a value — the setting stayed empty, and Customisation Sync
- * silently does nothing when it is empty.
+ * This was a required field on the settings page, with a blank box and a
+ * placeholder reading "MacBook Air" — a machine the reader may not own, and a
+ * placeholder is not a value, so the setting stayed empty and the feature that
+ * needed it silently did nothing.
  *
- * So this produces a real value to prefill, built from what the platform
- * already knows. The user renames it or keeps it; either way the setting is
- * never accidentally blank.
+ * The feature that needed it is gone. What remains is device *identity*: the
+ * name that appears against this device in the record of who has caught up with
+ * the server. Nobody has ever wanted to type that, and Obsidian's own Sync does
+ * not ask — it shows you a list of your devices and names them itself. So this
+ * is derived once, at load, and never appears as a question.
  */
 
-import { DEVICE_NAME_MAX } from "./deviceNameRules.ts";
+const DEVICE_NAME_MAX = 50;
 
 export interface DevicePlatform {
     readonly isPhone: boolean;
@@ -68,7 +70,7 @@ export function readSystemHostName(): string {
 export function cleanHostName(raw: string): string {
     // Everything after the first dot is the network's business, not the user's.
     const name = (raw.split(".")[0] ?? "")
-        // Reserved by the Customisation Sync document key; see deviceNameRules.
+        // Kept out because the name is interpolated into document keys.
         .replace(/[/%]/g, " ")
         .replace(/\s+/g, " ")
         .trim();

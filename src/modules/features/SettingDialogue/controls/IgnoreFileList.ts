@@ -1,5 +1,4 @@
 import { setIcon } from "@/deps.ts";
-import { LiveSyncSetting as Setting } from "@/modules/features/SettingDialogue/LiveSyncSetting.ts";
 import type { ObsidianLiveSyncSettingTab } from "@/modules/features/SettingDialogue/ObsidianLiveSyncSettingTab.ts";
 import { parseIgnoreFileNames, serialiseIgnoreFileNames } from "./ignoreFileNames.ts";
 
@@ -69,9 +68,4 @@ export function renderIgnoreFileList(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
     };
 
     draw();
-
-    new Setting(el)
-        .setName("Path rules")
-        .setDesc("Regular expressions applied to paths directly, without a rule file. Under File selection.")
-        .setClass("lsfsx-setting-crossref");
 }

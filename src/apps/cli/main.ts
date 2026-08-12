@@ -83,9 +83,38 @@ Commands:
                             Show remote database status
 
 Options:
-  --vault <path>, -V <path>  (daemon/mirror) Path to the vault directory containing .md files
-                              (defaults to database-path; allows separate PouchDB and vault dirs)
-  --interval <N>, -i <N>  (daemon only) Poll CouchDB every N seconds instead of using the _changes feed
+  --vault <path>, -V <path>   (daemon/mirror) Vault directory holding the .md files.
+                              Defaults to database-path; set it to keep the PouchDB
+                              directory and the vault apart.
+  --interval <N>, -i <N>      (daemon) Poll CouchDB every N seconds instead of holding
+                              the _changes feed open. Use behind a proxy that caps
+                              request duration.
+  --settings <path>, -s       Settings file to read and write. Default: ${SETTINGS_FILE}
+                              relative to database-path.
+  --force, -f                 Proceed without the interactive confirmation a command
+                              would otherwise ask for. Required for unattended use of
+                              anything destructive.
+  --verbose, -v               Log at verbose level on stderr.
+  --debug, -d                 Log at debug level on stderr. Implies --verbose.
+  --help, -h                  Print this and exit 0.
+
+For unattended and agent use:
+  Exit codes    0 success. 1 anything else: bad arguments, missing file, unreachable
+                server, unresolved conflict. There are no other codes; test the exit
+                status, and read stderr for the reason.
+  Streams       Command output goes to stdout and nothing else does. Logs, progress
+                and errors go to stderr. So \`livesync-cli db cat notes/x.md > x.md\`
+                yields the file and never a log line inside it.
+  Determinism   Every command except \`daemon\` runs once and exits. \`daemon\` runs
+                until signalled; use \`sync\` in a script.
+  Parsing       \`ls\` emits tab-separated \`path\\tsize\\tmtime\\trevision\`, one record
+                per line, with a trailing \`*\` on the revision when the file is
+                conflicted. Split on tabs, not spaces: paths contain spaces.
+  Conflicts     \`ls\` marks them, \`info <path>\` lists the competing revisions, and
+                \`resolve <path> <rev>\` keeps one and deletes the rest. Nothing
+                resolves conflicts on its own, so a script that syncs should check.
+  Credentials   Connection strings contain passwords. \`remote-export\` prints one to
+                stdout in full; redact it before putting it anywhere it will be kept.
 
 Examples:
     livesync-cli ./my-database                        Run daemon (LiveSync mode)
@@ -94,7 +123,7 @@ Examples:
     livesync-cli ./my-database --settings ./custom-settings.json push ./note.md folder/note.md
     livesync-cli ./my-database pull folder/note.md ./exports/note.md
     livesync-cli ./my-database pull-rev folder/note.md ./exports/note.old.md 3-abcdef
-    livesync-cli ./my-database setup "obsidian://setuplivesync?settings=..."
+    livesync-cli ./my-database setup "obsidian://setuplivesync-fsx?settings=..."
     echo "Hello" | livesync-cli ./my-database put notes/hello.md
     livesync-cli ./my-database cat notes/hello.md
     livesync-cli ./my-database cat-rev notes/hello.md 3-abcdef

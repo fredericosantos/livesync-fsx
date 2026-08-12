@@ -9,14 +9,13 @@ import { $msg } from "@/common/translation";
 import { LiveSyncSetting as Setting } from "./LiveSyncSetting.ts";
 import {
     EVENT_REQUEST_COPY_SETUP_URI,
-    EVENT_REQUEST_OPEN_PLUGIN_SYNC_DIALOG,
     EVENT_REQUEST_OPEN_SETUP_URI,
     EVENT_REQUEST_SHOW_SETUP_QR,
     eventHub,
 } from "@/common/events.ts";
+import { renderPluginSyncTable } from "./controls/PluginSyncTable.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import { yieldNextAnimationFrame } from "octagonal-wheels/promises";
-import { visibleOnly } from "./SettingPane.ts";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
 import {
     createCoreSettingsAfterFullReset,
@@ -99,15 +98,12 @@ const server: Extra = (tab, el) => {
         );
 };
 
-const pluginSyncDialog: Extra = (tab, el) => {
-    new Setting(el)
-        .setName("Plugins and settings on other devices")
-        .setDesc("Review what each device has, and pick what to apply here.")
-        .addOnUpdate(visibleOnly(() => tab.isConfiguredAs("usePluginSync", true)))
-        .addButton((button) =>
-            button.setButtonText("Open").onClick(() => eventHub.emitEvent(EVENT_REQUEST_OPEN_PLUGIN_SYNC_DIALOG))
-        );
-};
+// Where a button used to open Customisation Sync's pane — a grid of devices,
+// tri-state mode buttons, "Select All Shiny", "⚑ Select Flagged Shiny" and a
+// maintenance mode — there is now a list of the plug-ins installed here, each
+// with a checkbox. The pane existed because the model needed one: with a copy
+// stored per device, something had to let you choose between them.
+const pluginTable: Extra = (tab, el) => renderPluginSyncTable(tab, el);
 
 const discard: Extra = (tab, el) => {
     new Setting(el)
@@ -138,6 +134,6 @@ const discard: Extra = (tab, el) => {
 export const SECTION_EXTRAS: Record<string, Extra> = {
     connect,
     server,
-    "plugin-sync-dialog": pluginSyncDialog,
+    "plugin-table": pluginTable,
     discard,
 };

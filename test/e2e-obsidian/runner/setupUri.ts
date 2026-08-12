@@ -151,7 +151,7 @@ export async function generateSetupURIFromDevice(
         await result.waitFor({ state: "visible", timeout: uiTimeoutMs });
         return await result.locator("textarea[readonly]").inputValue();
     });
-    if (!setupURI.startsWith("obsidian://setuplivesync?settings=")) {
+    if (!setupURI.startsWith("obsidian://setuplivesync-fsx?settings=")) {
         throw new Error("The first device did not generate a valid Setup URI.");
     }
     const resultScreenshot = await captureGuideDialogue(

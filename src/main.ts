@@ -3,11 +3,11 @@ import { setGetLanguage } from "@vrtmrz/livesync-commonlib/compat/common/coreEnv
 setGetLanguage(getLanguage);
 import { LiveSyncCommands } from "./features/LiveSyncCommands.ts";
 import { HiddenFileSync } from "./features/HiddenFileSync/CmdHiddenFileSync.ts";
-import { ConfigSync } from "./features/ConfigSync/CmdConfigSync.ts";
 
 import { ModuleInteractiveConflictResolver } from "./modules/features/ModuleInteractiveConflictResolver.ts";
 import { ModuleLog } from "./modules/features/ModuleLog.ts";
 import { ModuleObsidianEvents } from "./modules/essentialObsidian/ModuleObsidianEvents.ts";
+import { ModuleDeviceName } from "./modules/essentialObsidian/ModuleDeviceName.ts";
 import { ModuleObsidianSettingDialogue } from "./modules/features/ModuleObsidianSettingTab.ts";
 import { ModuleObsidianDocumentHistory } from "./modules/features/ModuleObsidianDocumentHistory.ts";
 import { ModuleObsidianGlobalHistory } from "./modules/features/ModuleGlobalHistory.ts";
@@ -148,6 +148,7 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
             (core) => {
                 const extraModules = [
                     new ModuleObsidianEvents(this, core),
+                    new ModuleDeviceName(this, core),
                     new ModuleObsidianSettingDialogue(this, core),
                     new ModuleLog(this, core),
                     new ModuleObsidianDocumentHistory(this, core),
@@ -160,7 +161,6 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
             },
             (core) => {
                 const addOns = [
-                    new ConfigSync(this, core),
                     new HiddenFileSync(this, core),
                     new LocalDatabaseMaintenance(this, core),
                     new CmdRecovery(this, core),

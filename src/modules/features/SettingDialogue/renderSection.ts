@@ -17,7 +17,6 @@ import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts
 import { visibleOnly } from "./SettingPane.ts";
 import type { SettingKey, SettingSection } from "./settingsCatalogue.ts";
 import { AllSettingDefault, type AllSettingItemKey } from "./settingConstants.ts";
-import { renderDeviceName } from "./controls/DeviceName.ts";
 import { renderPassphrase } from "./controls/Passphrase.ts";
 import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
 
@@ -26,13 +25,20 @@ type KeyRenderer = (tab: ObsidianLiveSyncSettingTab, el: HTMLElement) => void;
 /** Copy we deliberately override, applied after the schema name and description. */
 const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
     syncInternalFiles: {
-        name: "Sync hidden files",
-        desc: "Themes, snippets and plugin data under the configuration folder.",
+        name: "Sync app settings and plugins",
+        desc: "Choose what travels below. Window layout always stays on the device it belongs to.",
     },
-    // No description. The dependency on a device name is not worth a sentence
-    // under every toggle: if the name is missing when this is switched on, the
-    // field above says so, where the problem actually is.
-    usePluginSync: { name: "Sync plugins and their settings" },
+    // The eight category rows carry no descriptions. Obsidian's own Sync labels
+    // them and stops, because "Hotkeys" needs no gloss — and a paragraph under
+    // each of eight adjacent switches is how a short list becomes a wall.
+    syncConfigApp: { name: "App settings" },
+    syncConfigAppearance: { name: "Appearance" },
+    syncConfigThemesAndSnippets: { name: "Themes and snippets" },
+    syncConfigHotkeys: { name: "Hotkeys" },
+    syncConfigCorePluginList: { name: "Active core plugins" },
+    syncConfigCorePluginSettings: { name: "Core plugin settings" },
+    syncConfigCommunityPluginList: { name: "Active community plugins" },
+    syncConfigCommunityPluginSettings: { name: "Community plugins and their settings" },
     encrypt: {
         name: "Encrypt this vault",
         desc: "Every device must use the same passphrase, or they cannot read each other's notes.",
@@ -48,7 +54,6 @@ const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
 };
 
 const KEY_RENDERERS: Partial<Record<SettingKey, KeyRenderer>> = {
-    deviceAndVaultName: renderDeviceName,
     // Meaningless while encryption is off, so it is not shown then. A disabled
     // field would still invite the reader to wonder what it is for.
     passphrase: (tab, el) => renderPassphrase(tab, el, visibleOnly(() => tab.isConfiguredAs("encrypt", true))),

@@ -247,7 +247,7 @@ livesync-cli /path/to/your-local-database --settings /path/to/settings.json pull
 livesync-cli /path/to/your-local-database --settings /path/to/settings.json --verbose
 
 # Apply setup URI to settings file (settings only; does not run synchronisation)
-livesync-cli /path/to/your-local-database --settings /path/to/settings.json setup "obsidian://setuplivesync?settings=..."
+livesync-cli /path/to/your-local-database --settings /path/to/settings.json setup "obsidian://setuplivesync-fsx?settings=..."
 
 # Put text from stdin into local database
 echo "Hello from stdin" | livesync-cli /path/to/your-local-database --settings /path/to/settings.json put /vault/path/file.md

@@ -180,7 +180,7 @@ async function provisionAndGenerateSetupURI(couchDb: CouchDbConfig, dbName: stri
 
     await runDeno("utils/couchdb/provision.ts", ["--allow-env", "--allow-net"], environment);
     const output = await runDeno("utils/setup/generate_setup_uri.ts", ["--allow-env"], environment);
-    const setupURI = output.split(/\r?\n/u).find((line) => line.startsWith("obsidian://setuplivesync?settings="));
+    const setupURI = output.split(/\r?\n/u).find((line) => line.startsWith("obsidian://setuplivesync-fsx?settings="));
     if (!setupURI) throw new Error("The public Setup URI generator did not emit a Setup URI.");
     return { setupURI, setupPassphrase };
 }
