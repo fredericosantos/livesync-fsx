@@ -446,14 +446,28 @@ span.ls-mark-cr::after {
     display: none;
 }
 
-/* See `MessageBox.onOpen`: a message box is an announcement, not a settings row. */
+/*
+ * See `MessageBox.onOpen`: a message box is an announcement, not a settings row.
+ *
+ * `Setting` lays out a label and pushes its control to the right-hand edge,
+ * which is correct on a settings page and wrong here — it left a lone "Done"
+ * against the right wall under centred content. The actions fill the width and
+ * share it equally, so one button spans the dialogue and three split it.
+ */
 .lsfsx-messagebox-actions {
     border-top: none;
     padding-bottom: 0;
 }
 
 .lsfsx-messagebox-actions .setting-item-control {
-    justify-content: center;
+    justify-content: stretch;
+    gap: var(--size-4-2);
+    width: 100%;
+}
+
+.lsfsx-messagebox-actions .setting-item-control button {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .lsfsx-dialogue-note-wrapper {
@@ -494,11 +508,31 @@ body.is-mobile .livesync-compatibility-review-notice {
     );
 }
 
+/*
+ * The QR code, centred and no larger than it needs to be.
+ *
+ * `max-width: max-content` made the box shrink to the image — and a shrunk box
+ * with `justify-content: center` centres its contents inside itself while
+ * sitting against the left margin, which is why the code was centred within a
+ * box that was not. `margin-inline: auto` centres the box.
+ */
 .lsfsx-qr {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    max-width: max-content;
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+.lsfsx-qr svg,
+.lsfsx-qr img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* A code is scanned from a screen, so it wants light behind it whatever
+       theme the reader is using. */
+    background: #fff;
+    padding: 8px;
+    border-radius: 6px;
 }
 
 .lsfsx-keypair pre {
