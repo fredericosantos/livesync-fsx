@@ -981,7 +981,8 @@ const englishMessages: Readonly<Record<string, string>> = {
     "Setup.FetchRemoteConf.Buttons.Skip": "No, please use the settings in the URI",
     "Setup.FetchRemoteConf.Message": "If we have already synchronised once with another device, the remote database stores the suitable configuration values between the synchronised devices. The plug-in would like to retrieve them for robust configuration.\n\nHowever, we have to make sure the one thing. Are we currently in a situation where we can access the network safely and retrieve the settings?\n\nNote: Mostly, you are safe to do this, that your remote database is hosted with a SSL certificate, and your network is not compromised.",
     "Setup.FetchRemoteConf.Title": "Fetch configuration from remote database?",
-    "Setup.QRCode": "We have generated a QR code to transfer the settings. Please scan the QR code with your phone or other device.\nNote: The QR code is not encrypted, so be careful to open this.\n\n>[!FOR YOUR EYES ONLY]-\n> <div class=\"lsfsx-qr\">${qr_image}</div>",
+    "Setup.QRCode":
+        "<div class=\"lsfsx-qr\">${qr_image}</div>\n\nThe code carries your server password unencrypted. Keep it off screen shares.",
     "Setup.RemoteE2EE.AdvancedTitle": "Advanced",
     "Setup.RemoteE2EE.AlgorithmWarning": "Changing the encryption algorithm will prevent access to any data previously encrypted with a different algorithm. Ensure that all your devices are configured to use the same algorithm to maintain access to your data.",
     "Setup.RemoteE2EE.ButtonCancel": "Cancel",

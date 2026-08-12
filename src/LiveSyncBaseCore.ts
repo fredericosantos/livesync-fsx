@@ -18,7 +18,6 @@ import { useRemoteConfigurationMigration } from "@vrtmrz/livesync-commonlib/comp
 import type { ServiceContext } from "@vrtmrz/livesync-commonlib/context";
 import type { InjectableServiceHub } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableServiceHub";
 import { AbstractModule } from "./modules/AbstractModule";
-import { ModulePeriodicProcess } from "./modules/core/ModulePeriodicProcess";
 import { ModuleReplicator } from "./modules/core/ModuleReplicator";
 import { ModuleReplicatorCouchDB } from "./modules/core/ModuleReplicatorCouchDB";
 import { ModuleConflictChecker } from "./modules/coreFeatures/ModuleConflictChecker";
@@ -141,7 +140,6 @@ export class LiveSyncBaseCore<
         this._registerModule(new ModuleReplicatorCouchDB(this));
         this._registerModule(new ModuleReplicator(this));
         this._registerModule(new ModuleConflictResolver(this));
-        this._registerModule(new ModulePeriodicProcess(this));
         this._registerModule(new ModuleResolvingMismatchedTweaks(this));
         this._registerModule(new ModuleBasicMenu(this));
 

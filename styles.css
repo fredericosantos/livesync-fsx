@@ -446,6 +446,16 @@ span.ls-mark-cr::after {
     display: none;
 }
 
+/* See `MessageBox.onOpen`: a message box is an announcement, not a settings row. */
+.lsfsx-messagebox-actions {
+    border-top: none;
+    padding-bottom: 0;
+}
+
+.lsfsx-messagebox-actions .setting-item-control {
+    justify-content: center;
+}
+
 .lsfsx-dialogue-note-wrapper {
     display: flex;
     justify-content: flex-end;

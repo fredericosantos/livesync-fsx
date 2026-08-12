@@ -18,28 +18,18 @@ export class ModuleReplicatorCouchDB extends AbstractModule {
     _everyAfterResumeProcess(): Promise<boolean> {
         if (this.services.appLifecycle.isSuspended()) return Promise.resolve(true);
         if (!this.services.appLifecycle.isReady()) return Promise.resolve(true);
-        if (!this.settings.remoteType) {
-            const LiveSyncEnabled = this.settings.liveSync;
-            const continuous = LiveSyncEnabled;
-            const eventualOnStart = !LiveSyncEnabled && this.settings.syncOnStart;
-            // If enabled LiveSync or on start, open replication
-            if (LiveSyncEnabled || eventualOnStart) {
-                // And note that we do not open the conflict detection dialogue directly during this process.
-                // This should be raised explicitly if needed.
-                fireAndForget(async () => {
-                    const canReplicate = await this.services.replication.isReplicationReady(false);
-                    if (!canReplicate) return;
-                    const openReplication = () =>
-                        this.core.replicator.openReplication(this.settings, continuous, false, false);
-                    if (continuous) {
-                        void openReplication();
-                    } else {
-                        await this.services.replicator.runFiniteReplicationActivity(openReplication, {
-                            label: "replication",
-                        });
-                    }
-                });
-            }
+        // Continuous, or not at all. The `eventualOnStart` branch this replaces
+        // ran one finite replication when continuous replication was off, which
+        // was the closest the "sync on startup" option came to being a mode:
+        // connect once, then go quiet for the rest of the session.
+        if (!this.settings.remoteType && this.settings.liveSync) {
+            // And note that we do not open the conflict detection dialogue directly during this process.
+            // This should be raised explicitly if needed.
+            fireAndForget(async () => {
+                const canReplicate = await this.services.replication.isReplicationReady(false);
+                if (!canReplicate) return;
+                void this.core.replicator.openReplication(this.settings, true, false, false);
+            });
         }
 
         return Promise.resolve(true);

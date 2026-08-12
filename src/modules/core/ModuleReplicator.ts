@@ -9,8 +9,7 @@ import {
     type RemoteType,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 
-import { scheduleTask } from "octagonal-wheels/concurrency/task";
-import { EVENT_FILE_SAVED, EVENT_SETTING_SAVED, eventHub } from "@/common/events";
+import { EVENT_SETTING_SAVED, eventHub } from "@/common/events";
 
 import { $msg } from "@/common/translation";
 import type { LiveSyncCore } from "@/main";
@@ -98,11 +97,9 @@ export class ModuleReplicator extends AbstractModule {
 
     private _everyOnloadAfterLoadSettings(): Promise<boolean> {
         this._normalFileReflectionFilterSignature = this.getNormalFileReflectionFilterSignature(this.settings);
-        eventHub.onEvent(EVENT_FILE_SAVED, () => {
-            if (this.settings.syncOnSave && !this.core.services.appLifecycle.isSuspended()) {
-                scheduleTask("perform-replicate-after-save", 250, () => this.services.replication.replicateByEvent());
-            }
-        });
+        // No replicate-on-save. Continuous replication is already watching the
+        // database; asking it again a quarter-second after every write was a
+        // way to approximate continuous replication without having it.
         eventHub.onEvent(EVENT_SETTING_SAVED, (setting) => {
             const previousReflectionFilter = this._normalFileReflectionFilterSignature;
             const nextReflectionFilter = this.getNormalFileReflectionFilterSignature(setting);

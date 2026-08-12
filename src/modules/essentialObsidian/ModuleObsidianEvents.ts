@@ -15,22 +15,9 @@ import {
 import type { LiveSyncCore } from "@/main.ts";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 
-type MutableCommandDefinition = {
-    callback?: () => void;
-};
-
-type InternalCommandRegistry = {
-    commands?: Record<string, MutableCommandDefinition | undefined>;
-    executeCommandById(commandId: string): unknown;
-};
-
-type AppWithInternalCommands = {
-    commands?: InternalCommandRegistry;
-};
-
-type CodeMirrorAdapter = {
-    commands: { save: () => void };
-};
+// The four types that used to be here described Obsidian's private command
+// registry and CodeMirror's command table, so that the save command could be
+// replaced at runtime. Nothing reaches into either any more.
 
 export class ModuleObsidianEvents extends AbstractObsidianModule {
     _everyOnloadStart(): Promise<boolean> {
@@ -53,42 +40,20 @@ export class ModuleObsidianEvents extends AbstractObsidianModule {
         this.services.appLifecycle.performRestart();
     }
 
-    initialCallback: (() => void) | undefined = undefined;
-
-    swapSaveCommand() {
-        this._log("Modifying callback of the save command", LOG_LEVEL_VERBOSE);
-        const commandRegistry = (this.app as unknown as AppWithInternalCommands).commands;
-        const saveCommandDefinition = commandRegistry?.commands?.["editor:save-file"];
-        const save = saveCommandDefinition?.callback;
-        if (saveCommandDefinition && typeof save === "function") {
-            this.initialCallback = save;
-            saveCommandDefinition.callback = () => {
-                scheduleTask("syncOnEditorSave", 250, () => {
-                    if (this.services.control.hasUnloaded()) {
-                        this._log("Unload and remove the handler.", LOG_LEVEL_VERBOSE);
-                        saveCommandDefinition.callback = this.initialCallback;
-                        this.initialCallback = undefined;
-                    } else {
-                        if (this.settings.syncOnEditorSave) {
-                            this._log("Sync on Editor Save.", LOG_LEVEL_VERBOSE);
-                            fireAndForget(() => this.services.replication.replicateByEvent());
-                        }
-                    }
-                });
-                save();
-            };
-        }
-        const codeMirrorAdapter = (compatGlobal as typeof compatGlobal & { CodeMirrorAdapter?: CodeMirrorAdapter })
-            .CodeMirrorAdapter;
-        if (!codeMirrorAdapter) {
-            this._log("CodeMirrorAdapter is not available");
-            return;
-        }
-        codeMirrorAdapter.commands.save = () => {
-            void commandRegistry?.executeCommandById("editor:save-file");
-            // _this.app.performCommand('editor:save-file');
-        };
-    }
+    /*
+     * `swapSaveCommand` was here.
+     *
+     * It reached into Obsidian's internal command registry, replaced the
+     * callback of `editor:save-file` with a wrapper, remembered the original so
+     * it could put it back on unload, and separately reassigned
+     * `CodeMirrorAdapter.commands.save`. All of it existed to notice the ⌘S
+     * keystroke and start a replication — an approximation of continuous
+     * replication for people who had turned continuous replication off.
+     *
+     * Monkey-patching another application's private command table is a large
+     * thing to do for a small effect, and the effect is now free: continuous
+     * replication is already watching the database when the save lands.
+     */
 
     registerWatchEvents() {
         this.setHasFocus = this.setHasFocus.bind(this);
@@ -130,7 +95,7 @@ export class ModuleObsidianEvents extends AbstractObsidianModule {
     private keepReplicationActiveInBackground() {
         return (
             this.settings.keepReplicationActiveInBackground &&
-            (this.settings.liveSync || this.settings.periodicReplication) &&
+            this.settings.liveSync &&
             !this.services.API.isMobile()
         );
     }
@@ -289,14 +254,12 @@ export class ModuleObsidianEvents extends AbstractObsidianModule {
         if (file == null) {
             return;
         }
-        if (this.settings.syncOnFileOpen && !this.services.appLifecycle.isSuspended()) {
-            await this.services.replication.replicateByEvent();
-        }
+        // No replicate-on-open. Opening a file cannot make it fresher than a
+        // connection that has been streaming changes the whole time.
         await this.services.conflict.queueCheckForIfOpen(file.path as FilePathWithPrefix);
     }
 
     _everyOnLayoutReady(): Promise<boolean> {
-        this.swapSaveCommand();
         this.registerWatchEvents();
         return Promise.resolve(true);
     }

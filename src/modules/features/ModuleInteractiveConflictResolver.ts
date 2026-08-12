@@ -177,12 +177,8 @@ export class ModuleInteractiveConflictResolver extends AbstractObsidianModule {
                 this._log(`Could not complete the merge of ${filename} (${String(toDelete)})`, LOG_LEVEL_INFO);
                 return false;
             }
-            // In here, some merge has been processed.
-            // So we have to run replication if configured.
-            // TODO: Make this is as a event request
-            if (this.settings.syncAfterMerge && !this.services.appLifecycle.isSuspended()) {
-                await this.services.replication.replicateByEvent();
-            }
+            // The resolution is a database write, and continuous replication is
+            // already watching the database. Nothing to trigger.
             // And, check it again.
             await this.services.conflict.queueCheckFor(filename);
             return false;

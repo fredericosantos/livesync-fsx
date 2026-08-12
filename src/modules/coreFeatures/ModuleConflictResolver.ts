@@ -141,11 +141,10 @@ export class ModuleConflictResolver extends AbstractModule {
                 return;
             }
             if (conflictCheckResult === AUTO_MERGED) {
-                //auto resolved, but need check again;
-                if (this.settings.syncAfterMerge && !this.services.appLifecycle.isSuspended()) {
-                    //Wait for the running replication, if not running replication, run it once.
-                    await this.services.replication.replicateByEvent();
-                }
+                // The merge is a database write like any other, so continuous
+                // replication carries it. There was a "sync after merging file"
+                // switch here, which only mattered to someone who had turned
+                // continuous replication off.
                 this._log("[conflict] Automatically merged, but we have to check it again");
                 await this.services.conflict.queueCheckFor(filename);
                 return;

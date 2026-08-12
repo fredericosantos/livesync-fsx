@@ -207,6 +207,11 @@ export class MessageBox<T extends readonly string[]> extends AutoClosableModal {
         }
 
         buttonSetting.infoEl.setCssStyles({ display: "none" });
+        // Centred, not right-aligned. `Setting` is built for a settings row —
+        // a label on the left and its control pushed to the right edge — and a
+        // message box is not one of those. A lone "Done" under a centred QR
+        // code sat against the right-hand wall for no reason anyone could see.
+        buttonSetting.settingEl.addClass("lsfsx-messagebox-actions");
         buttonSetting.controlEl.setCssStyles({ flexWrap: "wrap" });
         if (this.wideButton) {
             buttonSetting.controlEl.setCssStyles({

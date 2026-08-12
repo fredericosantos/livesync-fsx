@@ -190,13 +190,9 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         return ret;
     }
     computeAllLocalSettings(): Partial<OnDialogSettings> {
-        const syncMode = this.editingSettings?.liveSync
-            ? "LIVESYNC"
-            : this.editingSettings?.periodicReplication
-              ? "PERIODIC"
-              : "ONEVENTS";
+        // "PERIODIC" and "ONEVENTS" were the other two modes. Neither exists.
         return {
-            syncMode,
+            syncMode: "LIVESYNC",
         };
     }
     /**
@@ -392,16 +388,11 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
             "encrypt",
         ]);
     }
+    // Was eight checks over seven settings, one of them asked twice. There is
+    // one way to replicate, so there is one thing to ask.
     isAnySyncEnabled() {
         if (this.isConfiguredAs("isConfigured", false)) return false;
         if (this.isConfiguredAs("liveSync", true)) return true;
-        if (this.isConfiguredAs("periodicReplication", true)) return true;
-        if (this.isConfiguredAs("syncOnFileOpen", true)) return true;
-        if (this.isConfiguredAs("syncOnSave", true)) return true;
-        if (this.isConfiguredAs("syncOnEditorSave", true)) return true;
-        if (this.isConfiguredAs("syncOnStart", true)) return true;
-        if (this.isConfiguredAs("syncAfterMerge", true)) return true;
-        if (this.isConfiguredAs("syncOnFileOpen", true)) return true;
         if (this.core?.replicator?.syncStatus == "CONNECTED") return true;
         if (this.core?.replicator?.syncStatus == "PAUSED") return true;
         return false;

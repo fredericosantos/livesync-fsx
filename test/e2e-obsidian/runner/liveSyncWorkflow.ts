@@ -10,8 +10,6 @@ import { captureObsidianDialogue, withObsidianPage } from "./ui.ts";
 export type ConfiguredSettings = {
     isConfigured: boolean;
     liveSync: boolean;
-    syncOnStart: boolean;
-    syncOnSave: boolean;
     remoteType: string;
     couchDB_URI: string;
     couchDB_DBNAME: string;
@@ -78,8 +76,6 @@ export type LocalDatabaseEntry = {
 const E2E_PREFERRED_SETTINGS = {
     displayLanguage: "def",
     liveSync: false,
-    syncOnStart: false,
-    syncOnSave: false,
     usePluginSync: false,
     usePluginSyncV2: true,
     useEden: false,
@@ -279,8 +275,6 @@ export async function configureCouchDb(
             "return JSON.stringify({",
             "isConfigured:current.isConfigured,",
             "liveSync:current.liveSync,",
-            "syncOnStart:current.syncOnStart,",
-            "syncOnSave:current.syncOnSave,",
             "remoteType:current.remoteType,",
             "couchDB_URI:current.couchDB_URI,",
             "couchDB_DBNAME:current.couchDB_DBNAME,",

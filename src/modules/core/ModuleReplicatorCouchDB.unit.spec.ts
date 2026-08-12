@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ModuleReplicatorCouchDB } from "./ModuleReplicatorCouchDB.ts";
 
-function createModule(settings: { liveSync: boolean; syncOnStart: boolean }, isReplicationReady = true) {
+function createModule(settings: { liveSync: boolean }, isReplicationReady = true) {
     const openReplication = vi.fn(async () => true);
     const runFiniteReplicationActivity = vi.fn(async (task: () => unknown) => await task());
     const services = {
@@ -43,25 +43,12 @@ function createModule(settings: { liveSync: boolean; syncOnStart: boolean }, isR
 }
 
 describe("ModuleReplicatorCouchDB resume replication activity", () => {
-    it("exposes start-up one-shot replication as finite replication activity", async () => {
-        const { module, openReplication, runFiniteReplicationActivity } = createModule({
-            liveSync: false,
-            syncOnStart: true,
-        });
-
-        await module._everyAfterResumeProcess();
-
-        await vi.waitFor(() => expect(openReplication).toHaveBeenCalledOnce());
-        expect(runFiniteReplicationActivity).toHaveBeenCalledWith(expect.any(Function), {
-            label: "replication",
-        });
-        expect(openReplication).toHaveBeenCalledWith(expect.any(Object), false, false, false);
-    });
-
-    it("does not wrap the unbounded continuous channel in another finite activity", async () => {
+    // The "start-up one-shot" this used to test was the `syncOnStart` mode:
+    // connect once when Obsidian opens, then stay quiet for the session. There
+    // is one way to replicate now, and it is continuous.
+    it("opens the continuous channel, unwrapped by any finite activity", async () => {
         const { module, openReplication, runFiniteReplicationActivity } = createModule({
             liveSync: true,
-            syncOnStart: false,
         });
 
         await module._everyAfterResumeProcess();
@@ -71,19 +58,21 @@ describe("ModuleReplicatorCouchDB resume replication activity", () => {
         expect(openReplication).toHaveBeenCalledWith(expect.any(Object), true, false, false);
     });
 
-    it("does not start a one-shot activity when start-up readiness fails", async () => {
-        const { module, openReplication, runFiniteReplicationActivity } = createModule(
-            {
-                liveSync: false,
-                syncOnStart: true,
-            },
-            false
-        );
+    it("opens nothing while replication is switched off", async () => {
+        const { module, openReplication } = createModule({ liveSync: false });
 
         await module._everyAfterResumeProcess();
         await new Promise((resolve) => setTimeout(resolve, 0));
 
-        expect(runFiniteReplicationActivity).not.toHaveBeenCalled();
+        expect(openReplication).not.toHaveBeenCalled();
+    });
+
+    it("opens nothing when start-up readiness fails", async () => {
+        const { module, openReplication } = createModule({ liveSync: true }, false);
+
+        await module._everyAfterResumeProcess();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
         expect(openReplication).not.toHaveBeenCalled();
     });
 });

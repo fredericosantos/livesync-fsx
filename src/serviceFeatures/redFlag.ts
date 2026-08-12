@@ -292,28 +292,15 @@ export async function adjustSettingToRemoteIfNeeded(
 /**
  * The switches `suspendAllSync` turns off, so that they can be turned back on.
  *
- * Initialisation legitimately silences every trigger: seeding or fetching a
- * whole Vault must not race with ordinary replication. What it did not do was
- * put them back. The `finally` below restored `suspendFileWatching` and nothing
- * else, so a Vault that had just been set up successfully — connected, remote
- * database created, version marker written — ended with continuous sync off,
- * sync-on-save off, sync-on-start off, and every other trigger off.
- *
- * Nothing then ever asked for replication, so nothing ever replicated, and the
- * status bar reported a connection problem for a setup that had worked. The CLI
- * carried a comment about this and worked around it locally; the plug-in did
- * not.
+ * Initialisation legitimately stops replication: seeding or fetching a whole
+ * Vault must not race with it. What it did not do was start it again. The
+ * `finally` below restored `suspendFileWatching` and nothing else, so a Vault
+ * that had just been set up successfully — connected, remote database created,
+ * version marker written — ended with replication switched off, and nothing
+ * ever replicated again. The CLI carried a comment about this and worked around
+ * it locally; the plug-in did not.
  */
-const SUSPENDED_BY_INITIALISATION = [
-    "liveSync",
-    "periodicReplication",
-    "syncOnSave",
-    "syncOnEditorSave",
-    "syncOnStart",
-    "syncOnFileOpen",
-    "syncAfterMerge",
-    "batchSave",
-] as const;
+const SUSPENDED_BY_INITIALISATION = ["liveSync", "batchSave"] as const;
 
 type SuspendedSwitches = Pick<ObsidianLiveSyncSettings, (typeof SUSPENDED_BY_INITIALISATION)[number]>;
 

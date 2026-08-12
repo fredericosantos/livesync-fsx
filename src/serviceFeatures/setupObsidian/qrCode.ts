@@ -23,14 +23,13 @@ export async function encodeSetupSettingsAsQR(host: SetupFeatureHost) {
         // Multi-page QR code
         let currentIndex = 0;
         while (currentIndex < result.total) {
-            const msg = `The setting is too large for a single QR code.
-We are using the aggregator to combine multiple QR codes.
-Your settings will not be sent to any server; they will be processed only on your device.
-Please scan this QR code with your mobile's camera, and open the page in your browser.
-After all parts are collected, the page will navigate you back to Obsidian with the aggregated settings.
+            // The five lines this replaces explained the aggregator, promised
+            // nothing was sent to a server, and described what the page would
+            // do afterwards — none of which changes what the reader does next,
+            // which is scan the code in front of them.
+            const msg = `<div class="lsfsx-qr">${result.parts[currentIndex]}</div>
 
-Progress: ${currentIndex + 1} / ${result.total}
-${result.parts[currentIndex]}`;
+Part ${currentIndex + 1} of ${result.total}. Scan them in order; the page collects them and sends you back to Obsidian.`;
 
             const buttons = [];
             if (currentIndex > 0) buttons.push("Back");

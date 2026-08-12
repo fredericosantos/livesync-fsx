@@ -259,48 +259,19 @@ describe("watchWindowVisibilityAsync — keepReplicationActiveInBackground", () 
         expect(appLifecycle.onResumed).toHaveBeenCalledTimes(1);
     });
 
-    it("does not apply in On-Events mode even if the flag is set (no scope leak)", async () => {
+    // There were three tests here for the Periodic and On-Events modes, which
+    // no longer exist. The one distinction still worth drawing is between
+    // replicating and not.
+    it("does not keep anything alive when replication is off", async () => {
         const { module, appLifecycle } = setup({
             settings: {
                 keepReplicationActiveInBackground: true,
                 liveSync: false,
-                periodicReplication: false,
             },
             hidden: true,
         });
         await module.watchWindowVisibilityAsync();
         expect(appLifecycle.onSuspending).toHaveBeenCalledTimes(1);
-    });
-
-    it("does NOT suspend on hide when enabled in Periodic mode (the periodic timer also stalls otherwise)", async () => {
-        const { module, appLifecycle } = setup({
-            settings: {
-                keepReplicationActiveInBackground: true,
-                liveSync: false,
-                periodicReplication: true,
-            },
-            hidden: true,
-        });
-        await module.watchWindowVisibilityAsync();
-        expect(appLifecycle.onSuspending).not.toHaveBeenCalled();
-    });
-
-    it("does NOT force a teardown on becoming visible in Periodic mode (only the continuous channel can stall)", async () => {
-        const { module, appLifecycle } = setup({
-            settings: {
-                keepReplicationActiveInBackground: true,
-                liveSync: false,
-                periodicReplication: true,
-            },
-            hidden: false,
-            isLastHidden: true,
-        });
-        await module.watchWindowVisibilityAsync();
-        // The teardown is gated on liveSync: a periodic timer doesn't go half-open, so bouncing it
-        // on every restore would be needless churn. Resume still runs normally.
-        expect(appLifecycle.onSuspending).not.toHaveBeenCalled();
-        expect(appLifecycle.onResuming).toHaveBeenCalledTimes(1);
-        expect(appLifecycle.onResumed).toHaveBeenCalledTimes(1);
     });
 
     it("does not apply on mobile even if the flag is set", async () => {

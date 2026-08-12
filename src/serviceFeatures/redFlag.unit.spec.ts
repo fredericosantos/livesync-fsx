@@ -76,15 +76,8 @@ const createSettingServiceMock = () => {
         suspendFileWatching: false,
         writeLogToTheFile: false,
         remoteType: "CouchDB",
-        // The switches a real `suspendAllSync` clears. They start on, as they
-        // are for any Vault that is actually synchronising.
+        // On, as it is for any Vault that is actually synchronising.
         liveSync: true,
-        periodicReplication: true,
-        syncOnSave: true,
-        syncOnEditorSave: true,
-        syncOnStart: true,
-        syncOnFileOpen: true,
-        syncAfterMerge: true,
     };
     const smallConfig = new Map<string, string>();
     return {
@@ -98,19 +91,11 @@ const createSettingServiceMock = () => {
             Object.assign(settings, partial);
             return Promise.resolve();
         }),
-        // Mirrors the real implementation, which clears every trigger. A mock
-        // that merely recorded the call could not have caught the fact that
-        // nothing ever turned them back on.
+        // Mirrors the real implementation, which stops replication. A mock that
+        // merely recorded the call could not have caught the fact that nothing
+        // ever started it again.
         suspendAllSync: vi.fn(() => {
-            Object.assign(settings, {
-                liveSync: false,
-                periodicReplication: false,
-                syncOnSave: false,
-                syncOnEditorSave: false,
-                syncOnStart: false,
-                syncOnFileOpen: false,
-                syncAfterMerge: false,
-            });
+            Object.assign(settings, { liveSync: false });
             return Promise.resolve();
         }),
         suspendExtraSync: vi.fn(() => Promise.resolve()),
@@ -327,30 +312,18 @@ describe("Red Flag Feature", () => {
         // then left every trigger off. Nothing asked for replication ever
         // again, so nothing replicated, and the status bar reported a
         // connection problem for a setup that had worked perfectly.
-        it("gives back every sync trigger it took away", async () => {
+        it("starts replication again after it finishes", async () => {
             const host = createHostMock();
             const log = createLoggerMock();
-            const triggers = [
-                "liveSync",
-                "periodicReplication",
-                "syncOnSave",
-                "syncOnEditorSave",
-                "syncOnStart",
-                "syncOnFileOpen",
-                "syncAfterMerge",
-            ] as const;
 
             await processVaultInitialisation(host as any, log, () => {
-                for (const trigger of triggers) {
-                    expect(host.mocks.setting.currentSettings()[trigger], `${trigger} during`).toBe(false);
-                }
+                expect(host.mocks.setting.currentSettings().liveSync, "during").toBe(false);
+                expect(host.mocks.setting.currentSettings().batchSave, "during").toBe(false);
                 return Promise.resolve(true);
             });
 
-            for (const trigger of triggers) {
-                expect(host.mocks.setting.currentSettings()[trigger], `${trigger} after`).toBe(true);
-            }
-            expect(host.mocks.setting.currentSettings().batchSave).toBe(true);
+            expect(host.mocks.setting.currentSettings().liveSync, "after").toBe(true);
+            expect(host.mocks.setting.currentSettings().batchSave, "after").toBe(true);
         });
 
         it("gives them back even when the initialisation failed", async () => {
