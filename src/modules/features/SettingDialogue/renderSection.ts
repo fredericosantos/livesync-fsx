@@ -12,15 +12,11 @@
  * twice and how two adjacent groups ended up with different spacing.
  */
 
-import { mount } from "svelte";
 import { LiveSyncSetting as Setting } from "./LiveSyncSetting.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import { visibleOnly } from "./SettingPane.ts";
 import type { SettingKey, SettingSection } from "./settingsCatalogue.ts";
 import { AllSettingDefault, type AllSettingItemKey } from "./settingConstants.ts";
-import MultipleRegExpControl from "./MultipleRegExpControl.svelte";
-import { constructCustomRegExpList, splitCustomRegExpList } from "@vrtmrz/livesync-commonlib/compat/common/utils";
-import type { CustomRegExpSource } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { renderDeviceName } from "./controls/DeviceName.ts";
 import { renderPassphrase } from "./controls/Passphrase.ts";
 import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
@@ -49,37 +45,7 @@ const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
         name: "Warn when the database passes",
         desc: "Megabytes. 0 never warns. Useful when the server has a quota.",
     },
-    syncOnlyRegEx: {
-        name: "Sync only these paths",
-        desc: "Regular expressions. Empty means every file.",
-    },
-    syncIgnoreRegEx: {
-        name: "Never sync these paths",
-        desc: "Regular expressions. Matching files are skipped in both directions.",
-    },
 };
-
-/** A regular-expression list, edited as chips rather than as a delimited string. */
-function regExpList(key: SettingKey & AllSettingItemKey, delimiter: string): KeyRenderer {
-    return (tab, el) => {
-        const setting = new Setting(el);
-        applySchema(setting, key);
-        const read = () => splitCustomRegExpList(tab.editingSettings[key] as never, delimiter as never);
-        const patterns = read();
-        mount(MultipleRegExpControl, {
-            target: setting.controlEl,
-            props: {
-                patterns,
-                originals: [...patterns],
-                apply: async (newPatterns: CustomRegExpSource[]) => {
-                    Reflect.set(tab.editingSettings, key, constructCustomRegExpList(newPatterns, delimiter as never));
-                    await tab.saveAllDirtySettings();
-                    tab.display();
-                },
-            },
-        });
-    };
-}
 
 const KEY_RENDERERS: Partial<Record<SettingKey, KeyRenderer>> = {
     deviceAndVaultName: renderDeviceName,
@@ -87,21 +53,7 @@ const KEY_RENDERERS: Partial<Record<SettingKey, KeyRenderer>> = {
     // field would still invite the reader to wonder what it is for.
     passphrase: (tab, el) => renderPassphrase(tab, el, visibleOnly(() => tab.isConfiguredAs("encrypt", true))),
     ignoreFiles: (tab, el) => renderIgnoreFileList(tab, el),
-    syncOnlyRegEx: regExpList("syncOnlyRegEx", "|[]|"),
-    syncIgnoreRegEx: regExpList("syncIgnoreRegEx", "|[]|"),
-    syncInternalFilesTargetPatterns: regExpList("syncInternalFilesTargetPatterns", ","),
-    syncInternalFilesIgnorePatterns: regExpList("syncInternalFilesIgnorePatterns", ","),
 };
-
-/** Name and description: upstream's, unless we have said otherwise. */
-function applySchema(setting: Setting, key: SettingKey & AllSettingItemKey): void {
-    setting.autoWireSetting(key);
-    const copy = COPY[key];
-    if (copy) {
-        setting.setName(copy.name);
-        if (copy.desc) setting.setDesc(copy.desc);
-    }
-}
 
 /**
  * The default control for a key: whatever its schema default's type implies.

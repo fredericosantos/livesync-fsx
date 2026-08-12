@@ -31,9 +31,6 @@ import { fireAndForget, yieldNextAnimationFrame } from "octagonal-wheels/promise
 import { EVENT_REQUEST_RELOAD_SETTING_TAB, eventHub } from "@/common/events.ts";
 import {
     enableOnly,
-    // findAttrFromParent,
-    // getLevelStr,
-    setStyle,
     visibleOnly,
     type OnSavedHandler,
     type OnSavedHandlerFunc,
@@ -549,9 +546,19 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         containerEl.addClass("lsfsx-setting");
         containerEl.removeClass("isWizard");
 
-        setStyle(containerEl, "menu-setting-poweruser", () => this.isConfiguredAs("usePowerUserMode", true));
-        setStyle(containerEl, "menu-setting-advanced", () => this.isConfiguredAs("useAdvancedMode", true));
-        setStyle(containerEl, "menu-setting-edgecase", () => this.isConfiguredAs("useEdgeCaseMode", true));
+        // No tiers. There were four — advanced, power user, edge case, debug
+        // tools — three of which put a class on this element so that stylesheet
+        // rules could reveal extra rows, and all four of which had lost the
+        // switches that turned them on. Every setting they hid was therefore
+        // permanently hidden, and every command they gated permanently absent
+        // from the palette, while the branches that read them stayed in the
+        // source looking like live behaviour.
+        //
+        // A tier is a promise that the simple version is enough, made by a
+        // program that does not believe it. Either a setting is worth showing
+        // everyone, or it should not exist; that judgement is the catalogue's
+        // job, and it is made once, here, rather than deferred to the reader in
+        // the form of a switch labelled "advanced".
 
         // One page. Tabs exist to manage volume; once the volume is cut, they
         // only hide things a reader could otherwise scan past in a second.

@@ -1,5 +1,4 @@
 import type { LiveSyncCore } from "@/main";
-import { LOG_LEVEL_NOTICE } from "octagonal-wheels/common/logger";
 import { fireAndForget } from "octagonal-wheels/promises";
 import { AbstractModule } from "@/modules/AbstractModule";
 import { $msg } from "@/common/translation";
@@ -27,69 +26,30 @@ export class ModuleBasicMenu extends AbstractModule {
                 return true;
             },
         });
-        this.addCommand({
-            id: "livesync-toggle",
-            name: "Toggle LiveSync",
-            callback: async () => {
-                if (this.settings.liveSync) {
-                    this.settings.liveSync = false;
-                    this._log("LiveSync Disabled.", LOG_LEVEL_NOTICE);
-                } else {
-                    this.settings.liveSync = true;
-                    this._log("LiveSync Enabled.", LOG_LEVEL_NOTICE);
-                }
-                await this.services.control.applySettings();
-                await this.services.setting.saveSettingData();
-            },
-        });
-        this.addCommand({
-            id: "livesync-suspendall",
-            name: "Toggle All Sync.",
-            callback: async () => {
-                if (this.services.appLifecycle.isSuspended()) {
-                    this.services.appLifecycle.setSuspended(false);
-                    this._log("Self-hosted LiveSync resumed", LOG_LEVEL_NOTICE);
-                } else {
-                    this.services.appLifecycle.setSuspended(true);
-                    this._log("Self-hosted LiveSync suspended", LOG_LEVEL_NOTICE);
-                }
-                await this.services.control.applySettings();
-                await this.services.setting.saveSettingData();
-            },
-        });
-
+        // Pausing lives in `CmdRecovery`, in one command, because there is one
+        // pause. There used to be two independent ones: this module suspended
+        // the plug-in in memory, so the pause was forgotten on the next restart,
+        // while `suspendFileWatching` and `suspendParseReplicationResult` were
+        // written to disk by a different command. Two mechanisms, one word for
+        // them in the interface, and no way for the reader to tell which they
+        // had. A third command, "Toggle LiveSync", turned off continuous
+        // replication under a name that sounded like all of it, and duplicated
+        // a switch already on the settings page.
+        //
+        // The one repair left here is the one nothing else does: reconcile what
+        // is on disk with what the database believes. "Abort synchronisation
+        // immediately" and "Apply pending changes now" both went — the first is
+        // what pausing does, the second is what the batch timer does a moment
+        // later on its own. Neither was reachable in any case: both were gated
+        // on an advanced mode that had no way to be switched on.
         this.addCommand({
             id: "livesync-scan-files",
             name: "Scan storage and database again",
-            checkCallback: (checking) => {
-                if (!this.settings.useAdvancedMode) return false;
-                if (!checking) {
-                    fireAndForget(() => this.services.vault.scanVault(true));
-                }
-                return true;
-            },
-        });
-
-        this.addCommand({
-            id: "livesync-runbatch",
-            name: $msg("Apply pending changes now"),
             callback: async () => {
-                await this.services.fileProcessing.commitPendingFileEvents();
+                await this.services.vault.scanVault(true);
             },
         });
 
-        // TODO, Replicator is possibly one of features. It should be moved to features.
-        this.addCommand({
-            id: "livesync-abortsync",
-            name: "Abort synchronization immediately",
-            checkCallback: (checking) => {
-                if (!this.settings.useAdvancedMode) return false;
-                if (!checking) {
-                    this.core.replicator.terminateSync();
-                }
-                return true;
-            },
-        });
         return Promise.resolve(true);
     }
 

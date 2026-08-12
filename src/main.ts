@@ -4,7 +4,6 @@ setGetLanguage(getLanguage);
 import { LiveSyncCommands } from "./features/LiveSyncCommands.ts";
 import { HiddenFileSync } from "./features/HiddenFileSync/CmdHiddenFileSync.ts";
 import { ConfigSync } from "./features/ConfigSync/CmdConfigSync.ts";
-// import { ModuleDev } from "./modules/extras/ModuleDev.ts";
 
 import { ModuleInteractiveConflictResolver } from "./modules/features/ModuleInteractiveConflictResolver.ts";
 import { ModuleLog } from "./modules/features/ModuleLog.ts";
@@ -27,7 +26,6 @@ import type { ServiceModules } from "./types.ts";
 import { setNoticeClass } from "@vrtmrz/livesync-commonlib/compat/mock_and_interop/wrapper";
 import type { ObsidianServiceContext } from "@/modules/services/ObsidianServiceContext";
 import { LiveSyncBaseCore } from "./LiveSyncBaseCore.ts";
-import { ModuleObsidianMenu } from "./modules/essentialObsidian/ModuleObsidianMenu.ts";
 import { SetupManager } from "./modules/features/SetupManager.ts";
 import { ModuleMigration } from "./modules/essential/ModuleMigration.ts";
 import { enableI18nFeature } from "./serviceFeatures/onLayoutReady/enablei18n.ts";
@@ -151,12 +149,10 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                 const extraModules = [
                     new ModuleObsidianEvents(this, core),
                     new ModuleObsidianSettingDialogue(this, core),
-                    new ModuleObsidianMenu(core),
                     new ModuleLog(this, core),
                     new ModuleObsidianDocumentHistory(this, core),
                     new ModuleInteractiveConflictResolver(this, core),
                     new ModuleObsidianGlobalHistory(this, core),
-                    // new ModuleDev(this, core),
                     new SetupManager(core), // this should be moved to core?
                     new ModuleMigration(core, () => waitForCompatibilityReview()),
                 ];

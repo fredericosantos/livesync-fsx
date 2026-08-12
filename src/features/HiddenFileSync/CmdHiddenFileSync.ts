@@ -103,46 +103,24 @@ export class HiddenFileSync extends LiveSyncCommands {
         this.periodicInternalFileScanProcessor?.disable();
     }
     onload() {
+        // One command, where there were four. "Scan hidden file changes on the
+        // storage", "…on the local database" and "Scan and apply all offline
+        // hidden-file changes" all describe a half of a job the periodic
+        // processor and the start-up scan already do in full, on their own,
+        // without being asked. Offering them turns an implementation detail —
+        // that the plug-in walks two sides and reconciles them — into three
+        // decisions the reader has no way to choose between.
+        //
+        // What remains is the repair: reconcile both sides from scratch. All
+        // four were also gated behind an advanced mode with no switch, so none
+        // of them had appeared in the palette for some time.
         this.services.API.addCommand({
             id: "livesync-sync-internal",
-            name: "(re)initialise hidden files between storage and database",
+            name: "Compare hidden files with the server again",
             checkCallback: (checking) => {
                 if (!this.isManualCommandAvailable()) return false;
                 if (!checking) {
                     void this.initialiseInternalFileSync("safe", true);
-                }
-                return true;
-            },
-        });
-        this.services.API.addCommand({
-            id: "livesync-scaninternal-storage",
-            name: "Scan hidden file changes on the storage",
-            checkCallback: (checking) => {
-                if (!this.isManualCommandAvailable()) return false;
-                if (!checking) {
-                    void this.scanAllStorageChanges(true);
-                }
-                return true;
-            },
-        });
-        this.services.API.addCommand({
-            id: "livesync-scaninternal-database",
-            name: "Scan hidden file changes on the local database",
-            checkCallback: (checking) => {
-                if (!this.isManualCommandAvailable()) return false;
-                if (!checking) {
-                    void this.scanAllDatabaseChanges(true);
-                }
-                return true;
-            },
-        });
-        this.services.API.addCommand({
-            id: "livesync-internal-scan-offline-changes",
-            name: "Scan and apply all offline hidden-file changes",
-            checkCallback: (checking) => {
-                if (!this.isManualCommandAvailable()) return false;
-                if (!checking) {
-                    void this.applyOfflineChanges(true);
                 }
                 return true;
             },
@@ -203,7 +181,7 @@ export class HiddenFileSync extends LiveSyncCommands {
     }
 
     private isManualCommandAvailable() {
-        return this.settings.useAdvancedMode && this.isReady() && this._isDatabaseReady();
+        return this.isReady() && this._isDatabaseReady();
     }
 
     async performStartupScan(showNotice: boolean) {
@@ -1931,13 +1909,7 @@ Offline Changed files: ${files.length}`;
                     // before the initial file enumeration begins.
                     initialisationProgress = this._progress("[Initialise]\n", LOG_LEVEL_NOTICE);
                     initialisationProgress.log("Preparing Hidden File Sync...");
-                    await this.core.services.setting.applyPartial(
-                        {
-                            useAdvancedMode: true,
-                            syncInternalFiles: true,
-                        },
-                        true
-                    );
+                    await this.core.services.setting.applyPartial({ syncInternalFiles: true }, true);
                 },
                 initialise: async (direction) => {
                     await this.initialiseInternalFileSync(direction, true, false, initialisationProgress);

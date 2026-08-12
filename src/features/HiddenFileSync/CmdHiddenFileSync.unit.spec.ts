@@ -99,14 +99,13 @@ function createHiddenRevisionOperation() {
 }
 
 describe("HiddenFileSync configuration-change notices", () => {
-    it("shows manual Hidden File Sync commands only when the feature, Advanced mode, and runtime are ready", () => {
+    it("offers one hidden-file repair, and only once the feature and runtime are ready", () => {
         const commands: Array<{
             id: string;
             checkCallback?: (checking: boolean) => boolean | void;
         }> = [];
         const settings = {
             syncInternalFiles: false,
-            useAdvancedMode: false,
         };
         const hiddenFileSync = Object.create(HiddenFileSync.prototype) as HiddenFileSync;
         Object.assign(hiddenFileSync, {
@@ -125,23 +124,17 @@ describe("HiddenFileSync configuration-change notices", () => {
 
         hiddenFileSync.onload();
 
-        const commandIds = [
-            "livesync-sync-internal",
-            "livesync-scaninternal-storage",
-            "livesync-scaninternal-database",
-            "livesync-internal-scan-offline-changes",
-        ];
-        for (const commandId of commandIds) {
-            const command = commands.find(({ id }) => id === commandId);
-            expect(command?.checkCallback?.(true)).toBe(false);
-        }
+        // The three "scan…" commands are gone. Each performed one half of what
+        // the periodic processor and the start-up scan already do in full,
+        // unprompted, and no reader could have chosen between them on the
+        // evidence their names gave.
+        expect(commands.map(({ id }) => id)).toEqual(["livesync-sync-internal"]);
+
+        const command = commands[0];
+        expect(command.checkCallback?.(true)).toBe(false);
 
         settings.syncInternalFiles = true;
-        settings.useAdvancedMode = true;
-        for (const commandId of commandIds) {
-            const command = commands.find(({ id }) => id === commandId);
-            expect(command?.checkCallback?.(true)).toBe(true);
-        }
+        expect(command.checkCallback?.(true)).toBe(true);
     });
 
     it("does not report Hidden File Sync as ready before the main runtime is ready", () => {

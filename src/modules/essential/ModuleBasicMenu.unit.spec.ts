@@ -120,20 +120,25 @@ describe("ModuleBasicMenu command palette", () => {
         await fixture.module._everyOnloadStart();
 
         expect(fixture.getCommand("livesync-replicate").name).toBe("Sync now");
-        expect(fixture.getCommand("livesync-runbatch").name).toBe("Apply pending changes now");
     });
 
-    it("keeps maintenance commands out of the normal palette", async () => {
+    it("registers three commands and no tier of hidden ones", async () => {
         const fixture = createFixture();
 
         await fixture.module._everyOnloadStart();
 
-        expect(fixture.getCommand("livesync-scan-files").checkCallback?.(true)).toBe(false);
-        expect(fixture.getCommand("livesync-abortsync").checkCallback?.(true)).toBe(false);
-
-        fixture.settings.useAdvancedMode = true;
-        expect(fixture.getCommand("livesync-scan-files").checkCallback?.(true)).toBe(true);
-        expect(fixture.getCommand("livesync-abortsync").checkCallback?.(true)).toBe(true);
+        // Pausing moved to `CmdRecovery`, so that one pause has one command.
+        // "Toggle LiveSync" duplicated a settings switch; "Abort synchronisation
+        // immediately" is what pausing does; "Apply pending changes now" is what
+        // the batch timer does unbidden. The last two, plus this scan, were
+        // gated on an advanced mode that had no way to be switched on — so a
+        // command that is registered here is now a command the reader can reach.
+        expect(fixture.commands.map((command) => command.id).sort()).toEqual([
+            "livesync-dump",
+            "livesync-replicate",
+            "livesync-scan-files",
+        ]);
+        expect(fixture.getCommand("livesync-scan-files").checkCallback).toBeUndefined();
     });
 
     it("keeps active-file database information available and opens it in a copy dialogue", async () => {

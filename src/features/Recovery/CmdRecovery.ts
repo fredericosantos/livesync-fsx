@@ -1,6 +1,6 @@
 import { LOG_LEVEL_NOTICE } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { LiveSyncCommands } from "@/features/LiveSyncCommands.ts";
-import { syncHold } from "@/common/syncHold.ts";
+import { HOLD_SUSPENDED, syncHold } from "@/common/syncHold.ts";
 
 /**
  * The two ways out when synchronisation has gone wrong.
@@ -45,18 +45,32 @@ export class CmdRecovery extends LiveSyncCommands {
             },
         });
 
+        // One pause, one command, and a name that says which way it will go.
+        // There used to be two unrelated mechanisms sharing the word "suspend":
+        // a "Toggle All Sync." command that suspended the plug-in in memory, so
+        // the pause was forgotten on the next restart, and this pair of stored
+        // flags, which only a separate "Resume synchronisation" command could
+        // clear. A reader who paused and reopened Obsidian could not tell which
+        // of the two they had used, or why it had come back on.
         this.plugin.addCommand({
             id: "livesync-fsx-resume",
-            name: "Resume synchronisation",
-            checkCallback: (checking) => {
-                const suspended =
-                    this.settings.suspendFileWatching === true ||
-                    this.settings.suspendParseReplicationResult === true;
-                if (!suspended) return false;
-                if (!checking) void this.resume();
-                return true;
+            name: "Pause or resume synchronisation",
+            callback: () => {
+                void (this.isPaused() ? this.resume() : this.pause());
             },
         });
+    }
+
+    private isPaused(): boolean {
+        return this.settings.suspendFileWatching === true || this.settings.suspendParseReplicationResult === true;
+    }
+
+    private async pause(): Promise<void> {
+        this.settings.suspendFileWatching = true;
+        this.settings.suspendParseReplicationResult = true;
+        await this.core.services.setting.saveSettingData();
+        syncHold.value = HOLD_SUSPENDED;
+        this._log("Synchronisation paused. It stays paused until you resume it.", LOG_LEVEL_NOTICE);
     }
 
     /**

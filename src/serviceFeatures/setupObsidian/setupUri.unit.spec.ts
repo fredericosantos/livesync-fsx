@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { EVENT_REQUEST_COPY_SETUP_URI } from "@vrtmrz/livesync-commonlib/compat/events/coreEvents";
 import { createServiceContext } from "@vrtmrz/livesync-commonlib/context";
-import { askEncryptingPassphrase, copySetupURI, copySetupURIFull, useSetupURIFeature } from "./setupUri";
+import { askEncryptingPassphrase, copySetupURI, useSetupURIFeature } from "./setupUri";
 import { encodeSettingsToSetupURI } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
 
 vi.mock("@vrtmrz/livesync-commonlib/compat/API/processSetting", () => {
@@ -57,7 +57,7 @@ describe("setupObsidian/setupUri", () => {
         expect(log).not.toHaveBeenCalled();
     });
 
-    it("copySetupURI should encode with short mode by default", async () => {
+    it("always strips this device's own customisation-sync choices from the link", async () => {
         const promptCopyToClipboard = vi.fn(() => true);
         const currentSettings = { pluginSyncExtendedSetting: true, x: 1 };
         const host = {
@@ -88,33 +88,7 @@ describe("setupObsidian/setupUri", () => {
         expect(log).toHaveBeenCalled();
     });
 
-    it("copySetupURIFull should encode with full mode", async () => {
-        const promptCopyToClipboard = vi.fn(() => true);
-        const currentSettings = { pluginSyncExtendedSetting: true, x: 1 };
-        const host = {
-            services: {
-                setting: {
-                    currentSettings: vi.fn(() => currentSettings),
-                },
-                UI: {
-                    confirm: {
-                        askString: vi.fn(() => "pass-full"),
-                    },
-                    promptCopyToClipboard,
-                },
-            },
-        } as any;
-        const log = vi.fn();
-        vi.mocked(encodeSettingsToSetupURI).mockResolvedValue("uri://full" as any);
-
-        await copySetupURIFull(host, log);
-
-        expect(encodeSettingsToSetupURI).toHaveBeenCalledWith(currentSettings, "pass-full", [], false);
-        expect(promptCopyToClipboard).toHaveBeenCalledWith("setup link", "uri://full");
-        expect(log).toHaveBeenCalled();
-    });
-
-    it("useSetupURIFeature should register onLoaded handler that wires commands and event", async () => {
+    it("offers one setup-link command, not a choice between three encodings", async () => {
         const addHandler = vi.fn();
         const addCommand = vi.fn();
         const context = createServiceContext();
@@ -150,14 +124,12 @@ describe("setupObsidian/setupUri", () => {
         const loadedHandler = addHandler.mock.calls[0][0] as () => Promise<boolean>;
         await loadedHandler();
 
-        expect(addCommand).toHaveBeenCalledTimes(3);
+        expect(addCommand).toHaveBeenCalledTimes(1);
         expect(addCommand).toHaveBeenCalledWith(expect.objectContaining({ id: "livesync-copysetupuri" }));
-        expect(addCommand).toHaveBeenCalledWith(expect.objectContaining({ id: "livesync-copysetupuri-short" }));
-        expect(addCommand).toHaveBeenCalledWith(expect.objectContaining({ id: "livesync-copysetupurifull" }));
         expect(onEventSpy).toHaveBeenCalledWith(EVENT_REQUEST_COPY_SETUP_URI, expect.any(Function));
     });
 
-    it("shows Setup URI variants only when their configuration level is relevant", async () => {
+    it("offers the setup link only once there is a connection worth sharing", async () => {
         const addHandler = vi.fn();
         const commands: Array<{
             id: string;
@@ -165,8 +137,6 @@ describe("setupObsidian/setupUri", () => {
         }> = [];
         const settings = {
             isConfigured: false,
-            usePluginSync: false,
-            useAdvancedMode: false,
         };
         const host = {
             services: {
@@ -201,12 +171,6 @@ describe("setupObsidian/setupUri", () => {
 
         settings.isConfigured = true;
         expect(command("livesync-copysetupuri").checkCallback?.(true)).toBe(true);
-        expect(command("livesync-copysetupuri-short").checkCallback?.(true)).toBe(false);
-        expect(command("livesync-copysetupurifull").checkCallback?.(true)).toBe(false);
-
-        settings.usePluginSync = true;
-        settings.useAdvancedMode = true;
-        expect(command("livesync-copysetupuri-short").checkCallback?.(true)).toBe(true);
-        expect(command("livesync-copysetupurifull").checkCallback?.(true)).toBe(true);
+        expect(commands.map((candidate) => candidate.id)).toEqual(["livesync-copysetupuri"]);
     });
 });

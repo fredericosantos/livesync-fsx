@@ -67,8 +67,6 @@ describe("ModuleReplicator", () => {
             handleFilenameCaseSensitive: false,
             ignoreFiles: ".gitignore",
             maxMTimeForReflectEvents: 0,
-            syncOnlyRegEx: "^E2E/allowed/.*",
-            syncIgnoreRegEx: "",
             syncInternalFiles: false,
             syncMaxSizeInMB: 0,
             suspendParseReplicationResult: false,
@@ -103,7 +101,7 @@ describe("ModuleReplicator", () => {
             await Promise.resolve();
             expect(reprocessStoredDocuments).not.toHaveBeenCalled();
 
-            Object.assign(settings, { syncOnlyRegEx: "" });
+            Object.assign(settings, { useIgnoreFiles: true });
             eventHub.emitEvent(EVENT_SETTING_SAVED, { ...settings });
             await vi.waitFor(() => expect(reprocessStoredDocuments).toHaveBeenCalledOnce());
 

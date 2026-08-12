@@ -7,7 +7,6 @@ import {
     type ListedFiles,
     diff_match_patch,
     Platform,
-    addIcon,
 } from "@/deps.ts";
 
 import type {
@@ -68,7 +67,6 @@ import { ConflictResolveModal } from "@/modules/features/InteractiveConflictReso
 import { Semaphore } from "octagonal-wheels/concurrency/semaphore";
 import { EVENT_REQUEST_OPEN_PLUGIN_SYNC_DIALOG, eventHub } from "@/common/events.ts";
 import { PluginDialogModal } from "./PluginDialogModal.ts";
-import { $msg } from "@/common/translation";
 import {
     readSystemHostName,
     suggestDeviceName,
@@ -442,14 +440,7 @@ export class ConfigSync extends LiveSyncCommands {
         this.hidePluginSyncModal();
         this.periodicPluginSweepProcessor?.disable();
     }
-    addRibbonIcon = this.services.API.addRibbonIcon.bind(this.services.API);
     onload() {
-        addIcon(
-            "custom-sync",
-            `<g transform="rotate(-90 75 218)"  fill="currentColor" fill-rule="evenodd">
-            <path d="m272 166-9.38 9.38 9.38 9.38 9.38-9.38c1.96-1.93 5.11-1.9 7.03 0.058 1.91 1.94 1.91 5.04 0 6.98l-9.38 9.38 5.86 5.86-11.7 11.7c-8.34 8.35-21.4 9.68-31.3 3.19l-3.84 3.98c-8.45 8.7-20.1 13.6-32.2 13.6h-5.55v-9.95h5.55c9.43-0.0182 18.5-3.84 25-10.6l3.95-4.09c-6.54-9.86-5.23-23 3.14-31.3l11.7-11.7 5.86 5.86 9.38-9.38c1.96-1.93 5.11-1.9 7.03 0.0564 1.91 1.93 1.91 5.04 2e-3 6.98z"/>
-        </g>`
-        );
         this.services.API.addCommand({
             id: "livesync-plugin-dialog-ex",
             name: "Show customization sync dialog",
@@ -463,9 +454,11 @@ export class ConfigSync extends LiveSyncCommands {
                 return true;
             },
         });
-        this.addRibbonIcon("custom-sync", $msg("cmdConfigSync.showCustomizationSync"), () => {
-            this.showPluginSyncModal();
-        }).addClass("livesync-ribbon-showcustom");
+        // The ribbon icon this used to add was worse than redundant: it was
+        // added unconditionally, while `showPluginSyncModal` returns
+        // immediately when the feature is off. With the feature off — which is
+        // the default — the icon sat in the ribbon and did nothing at all when
+        // pressed. It is gone, along with the other two.
         eventHub.onEvent(EVENT_REQUEST_OPEN_PLUGIN_SYNC_DIALOG, () => this.showPluginSyncModal());
     }
 
@@ -1694,16 +1687,10 @@ export class ConfigSync extends LiveSyncCommands {
                 );
                 this.services.setting.setDeviceAndVaultName(name);
             }
-            // this.core.settings.usePluginSync = true;
-            // this.core.settings.useAdvancedMode = true;
-            // await this.core.saveSettings();
-            await this.core.services.setting.applyPartial(
-                {
-                    usePluginSync: true,
-                    useAdvancedMode: true,
-                },
-                true
-            );
+            // Switching a feature on used to also switch the reader into
+            // "advanced mode" behind their back, revealing a tier of settings
+            // they had not asked for. There are no tiers now.
+            await this.core.services.setting.applyPartial({ usePluginSync: true }, true);
             await this.scanAllConfigFiles(true);
         }
     }

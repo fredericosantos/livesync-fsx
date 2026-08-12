@@ -1,4 +1,4 @@
-import { LOG_LEVEL_NOTICE, type ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
+import { LOG_LEVEL_NOTICE } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import type { LogFunction } from "@vrtmrz/livesync-commonlib/compat/services/lib/logUtils";
 import { createInstanceLogFunction } from "@vrtmrz/livesync-commonlib/compat/services/lib/logUtils";
 import { encodeSettingsToSetupURI } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
@@ -16,28 +16,27 @@ export async function askEncryptingPassphrase(host: SetupFeatureHost): Promise<s
     );
 }
 
-export async function copySetupURI(host: SetupFeatureHost, log: LogFunction, stripExtra = true) {
+/**
+ * A setup link carries this vault's connection to another device.
+ *
+ * There were three commands for this, and the reader had to pick between
+ * them: "Copy settings as a new setup URI", "(With customization sync)" and
+ * "(Full)". The differences were not differences in what the other device ends
+ * up with. "Full" only declined to omit settings already at their default —
+ * a longer link, an identical result. "With customization sync" included
+ * `pluginSyncExtendedSetting`, which records *this* device's per-item choices
+ * about which plug-ins to accept; sending it makes the new device inherit
+ * decisions made about a machine it is not. So it is always stripped, and there
+ * is one command.
+ */
+export async function copySetupURI(host: SetupFeatureHost, log: LogFunction) {
     const encryptingPassphrase = await askEncryptingPassphrase(host);
     if (encryptingPassphrase === false) return;
     const encryptedURI = await encodeSettingsToSetupURI(
         host.services.setting.currentSettings(),
         encryptingPassphrase,
-        [...((stripExtra ? ["pluginSyncExtendedSetting"] : []) as (keyof ObsidianLiveSyncSettings)[])],
+        ["pluginSyncExtendedSetting"],
         true
-    );
-    if (await host.services.UI.promptCopyToClipboard("setup link", encryptedURI)) {
-        log("Setup URI copied to clipboard", LOG_LEVEL_NOTICE);
-    }
-}
-
-export async function copySetupURIFull(host: SetupFeatureHost, log: LogFunction) {
-    const encryptingPassphrase = await askEncryptingPassphrase(host);
-    if (encryptingPassphrase === false) return;
-    const encryptedURI = await encodeSettingsToSetupURI(
-        host.services.setting.currentSettings(),
-        encryptingPassphrase,
-        [],
-        false
     );
     if (await host.services.UI.promptCopyToClipboard("setup link", encryptedURI)) {
         log("Setup URI copied to clipboard", LOG_LEVEL_NOTICE);
@@ -49,32 +48,10 @@ export function useSetupURIFeature(host: NecessaryServices<"API" | "UI" | "setti
     host.services.appLifecycle.onLoaded.addHandler(() => {
         host.services.API.addCommand({
             id: "livesync-copysetupuri",
-            name: "Copy settings as a new setup URI",
+            name: "Copy the setup link for another device",
             checkCallback: (checking) => {
                 if (!host.services.setting.currentSettings().isConfigured) return false;
                 if (!checking) fireAndForget(copySetupURI(host, log));
-                return true;
-            },
-        });
-
-        host.services.API.addCommand({
-            id: "livesync-copysetupuri-short",
-            name: "Copy settings as a new setup URI (With customization sync)",
-            checkCallback: (checking) => {
-                const settings = host.services.setting.currentSettings();
-                if (!settings.isConfigured || !settings.usePluginSync) return false;
-                if (!checking) fireAndForget(copySetupURI(host, log, false));
-                return true;
-            },
-        });
-
-        host.services.API.addCommand({
-            id: "livesync-copysetupurifull",
-            name: "Copy settings as a new setup URI (Full)",
-            checkCallback: (checking) => {
-                const settings = host.services.setting.currentSettings();
-                if (!settings.isConfigured || !settings.useAdvancedMode) return false;
-                if (!checking) fireAndForget(copySetupURIFull(host, log));
                 return true;
             },
         });

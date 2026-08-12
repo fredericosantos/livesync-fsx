@@ -81,10 +81,8 @@ export class ModuleReplicator extends AbstractModule {
             | "handleFilenameCaseSensitive"
             | "ignoreFiles"
             | "maxMTimeForReflectEvents"
-            | "syncIgnoreRegEx"
             | "syncInternalFiles"
             | "syncMaxSizeInMB"
-            | "syncOnlyRegEx"
             | "useIgnoreFiles"
         >
     ): string {
@@ -92,10 +90,8 @@ export class ModuleReplicator extends AbstractModule {
             handleFilenameCaseSensitive: settings.handleFilenameCaseSensitive ?? false,
             ignoreFiles: settings.ignoreFiles ?? "",
             maxMTimeForReflectEvents: settings.maxMTimeForReflectEvents ?? 0,
-            syncIgnoreRegEx: settings.syncIgnoreRegEx ?? "",
             syncInternalFiles: settings.syncInternalFiles ?? false,
             syncMaxSizeInMB: settings.syncMaxSizeInMB ?? 0,
-            syncOnlyRegEx: settings.syncOnlyRegEx ?? "",
             useIgnoreFiles: settings.useIgnoreFiles ?? false,
         });
     }

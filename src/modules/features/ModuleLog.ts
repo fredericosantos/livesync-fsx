@@ -10,11 +10,10 @@ import { type LogEntry, logMessages } from "@vrtmrz/livesync-commonlib/compat/mo
 import { cancelTask, scheduleTask } from "octagonal-wheels/concurrency/task";
 import { fireAndForget, isDirty, throttle } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { AbstractObsidianModule } from "@/modules/AbstractObsidianModule.ts";
-import { addIcon, debounce, normalizePath, Notice, setIcon, stringifyYaml, type WorkspaceLeaf } from "@/deps.ts";
+import { debounce, normalizePath, Notice, setIcon, stringifyYaml, type WorkspaceLeaf } from "@/deps.ts";
 import { LOG_LEVEL_NOTICE, setGlobalLogFunction } from "octagonal-wheels/common/logger";
 import { LogPaneView, VIEW_TYPE_LOG } from "./Log/LogPaneView.ts";
 import { serialized } from "octagonal-wheels/concurrency/lock";
-import { $msg } from "@/common/translation";
 import { P2PLogCollector } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/P2PLogCollector";
 import { STATUS_ACTIVITY, STATUS_ATTENTION, presentStatus, type StatusLevel } from "./StatusPresentation.ts";
 import { syncHold } from "@/common/syncHold.ts";
@@ -181,17 +180,12 @@ export class ModuleLog extends AbstractObsidianModule {
         return Promise.resolve(true);
     }
     _everyOnloadStart(): Promise<boolean> {
-        addIcon(
-            "view-log",
-            `<g transform="matrix(1.28 0 0 1.28 -131 -411)" fill="currentColor" fill-rule="evenodd">
-        <path d="m103 330h76v12h-76z"/>
-        <path d="m106 346v44h70v-44zm45 16h-20v-8h20z"/>
-       </g>`
-        );
-        this.addRibbonIcon("view-log", $msg("moduleLog.showLog"), () => {
-            void this.services.API.showWindow(VIEW_TYPE_LOG);
-        }).addClass("livesync-ribbon-showlog");
-
+        // No ribbon icon. There were three — replicate, show log, customisation
+        // sync — and each was a second door to a command that already existed.
+        // The ribbon is the most expensive place in Obsidian to put anything:
+        // it is permanently visible, it competes with the user's own plug-ins,
+        // and it costs one row of the window forever. Obsidian's own Sync takes
+        // none of it and reports itself with a single status-bar icon.
         this.addCommand({
             id: "view-log",
             name: "Show log",

@@ -95,19 +95,24 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
         keys: ["notifyThresholdOfRemoteStorageSize"],
     },
     {
+        // One way to exclude a file, not three. There used to be, in addition
+        // to the ignore files below, a pair of regular-expression lists for
+        // ordinary files and a second pair for hidden ones — four lists, all
+        // kept in the plug-in's settings rather than in the Vault, all able to
+        // express the same thing, and none of them visible to the other
+        // devices they silently governed.
+        //
+        // An ignore file wins on every count that matters: it is a format the
+        // reader already knows, it sits next to the files it excludes, it
+        // supports negation and nesting, and it synchronises with the Vault, so
+        // one device's exclusions are every device's exclusions. The hidden-file
+        // patterns keep working, but as constants rather than questions: their
+        // defaults exclude `node_modules`, `.git` and the plug-in's own folder,
+        // which is the whole of what anyone ever needed them for.
         id: "files",
         title: "Files",
         requires: "configured",
-        keys: ["useIgnoreFiles", "ignoreFiles", "syncOnlyRegEx", "syncIgnoreRegEx"],
-    },
-    {
-        // Only reachable when hidden-file sync is on; otherwise the patterns
-        // govern nothing.
-        id: "hidden-files",
-        title: "Hidden files",
-        requires: "configured",
-        shownWhen: { key: "syncInternalFiles", is: true },
-        keys: ["syncInternalFilesTargetPatterns", "syncInternalFilesIgnorePatterns"],
+        keys: ["useIgnoreFiles", "ignoreFiles"],
     },
     // No "Appearance". Every setting that was there asked the reader to
     // configure the plugin's own chrome: which language it speaks (there is
