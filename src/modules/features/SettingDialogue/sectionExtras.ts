@@ -37,14 +37,32 @@ async function leaveSettings(tab: ObsidianLiveSyncSettingTab): Promise<void> {
     await yieldNextAnimationFrame();
 }
 
-/** Where this vault syncs, in the form a person would say it. */
-function describeConnection(uri: string, database: string): string {
-    if (!uri) return "No server configured.";
-    try {
-        return `${database || "vault"} on ${new URL(uri).host}`;
-    } catch {
-        return database || uri;
+/**
+ * Where this vault syncs: two values and the word between them.
+ *
+ * As one run of grey text, "notes on db.example.com" reads as a
+ * sentence, and the two things in it that are actually *values* — the ones you
+ * would check against another device, or read aloud to someone — are
+ * indistinguishable from the preposition joining them. Setting each in a chip
+ * says which parts are data.
+ */
+function describeConnection(el: HTMLElement, uri: string, database: string): void {
+    if (!uri) {
+        el.setText("No server configured.");
+        return;
     }
+    let host: string;
+    try {
+        host = new URL(uri).host;
+    } catch {
+        // Not a URL we can read: show what is stored rather than nothing, but
+        // do not dress a broken value up as two tidy facts.
+        el.setText(database || uri);
+        return;
+    }
+    el.createSpan({ cls: "lsfsx-chip", text: database || "vault" });
+    el.createSpan({ cls: "lsfsx-chip__joiner", text: "on" });
+    el.createSpan({ cls: "lsfsx-chip", text: host });
 }
 
 const connect: Extra = (tab, el) => {
@@ -77,15 +95,15 @@ const connect: Extra = (tab, el) => {
 };
 
 const server: Extra = (tab, el) => {
-    new Setting(el)
+    const connection = new Setting(el)
         .setName("Server")
-        .setDesc(describeConnection(tab.editingSettings.couchDB_URI, tab.editingSettings.couchDB_DBNAME))
         .addButton((button) =>
             button.setButtonText("Reconfigure").onClick(async () => {
                 await leaveSettings(tab);
                 await tab.core.getModule(SetupManager).startOnBoarding();
             })
         );
+    describeConnection(connection.descEl, tab.editingSettings.couchDB_URI, tab.editingSettings.couchDB_DBNAME);
 
     new Setting(el)
         .setName("Add another device")

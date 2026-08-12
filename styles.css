@@ -812,6 +812,33 @@ body.is-mobile .livesync-compatibility-review-notice {
 }
 
 /*
+ * A chip is a value.
+ *
+ * Used where a description would otherwise run two facts together with a word
+ * of English between them — "notes on db.example.com" — and the
+ * reader has no way to see where the database name stops and the sentence
+ * starts. Monospace because both are identifiers, and identifiers are compared
+ * character by character.
+ */
+.lsfsx-chip {
+    display: inline-block;
+    padding: 0.1em 0.45em;
+    border-radius: 4px;
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.lsfsx-chip__joiner {
+    display: inline-block;
+    margin: 0 0.4em;
+    color: var(--text-faint);
+}
+
+/*
  * The plug-in table.
  *
  * Borrows the list frame above so that two lists on one page look like two

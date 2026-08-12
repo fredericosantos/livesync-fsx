@@ -49,7 +49,16 @@ export const liveSyncProvisionalEnglishMessages = {
     "Connect to existing database and continue": "Connect to existing database and continue",
     "Test connection and save": "Test connection and save",
     "Save without connecting": "Save without connecting",
-    "Enter a complete HTTP or HTTPS URL.": "Enter a complete HTTP or HTTPS URL.",
+    // Said once, when Continue is pressed — not typed at the reader while they
+    // are still spelling "https".
+    "Enter the address of your server.": "Enter the address of your server.",
+    "That does not look like a server address. It should begin with https://":
+        "That does not look like a server address. It should begin with https://",
+    "Obsidian on this device can only reach servers over https://":
+        "Obsidian on this device can only reach servers over https://",
+    "Enter your username.": "Enter your username.",
+    "Enter your password.": "Enter your password.",
+    "Enter the name of the database.": "Enter the name of the database.",
     "CouchDB validates the database name when you connect. The name must not be empty.":
         "CouchDB validates the database name when you connect. The name must not be empty.",
     "Saving without a successful connection test keeps this profile, but automatic synchronisation may fail until the connection is corrected.":

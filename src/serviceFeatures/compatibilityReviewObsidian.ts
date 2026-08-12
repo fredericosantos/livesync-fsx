@@ -25,8 +25,12 @@ export class ObsidianCompatibilityReviewUi implements CompatibilityReviewUi {
         const buttons = !pause.resumable
             ? ([REVIEW_DETAILS, KEEP_PAUSED] as const)
             : ([REVIEW_DETAILS, RESUME, KEEP_PAUSED] as const);
+        // "Sync paused", not "Why syncing is held back". A title should name the
+        // window, and a title beginning "Why…" withholds the answer to make you
+        // open it — which is a trick, and a poor one when the reader did not
+        // choose to be here.
         const result = await this.confirm.confirmWithMessage(
-            "Why syncing is held back",
+            "Sync paused",
             compatibilityReviewSummaryMarkdown(pause),
             [...buttons],
             KEEP_PAUSED,

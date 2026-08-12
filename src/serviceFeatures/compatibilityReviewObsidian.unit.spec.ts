@@ -47,10 +47,11 @@ describe("Obsidian compatibility review", () => {
         const ui = new ObsidianCompatibilityReviewUi({ confirmWithMessage } as never);
 
         await expect(ui.showSummary(resumablePause)).resolves.toBe("resume");
-        // A title names the thing; the buttons name their verbs. Neither
-        // repeats "compatibility review", which is the name of the machinery.
+        // A title names the state; the buttons name their verbs. A title
+        // starting "Why…" withholds its own answer to earn a click, which is
+        // not a thing to do to someone who did not ask to be interrupted.
         expect(confirmWithMessage).toHaveBeenCalledWith(
-            "Why syncing is held back",
+            "Sync paused",
             expect.any(String),
             ["Show details", "Resume syncing", "Leave it paused"],
             "Leave it paused",
