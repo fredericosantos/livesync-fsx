@@ -505,124 +505,33 @@ describe("Red Flag Feature", () => {
             expect(host.mocks.appLifecycle.performRestart).toHaveBeenCalled();
         });
 
-        it("should keep current remote configuration when selected", async () => {
+        // Five tests used to cover a dialogue asking which stored server to
+        // fetch from — keeping the current one, cancelling, activating another,
+        // an unrecognised answer, and a failed activation. The several servers
+        // it asked between were duplicates of one server, made by setup itself.
+        // Nothing asks now, so the whole branch and its five tests are gone;
+        // what remains to prove is that a leftover duplicate cannot resurrect
+        // the question.
+        it("fetches without asking which server, even with duplicate profiles left over", async () => {
             const host = createHostMock();
             const log = createLoggerMock();
 
             host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
             Object.assign(host.mocks.setting.settings, {
+                activeConfigurationId: "alpha",
                 remoteConfigurations: {
                     alpha: { name: "Alpha", uri: "sls+https://user:pass@example.com/db1" },
                     beta: { name: "Beta", uri: "sls+https://user:pass@example.com/db2" },
                 },
             });
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Use active remote");
             host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce("cancelled");
 
             const handler = createFetchAllFlagHandler(host as any, log);
             const result = await handler.handle();
 
             expect(result).toBe(false);
-            expect(host.mocks.setting.applyPartial).not.toHaveBeenCalledWith(
-                expect.objectContaining({ activeConfigurationId: expect.any(String) })
-            );
-        });
-
-        it("should stop when remote selection is cancelled", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            Object.assign(host.mocks.setting.settings, {
-                remoteConfigurations: {
-                    alpha: { name: "Alpha", uri: "sls+https://user:pass@example.com/db1" },
-                    beta: { name: "Beta", uri: "sls+https://user:pass@example.com/db2" },
-                },
-            });
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Cancel");
-
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(false);
-            expect(host.mocks.ui.confirm.confirmWithMessage).not.toHaveBeenCalled();
-        });
-
-        it("should activate selected remote configuration", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            Object.assign(host.mocks.setting.settings, {
-                remoteConfigurations: {
-                    alpha: {
-                        name: "Alpha",
-                        uri: "sls+https://user:pass@example.com/db1",
-                        remoteType: "CouchDB",
-                    },
-                    beta: {
-                        name: "Beta",
-                        uri: "sls+https://user:pass@example.com/db2",
-                        remoteType: "CouchDB",
-                    },
-                },
-            });
-            host.mocks.ui.confirm.askSelectStringDialogue.mockImplementationOnce(
-                async (_message: string, selections: string[]) => selections.find((e) => e.startsWith("Beta -"))
-            );
-            host.mocks.ui.dialogManager.openWithExplicitCancel.mockResolvedValueOnce("cancelled");
-
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(false);
-            expect(activateRemoteConfiguration).toHaveBeenCalledWith(host.mocks.setting.settings, "beta");
-            expect(host.mocks.setting.applyPartial).toHaveBeenCalledWith(
-                expect.objectContaining({ activeConfigurationId: "beta" })
-            );
-        });
-
-        it("should stop when selected remote name is unknown", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            Object.assign(host.mocks.setting.settings, {
-                remoteConfigurations: {
-                    alpha: { name: "Alpha", uri: "sls+https://user:pass@example.com/db1" },
-                    beta: { name: "Beta", uri: "sls+https://user:pass@example.com/db2" },
-                },
-            });
-            host.mocks.ui.confirm.askSelectStringDialogue.mockResolvedValueOnce("Unknown option");
-
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(false);
-            expect(host.mocks.ui.confirm.confirmWithMessage).not.toHaveBeenCalled();
-        });
-
-        it("should stop when remote activation fails", async () => {
-            const host = createHostMock();
-            const log = createLoggerMock();
-
-            host.mocks.storageAccess.files.add(FlagFilesOriginal.FETCH_ALL);
-            Object.assign(host.mocks.setting.settings, {
-                remoteConfigurations: {
-                    alpha: { name: "Alpha", uri: "sls+https://user:pass@example.com/db1" },
-                    beta: { name: "Beta", uri: "sls+https://user:pass@example.com/db2" },
-                },
-            });
-            host.mocks.ui.confirm.askSelectStringDialogue.mockImplementationOnce(
-                async (_message: string, selections: string[]) => selections.find((e) => e.startsWith("Beta -"))
-            );
-            (activateRemoteConfiguration as any).mockReturnValueOnce(false);
-
-            const handler = createFetchAllFlagHandler(host as any, log);
-            const result = await handler.handle();
-
-            expect(result).toBe(false);
-            expect(host.mocks.ui.confirm.confirmWithMessage).not.toHaveBeenCalled();
+            expect(host.mocks.ui.confirm.askSelectStringDialogue).not.toHaveBeenCalled();
+            expect(activateRemoteConfiguration).not.toHaveBeenCalled();
         });
     });
 

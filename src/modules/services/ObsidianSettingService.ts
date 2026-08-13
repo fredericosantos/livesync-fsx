@@ -9,6 +9,7 @@ import {
     type SettingServiceDependencies,
 } from "@vrtmrz/livesync-commonlib/compat/services/base/SettingService";
 import type { ObsidianServiceContext } from "@/modules/services/ObsidianServiceContext";
+import { keepOnlyTheActiveRemoteConfiguration } from "@/common/remoteConfiguration.ts";
 
 export function normaliseObsidianSettingsData(data: unknown): ObsidianLiveSyncSettings | undefined {
     if (typeof data !== "object" || data === null || Array.isArray(data)) return undefined;
@@ -44,6 +45,9 @@ export class ObsidianSettingService<T extends ObsidianServiceContext> extends Se
         return await this.context.liveSyncPlugin.saveData(data);
     }
     protected override async loadData(): Promise<ObsidianLiveSyncSettings | undefined> {
-        return normaliseObsidianSettingsData(await this.context.liveSyncPlugin.loadData());
+        const data = normaliseObsidianSettingsData(await this.context.liveSyncPlugin.loadData());
+        // Devices that accumulated duplicate server profiles before setup stopped
+        // creating them are repaired here rather than by asking their owner.
+        return data && keepOnlyTheActiveRemoteConfiguration(data);
     }
 }

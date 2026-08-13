@@ -8,6 +8,7 @@ import {
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { createNewVaultSettings } from "@vrtmrz/livesync-commonlib/settings";
 import { upsertRemoteConfigurationInPlace } from "@vrtmrz/livesync-commonlib/remote-configurations";
+import { keepOnlyTheActiveRemoteConfiguration, soleRemoteConfigurationId } from "@/common/remoteConfiguration.ts";
 import { isObjectDifferent } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import ScanQRCode from "./SetupWizard/dialogs/ScanQRCode.svelte";
 import UseSetupURI from "./SetupWizard/dialogs/UseSetupURI.svelte";
@@ -43,6 +44,22 @@ function copySettingsForRemoteProfileUpdate(settings: ObsidianLiveSyncSettings):
         ...settings,
         remoteConfigurations: { ...(settings.remoteConfigurations ?? {}) },
     };
+}
+
+/**
+ * Saves the server this setup configured, replacing the one already stored.
+ *
+ * `upsertRemoteConfigurationInPlace` allocates a new id when it is not given
+ * one, and keeps every profile it has seen before. Both calls here omitted it,
+ * so each run of setup added a server rather than changing one, and a vault
+ * reconfigured three times ended up offering a choice between three copies of
+ * the same server.
+ */
+function storeTheServer(settings: ObsidianLiveSyncSettings, activate: boolean): void {
+    upsertRemoteConfigurationInPlace(settings, "couchdb", {
+        id: soleRemoteConfigurationId(settings),
+        activate,
+    });
 }
 
 /**
@@ -120,7 +137,7 @@ export class SetupManager extends AbstractModule {
             ...e2eeConf,
             remoteType: REMOTE_COUCHDB,
         } as ObsidianLiveSyncSettings;
-        upsertRemoteConfigurationInPlace(newSetting, "couchdb", { activate: true });
+        storeTheServer(newSetting, true);
 
         const plan = planSetup(await this.observeRemote(newSetting), {
             fileCount: await this.countLocalFiles(),
@@ -253,7 +270,7 @@ export class SetupManager extends AbstractModule {
         if (activate) {
             newSetting.remoteType = REMOTE_COUCHDB;
         }
-        upsertRemoteConfigurationInPlace(newSetting, "couchdb", { activate });
+        storeTheServer(newSetting, activate);
         return await this.onConfirmApplySettingsFromWizard(newSetting, userMode, activate);
     }
 
@@ -327,6 +344,9 @@ export class SetupManager extends AbstractModule {
         activate: boolean = true,
         extra: () => void = () => {}
     ): Promise<boolean> {
+        // A link or QR code carries whatever the sending device had stored,
+        // which may include servers this vault has no business remembering.
+        newConf = keepOnlyTheActiveRemoteConfiguration(newConf);
         newConf = await this.services.setting.adjustSettings({
             ...this.settings,
             ...newConf,

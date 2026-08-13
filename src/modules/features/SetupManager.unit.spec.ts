@@ -245,7 +245,7 @@ describe("SetupManager", () => {
         expect(setting.currentSettings().isConfigured).toBe(false);
     });
 
-    it("preserves modern profiles, display names, and the active selection from a Setup URI", async () => {
+    it("keeps only the selected server from a Setup URI carrying several", async () => {
         const { manager, setting, dialogManager } = createSetupManager();
         const imported = {
             ...DEFAULT_SETTINGS,
@@ -271,13 +271,17 @@ describe("SetupManager", () => {
 
         await manager.onUseSetupURI(UserMode.Unknown, "mock-config://modern-settings");
 
+        // The sending device's other servers are not this vault's business: it
+        // syncs with one, and a stored copy of somebody else's second server is
+        // a duplicate waiting to be asked about.
         const current = setting.currentSettings();
-        expect(current.remoteConfigurations).toEqual(imported.remoteConfigurations);
+        expect(Object.keys(current.remoteConfigurations)).toEqual(["archive"]);
+        expect(current.remoteConfigurations.archive).toEqual(imported.remoteConfigurations.archive);
         expect(current.activeConfigurationId).toBe("archive");
         expect(Object.keys(current.remoteConfigurations).some((id) => id.startsWith("legacy-"))).toBe(false);
     });
 
-    it("adds and activates a manually configured CouchDB without replacing existing profiles", async () => {
+    it("replaces the stored server when CouchDB is configured again, rather than adding one", async () => {
         const { manager, setting, dialogManager } = createSetupManager();
         setting.settings = {
             ...setting.currentSettings(),
@@ -312,12 +316,15 @@ describe("SetupManager", () => {
 
         await manager.onCouchDBManualSetup(UserMode.ExistingUser, setting.currentSettings());
 
+        // Every run of setup used to allocate a fresh opaque id and keep the
+        // previous profile, so reconfiguring three times left three copies of
+        // one server and a dialogue asking which to fetch from. The id in use
+        // is now reused, and its display name with it.
         const current = setting.currentSettings();
-        expect(current.remoteConfigurations.existing).toBeDefined();
-        expect(Object.keys(current.remoteConfigurations)).toHaveLength(2);
-        expect(current.activeConfigurationId).not.toBe("existing");
-        const activeProfile = current.remoteConfigurations[current.activeConfigurationId];
-        expect(activeProfile?.name).toBe("CouchDB couch.example");
+        expect(Object.keys(current.remoteConfigurations)).toEqual(["existing"]);
+        expect(current.activeConfigurationId).toBe("existing");
+        const activeProfile = current.remoteConfigurations.existing;
+        expect(activeProfile?.name).toBe("Existing remote");
         expect(activeProfile?.uri).toContain("sls+https://alice:secret@couch.example");
     });
 
