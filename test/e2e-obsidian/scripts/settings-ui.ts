@@ -59,7 +59,7 @@ async function verifyCompatibilityReview(): Promise<void> {
 
     await withObsidianPage(port, async (page) => {
         const markerBeforeAcknowledgement = await page.evaluate(() => {
-            const plugin = (globalThis as ObsidianTestGlobal).app?.plugins?.plugins["obsidian-livesync"];
+            const plugin = (globalThis as ObsidianTestGlobal).app?.plugins?.plugins["livesync-fsx"];
             if (plugin === undefined) throw new Error("Self-hosted LiveSync is unavailable");
             return plugin.core.services.setting.getSmallConfig("database-compatibility-version");
         });
@@ -154,7 +154,7 @@ async function verifyCompatibilityReview(): Promise<void> {
         await summary.waitFor({ state: "hidden", timeout: uiTimeoutMs });
         await page.waitForFunction(
             (expectedVersion) => {
-                const plugin = (globalThis as ObsidianTestGlobal).app?.plugins?.plugins["obsidian-livesync"];
+                const plugin = (globalThis as ObsidianTestGlobal).app?.plugins?.plugins["livesync-fsx"];
                 if (plugin === undefined) return false;
                 const setting = plugin.core.services.setting;
                 return (
@@ -200,7 +200,7 @@ async function verifyEffectiveSettings(): Promise<void> {
             const setting = (globalThis as ObsidianTestGlobal).app?.setting;
             if (setting === undefined) throw new Error("Obsidian settings are unavailable");
             setting.open();
-            setting.openTabById("obsidian-livesync");
+            setting.openTabById("livesync-fsx");
         });
 
         const liveSyncSettings = page.locator(".sls-setting");

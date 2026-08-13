@@ -123,7 +123,7 @@ export async function generateSetupURIFromDevice(
                         app?: { commands?: { executeCommandById(id: string): boolean } };
                     }
                 ).app?.commands?.executeCommandById(commandId) === true,
-            "obsidian-livesync:livesync-copysetupuri"
+            "livesync-fsx:livesync-copysetupuri"
         );
     });
     if (!opened) throw new Error("The command for generating a Setup URI was not registered.");
@@ -329,7 +329,7 @@ export async function readSetupState(cliBinary: string, environment: NodeJS.Proc
         cliBinary,
         [
             "(()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const settings=core.services.setting.currentSettings();",
             "return JSON.stringify({",
             "configured:settings.isConfigured===true,",

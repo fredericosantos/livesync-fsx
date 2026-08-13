@@ -15,7 +15,7 @@ export async function captureObsidianPage(
     filename: string,
     assertReady: (page: Page) => Promise<void>
 ): Promise<string> {
-    const outputDirectory = process.env.E2E_OBSIDIAN_DIAGNOSTICS_DIR ?? "/tmp/obsidian-livesync-e2e";
+    const outputDirectory = process.env.E2E_OBSIDIAN_DIAGNOSTICS_DIR ?? "/tmp/livesync-fsx-e2e";
     const screenshotPath = join(outputDirectory, filename);
     await mkdir(dirname(screenshotPath), { recursive: true });
 
@@ -47,7 +47,7 @@ export async function captureObsidianElement(
     filename: string,
     resolveElement: (page: Page) => Locator | Promise<Locator>
 ): Promise<string> {
-    const outputDirectory = process.env.E2E_OBSIDIAN_DIAGNOSTICS_DIR ?? "/tmp/obsidian-livesync-e2e";
+    const outputDirectory = process.env.E2E_OBSIDIAN_DIAGNOSTICS_DIR ?? "/tmp/livesync-fsx-e2e";
     const screenshotPath = join(outputDirectory, filename);
     await mkdir(dirname(screenshotPath), { recursive: true });
 

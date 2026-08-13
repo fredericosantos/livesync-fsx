@@ -8,7 +8,7 @@ import {
 
 export type { LaunchObsidianOptions, ObsidianProcess, ObsidianProcessOutput };
 
-const STALE_PROCESS_PATTERN = "obsidian-livesync-e2e-state";
+const STALE_PROCESS_PATTERN = "livesync-fsx-e2e-state";
 
 export async function cleanupStaleObsidianE2EProcesses(): Promise<void> {
     await cleanupStaleProcesses(STALE_PROCESS_PATTERN);

@@ -41,7 +41,7 @@ The maintained runner provides several complementary observation paths:
 - `evalObsidianJson()` and `obsidian-cli eval` can read a small, explicitly selected piece of LiveSync or Obsidian state.
 - `withObsidianPage()` can inspect the active renderer, invoke a registered command, or interact with visible UI through CDP. `captureObsidianPage()`, `captureObsidianDialogue()`, and `captureObsidianElement()` retain screenshots; the capture helpers also write a full-page `.failure.png` before rethrowing a UI assertion failure.
 - `session.app.output()` returns the standard output and standard error captured from the isolated Obsidian process. This is especially useful when the renderer or CLI becomes unreachable.
-- **Show log** (`obsidian-livesync:view-log`) exposes the recent LiveSync log, while **Copy full report to clipboard** (`obsidian-livesync:dump-debug-info`) opens the generated diagnostic report. `dialog-mounts.ts` verifies both surfaces, and focused scenarios may inspect the log pane and `appLifecycle.getUnresolvedMessages()` for a bounded set of expected errors.
+- **Show log** (`livesync-fsx:view-log`) exposes the recent LiveSync log, while **Copy full report to clipboard** (`livesync-fsx:dump-debug-info`) opens the generated diagnostic report. `dialog-mounts.ts` verifies both surfaces, and focused scenarios may inspect the log pane and `appLifecycle.getUnresolvedMessages()` for a bounded set of expected errors.
 - Renderer `console` messages and uncaught page errors are not retained automatically. A focused investigation can attach `page.on("console", ...)` and `page.on("pageerror", ...)` while it owns a `withObsidianPage()` callback. That observer ends when the callback closes its CDP connection, so use it around the action under investigation rather than treating it as a session-wide audit trail.
 
 If a scenario times out or appears to do nothing, capture the visible page before teardown, then record a bounded state snapshot and the relevant tail of the LiveSync log, unresolved messages, and process output. If an unexplained Notice appears, retain a screenshot while it is still visible before opening or dismissing it, then use the log or full report to identify its source. A Notice alone is not enough evidence for its cause.
@@ -91,7 +91,6 @@ npm run test:e2e:obsidian:runner
 npm run test:e2e:obsidian:install-appimage
 npm run test:e2e:obsidian:discover
 npm run test:e2e:obsidian:cli-help -- vaults verbose
-npm run test:e2e:obsidian:upgrade-from-stable -- --transport all
 npm run test:e2e:obsidian:local-suite
 npm run test:e2e:obsidian:local-suite:services
 ```
@@ -122,7 +121,7 @@ The same workflow checks the two remote-activity status boundaries. It first hol
 
 `test:e2e:obsidian:couchdb-manual-setup-workflow` follows the visible onboarding path for the first device when no Setup URI is available. It enters end-to-end encryption and CouchDB details, runs the read-only `Check server requirements` step, requires the prepared fixture to pass without applying a server fix, and lets the onboarding connection test create the named database. After Rebuild completes on the first device, it creates an ordinary note, asks that working device to generate a Setup URI for a second device, completes Fetch there, and verifies a bidirectional note round-trip. The workflow captures each decision point and the expanded server-check result; password controls remain visually masked.
 
-If this status workflow fails while Obsidian is running, it writes a full-page screenshot and a JSON snapshot of the status text and counters under `/tmp/obsidian-livesync-e2e`. The dialogue-mount workflow leaves desktop and mobile screenshots for both representative Svelte routes, the Hidden File Sync workflow captures the successfully displayed JSON Resolve dialogue before selecting an option, and the Security Seed reconnect workflow captures each significant application state. The suite therefore records representative evidence without capturing every interaction. Set `E2E_OBSIDIAN_DIAGNOSTICS_DIR` to use another directory.
+If this status workflow fails while Obsidian is running, it writes a full-page screenshot and a JSON snapshot of the status text and counters under `/tmp/livesync-fsx-e2e`. The dialogue-mount workflow leaves desktop and mobile screenshots for both representative Svelte routes, the Hidden File Sync workflow captures the successfully displayed JSON Resolve dialogue before selecting an option, and the Security Seed reconnect workflow captures each significant application state. The suite therefore records representative evidence without capturing every interaction. Set `E2E_OBSIDIAN_DIAGNOSTICS_DIR` to use another directory.
 
 The two-Vault workflow performs the missing-marker review once for each isolated Vault. Later process launches reuse the same profile-backed acknowledgement, rather than seeding a replacement or repeatedly applying a decision for the first device. The Hidden File Sync scenario is narrower: it starts from an explicitly acknowledged marker because it tests consumer-owned hidden-file behaviour, JSON resolution, target filtering, and grouped mobile Notices rather than duplicating the compatibility workflow. After `app.emulateMobile(true)`, its fixture operations use the active DevTools renderer because Obsidian can remove desktop-only CLI commands in mobile mode.
 
@@ -175,21 +174,7 @@ This proves in real Obsidian the plug-in behaviour shared by supported platforms
 
 `test:e2e:obsidian:setting-markdown-export` enables setting Markdown export, waits for the generated Markdown file in the vault, and verifies that credentials are omitted when `writeCredentialsForSettingSync=false`.
 
-`test:e2e:obsidian:upgrade-from-stable` is the release-acceptance upgrade workflow. It installs the exact published 0.25.83 artefacts into an isolated Vault, verifies their pinned SHA-256 values, and then replaces only the plug-in artefacts with the current target while retaining the same Vault and isolated Obsidian profile. The first run downloads the old release into the ignored `_testdata/releases` cache; every later run verifies the cached bytes before use.
-
-The workflow first exercises a non-empty legacy settings document which has no `isConfigured` or file-name case value. It verifies that 0.25.83 treats a default-equivalent document as unconfigured. That release can persist the inferred boolean during a later, unrelated settings-save event, so the runner accepts either an absent value or the inferred `false` on disk, then restores the same minimal pre-flag document deliberately before installing 1.0. The target independently proves its direct migration: the Vault remains unconfigured instead of receiving new-Vault recommendations, case-insensitive handling becomes explicit, no compatibility pause or acknowledgement marker is created while onboarding remains pending, and a second 1.0 start is idempotent. The absent marker is deliberately deferred rather than accepted; a later configured start must evaluate it. This fixture rewrite is limited to the missing-flag boundary; the configured transport upgrades use only state created and saved by 0.25.83 itself.
-
-For CouchDB and Object Storage, the workflow then configures 0.25.83 from its own defaults, saves the selected remote, and restarts that release with the same profile before creating history. This both verifies that the old settings persist and lets the old release initialise its replicator from the same saved state as an ordinary existing Vault. The runner waits for that release's asynchronously initialised persistent node identity, creates, edits, renames, and deletes notes, and synchronises each transition before installing the target. Every launch of the upgraded device uses the same isolated Obsidian profile. The session layer closes the renderer before its process-tree fallback, so Chromium persists the legacy compatibility marker naturally; the target must read and migrate that actual profile state to its current namespaced key. The final target restart likewise consumes the marker persisted by the preceding target session. The runner does not reconstruct that device's Vault data, plug-in settings, local database files, device-local state, or remote state. Before the target performs any synchronisation, it must retain the same Vault profile, local database, node identity, remote profile, local checkpoint, and remote milestone. The local node-info document is the identity source of truth; a transient replicator field is used only to confirm that the old asynchronous initialisation has completed. Its first synchronisation must be a no-op: CouchDB document revisions and `update_seq` must remain unchanged, while Object Storage must neither upload nor download journal bodies. The upgraded device then sends a new delta. A separate fresh 1.0 verifier starts from an explicit fixture containing settings and compatibility state for the current version, receives the complete surviving history, and returns another delta; it is not part of the migration assertion for legacy remote settings. The upgraded Vault receives that return journey and retains it across restart.
-
-Before creating stable-release history, the runner waits until the remote Security Seed can be read and only then marks the remote as resolved. Completion of the old release's remote-creation method alone does not prove that this asynchronous fixture boundary is ready.
-
-Run the focused wrapper after source changes so that the target plug-in is rebuilt first:
-
-```bash
-npm run test:e2e:obsidian:focused -- upgrade-from-stable --transport all --manage-services
-```
-
-Use `--transport couchdb` or `--transport object-storage` for a focused rerun. `--manage-services` starts and stops the required local fixture or fixtures; add `--keep-services` only when they should remain available for inspection. Set `E2E_LIVESYNC_TARGET_ARTIFACT_ROOT` to validate another already-built target directory, or `E2E_LIVESYNC_SOURCE_ARTIFACT_ROOT` to use an explicit cache directory whose files still match the pinned release hashes.
+There was a release-acceptance workflow here, `test:e2e:obsidian:upgrade-from-stable`, which installed upstream's published 0.25.83 artefacts and upgraded them in place to the current build. This fork no longer tracks upstream, and nobody upgrades from upstream's releases to ours, so the scenario and its 1,900 lines of runner were removed rather than left to rot.
 
 This workflow is deliberately excluded from `local-suite`. It downloads a published historical artefact, reuses one profile across multiple application versions, and is an expensive release-acceptance gate rather than a routine current-version scenario. P2P is also excluded because cross-version P2P interoperability is a separate physical validation boundary.
 
@@ -235,7 +220,6 @@ Useful environment variables:
 - `E2E_OBSIDIAN_CLI_TIMEOUT_MS`: timeout for each `obsidian-cli` invocation.
 - `E2E_LIVESYNC_CLI_TIMEOUT_MS`: timeout for each official LiveSync CLI invocation in the CLI-to-Obsidian compatibility check; default is 60 seconds.
 - `LIVESYNC_CLI_COMMAND`: optional LiveSync CLI executable and prefix arguments used by the CLI-to-Obsidian compatibility check. The default is the locally built CLI.
-- `E2E_LIVESYNC_SOURCE_ARTIFACT_ROOT`: optional cache directory containing the exact pinned 0.25.83 plug-in artefacts. Cached files are always checksum-verified.
 - `E2E_LIVESYNC_TARGET_ARTIFACT_ROOT`: directory containing the built 1.0 target `main.js`, `manifest.json`, and `styles.css`; default is the repository root.
 - `E2E_OBSIDIAN_ARTIFACT_ROOT`: directory containing the plug-in artefact installed by a direct scenario invocation; default is the repository root.
 - `E2E_OBSIDIAN_ARTIFACT_REVISION`: exact source commit recorded by the Security Seed reconnect result when `E2E_OBSIDIAN_ARTIFACT_ROOT` is a downloaded artefact rather than a Git worktree.
@@ -244,7 +228,7 @@ Useful environment variables:
 - `E2E_OBSIDIAN_LOCAL_DB_TIMEOUT_MS`: timeout for waiting until a file appears in Self-hosted LiveSync's local database.
 - `E2E_OBSIDIAN_COUCHDB_TIMEOUT_MS`: timeout for waiting until CouchDB contains uploaded E2E documents.
 - `E2E_OBSIDIAN_REMOTE_ACTIVITY_TIMEOUT_MS`: timeout for an observed remote activity to enter or leave its status boundary; default is 30 seconds.
-- `E2E_OBSIDIAN_DIAGNOSTICS_DIR`: directory for screenshots and status snapshots, including the Security Seed reconnect stages; default is `/tmp/obsidian-livesync-e2e`.
+- `E2E_OBSIDIAN_DIAGNOSTICS_DIR`: directory for screenshots and status snapshots, including the Security Seed reconnect stages; default is `/tmp/livesync-fsx-e2e`.
 - `E2E_OBSIDIAN_OBJECT_STORAGE_TIMEOUT_MS`: timeout for waiting until Object Storage contains uploaded E2E objects.
 - `E2E_OBSIDIAN_KEEP_COUCHDB=true`: keep the temporary CouchDB database for inspection.
 - `E2E_OBSIDIAN_KEEP_OBJECT_STORAGE=true`: keep the temporary Object Storage prefix for inspection.

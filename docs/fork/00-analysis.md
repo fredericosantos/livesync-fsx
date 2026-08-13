@@ -5,6 +5,32 @@ Baseline: fork of `vrtmrz/obsidian-livesync` at `1.0.3` (`e9b2477b`), branch `fs
 Goal: CouchDB-only sync against a self-hosted server, with a settings surface a
 human can actually hold in their head.
 
+## Severed from upstream
+
+13th August 2026. The `upstream` remote has been removed and the repository
+renamed to `livesync-fsx`, matching the plug-in id. Nothing here shares a name
+with `vrtmrz/obsidian-livesync` any more.
+
+The reason was concrete: dev builds of this fork were repeatedly written into a
+real vault's `.obsidian/plugins/obsidian-livesync/` folder, overwriting the
+upstream plug-in installed there, because the folder name and the plug-in id were
+assumed to be the same thing. `scripts/install-local.sh` now derives the
+destination from `manifest.json` and refuses any folder holding a different
+plug-in; `test/e2e-obsidian/runner/pluginId.ts` does the same for the test
+harness, with `pluginId.test.ts` failing if the two ever part company.
+
+The cost, stated plainly so nobody is surprised by it later: upstream fixes to
+sync correctness and security no longer arrive. `e9b2477b` is the only reference
+point left. Re-adding the remote for a one-off `git fetch` remains possible:
+
+```
+git remote add upstream https://github.com/vrtmrz/obsidian-livesync.git
+```
+
+`livesync-commonlib` — which holds the sync engine — keeps its own upstream
+remote and its "track, do not diverge" policy. That is where sync correctness
+actually lives, and it played no part in the above.
+
 ## The key structural fact
 
 The sync engine is **not in this repo**. It is `@vrtmrz/livesync-commonlib@0.1.2`,

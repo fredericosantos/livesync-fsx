@@ -1,12 +1,13 @@
 {
-    "name": "obsidian-livesync",
-    "version": "1.0.3",
-    "description": "Reflect your vault changes to some other devices immediately. Please make sure to disable other synchronize solutions to avoid content corruption or duplication.",
+    "name": "livesync-fsx",
+    "version": "1.1.0",
+    "description": "CouchDB-only fork of Self-hosted LiveSync, for a single self-hosted server.",
     "main": "main.js",
     "type": "module",
     "scripts": {
         "dev": "node --env-file=.env esbuild.config.mjs",
         "build": "node esbuild.config.mjs production",
+        "install:local": "npm run build && scripts/install-local.sh",
         "buildVite": "npx dotenv-cli -e .env  -- vite build --mode production",
         "buildViteOriginal": "npx dotenv-cli -e .env  -- vite build --mode original",
         "buildDev": "node esbuild.config.mjs dev",
@@ -59,7 +60,6 @@
         "test:e2e:obsidian:hidden-file-snippet-sync": "tsx test/e2e-obsidian/scripts/hidden-file-snippet-sync.ts",
         "test:e2e:obsidian:customisation-sync": "tsx test/e2e-obsidian/scripts/customisation-sync.ts",
         "test:e2e:obsidian:setting-markdown-export": "tsx test/e2e-obsidian/scripts/setting-markdown-export.ts",
-        "test:e2e:obsidian:upgrade-from-stable": "tsx test/e2e-obsidian/scripts/upgrade-from-stable.ts",
         "test:e2e:obsidian:local-suite": "tsx test/e2e-obsidian/scripts/local-suite.ts",
         "test:e2e:obsidian:local-suite:services": "tsx test/e2e-obsidian/scripts/local-suite.ts --manage-services",
         "test:docker-couchdb:up": "npx dotenv-cli -e .env -e .test.env -- ./test/shell/couchdb-start.sh",
@@ -76,7 +76,7 @@
         "version": "node version-bump.mjs && node update-workspaces.mjs && npm run pretty:json && git add manifest.json versions.json src/apps/cli/package.json"
     },
     "keywords": [],
-    "author": "vorotamoroz",
+    "author": "fredericosantos",
     "license": "MIT",
     "devDependencies": {
         "@dword-design/eslint-plugin-import-alias": "^8.1.8",

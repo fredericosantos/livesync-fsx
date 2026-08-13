@@ -5,6 +5,6 @@
   "minAppVersion": "1.11.0",
   "description": "CouchDB-only fork of Self-hosted LiveSync. Installs alongside the original; only one of the two should be configured for a given vault.",
   "author": "fredericosantos",
-  "authorUrl": "https://github.com/fredericosantos/obsidian-livesync",
+  "authorUrl": "https://github.com/fredericosantos/livesync-fsx",
   "isDesktopOnly": false
 }

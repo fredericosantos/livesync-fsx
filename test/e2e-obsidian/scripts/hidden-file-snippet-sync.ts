@@ -143,7 +143,7 @@ async function scanHiddenStorage(cliBinary: string, env: NodeJS.ProcessEnv): Pro
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "await addOn.scanAllStorageChanges(true);",
             "return JSON.stringify({ok:true});",
@@ -158,7 +158,7 @@ async function scanHiddenDatabase(cliBinary: string, env: NodeJS.ProcessEnv): Pr
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "await addOn.scanAllDatabaseChanges(true);",
             "return JSON.stringify({ok:true});",
@@ -174,7 +174,7 @@ async function resolveHiddenConflicts(cliBinary: string, env: NodeJS.ProcessEnv)
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "await addOn.resolveConflictOnInternalFiles();",
             "await addOn.scanAllDatabaseChanges(true);",
@@ -193,7 +193,7 @@ async function autoMergeHiddenJsonConflict(cliBinary: string, env: NodeJS.Proces
             "(async()=>{",
             `const path=${JSON.stringify(path)};`,
             "const prefixedPath=`i:${path}`;",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "let doc=false;",
             "for await (const entry of core.localDatabase.findEntries('i:','i;',{conflicts:true})){",
@@ -235,7 +235,7 @@ async function openHiddenJsonResolveModal(cliBinary: string, env: NodeJS.Process
             "(async()=>{",
             `const path=${JSON.stringify(path)};`,
             "const prefixedPath=`i:${path}`;",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "let doc=false;",
             "for await (const entry of core.localDatabase.findEntries('i:','i;',{conflicts:true})){",
@@ -266,7 +266,7 @@ async function storeHiddenFileAsConflict(
             "(async()=>{",
             `const path=${JSON.stringify(path)};`,
             `const baseRev=${JSON.stringify(baseRev)};`,
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "const fileInfo=await addOn.loadFileWithInfo(path);",
             "if(fileInfo.deleted) throw new Error(`Hidden file was unexpectedly deleted: ${path}`);",
@@ -514,7 +514,7 @@ async function setHiddenFileNoticeFixtures(port: number, itemIds: string[], incl
         await page.evaluate(
             ({ nextItemIds, nextIncludeRestart }) => {
                 const obsidianApp = (globalThis as typeof globalThis & { app: any }).app;
-                const plugin = obsidianApp.plugins.plugins["obsidian-livesync"];
+                const plugin = obsidianApp.plugins.plugins["livesync-fsx"];
                 const core = plugin.core;
                 const addOn = core.getAddOn("HiddenFileSync");
                 for (const id of ["alpha", "beta", "gamma"]) {
@@ -549,7 +549,7 @@ async function clearHiddenFileNoticeFixtures(port: number): Promise<void> {
     await withObsidianPage(port, async (page) => {
         await page.evaluate(() => {
             const obsidianApp = (globalThis as typeof globalThis & { app: any }).app;
-            const plugin = obsidianApp.plugins.plugins["obsidian-livesync"];
+            const plugin = obsidianApp.plugins.plugins["livesync-fsx"];
             plugin.core.services.context.noticeGroups.hide("hidden-file-changes");
             for (const id of ["alpha", "beta", "gamma"]) {
                 const pluginId = `livesync-e2e-${id}`;
@@ -586,7 +586,7 @@ async function runInitialisationNoticeGrouping(context: RunnerContext, vault: Te
         await withObsidianPage(port, async (page) => {
             await page.evaluate((stateKey) => {
                 const obsidianApp = (globalThis as typeof globalThis & { app: any }).app;
-                const plugin = obsidianApp.plugins.plugins["obsidian-livesync"];
+                const plugin = obsidianApp.plugins.plugins["livesync-fsx"];
                 const core = plugin.core;
                 const addOn = core.getAddOn("HiddenFileSync");
                 const setting = core.services.setting;
@@ -817,7 +817,7 @@ async function runConfigurationNoticeGrouping(context: RunnerContext, vault: Tem
                 });
             }
 
-            const outputDirectory = process.env.E2E_OBSIDIAN_DIAGNOSTICS_DIR ?? "/tmp/obsidian-livesync-e2e";
+            const outputDirectory = process.env.E2E_OBSIDIAN_DIAGNOSTICS_DIR ?? "/tmp/livesync-fsx-e2e";
             const screenshotPath = join(outputDirectory, "hidden-file-notice-group-mobile.png");
             await mkdir(dirname(screenshotPath), { recursive: true });
             await page.screenshot({ path: screenshotPath, fullPage: true, animations: "disabled" });

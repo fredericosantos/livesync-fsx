@@ -442,7 +442,7 @@ async function readSetupState(cliBinary: string, environment: NodeJS.ProcessEnv)
         cliBinary,
         [
             "(()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const settings=core.services.setting.currentSettings();",
             "return JSON.stringify({",
             "configured:settings.isConfigured===true,",
@@ -492,7 +492,7 @@ async function enableHiddenFileSync(cliBinary: string, environment: NodeJS.Proce
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "await core.services.setting.applyPartial({",
             "syncInternalFiles:true,",
             "syncInternalFilesBeforeReplication:true,",
@@ -519,7 +519,7 @@ async function captureHiddenFileGuideSettings(
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "await core.services.setting.applyPartial({",
             "useAdvancedMode:true,",
             "syncInternalFilesTargetPatterns:'^\\\\.obsidian(?:$|/snippets(?:/|$))',",
@@ -544,7 +544,7 @@ async function captureHiddenFileGuideSettings(
             const setting = obsidian.app?.setting;
             if (!setting) throw new Error("Obsidian settings are unavailable");
             setting.open();
-            setting.openTabById("obsidian-livesync");
+            setting.openTabById("livesync-fsx");
         });
         const settings = page.locator(".sls-setting");
         await settings.waitFor({ state: "visible", timeout: uiTimeoutMs });
@@ -616,7 +616,7 @@ async function scanHiddenStorage(cliBinary: string, environment: NodeJS.ProcessE
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "await addOn.scanAllStorageChanges(true);",
             "return JSON.stringify({ok:true});",
@@ -632,7 +632,7 @@ async function scanHiddenDatabase(cliBinary: string, environment: NodeJS.Process
         cliBinary,
         [
             "(async()=>{",
-            "const core=app.plugins.plugins['obsidian-livesync'].core;",
+            "const core=app.plugins.plugins['livesync-fsx'].core;",
             "const addOn=core.getAddOn('HiddenFileSync');",
             "await addOn.scanAllDatabaseChanges(true);",
             "return JSON.stringify({ok:true});",
