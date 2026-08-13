@@ -13,7 +13,7 @@ import {
     EVENT_REQUEST_SHOW_SETUP_QR,
     eventHub,
 } from "@/common/events.ts";
-import { renderPluginSyncTable } from "./controls/PluginSyncTable.ts";
+import { renderConfigCategories } from "./controls/ConfigCategories.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import { yieldNextAnimationFrame } from "octagonal-wheels/promises";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
@@ -118,10 +118,11 @@ const server: Extra = (tab, el) => {
 
 // Where a button used to open Customisation Sync's pane — a grid of devices,
 // tri-state mode buttons, "Select All Shiny", "⚑ Select Flagged Shiny" and a
-// maintenance mode — there is now a list of the plug-ins installed here, each
-// with a checkbox. The pane existed because the model needed one: with a copy
-// stored per device, something had to let you choose between them.
-const pluginTable: Extra = (tab, el) => renderPluginSyncTable(tab, el);
+// maintenance mode — there are now five switches and a list of the plug-ins
+// installed here, each with a checkbox. The pane existed because the model
+// needed one: with a copy stored per device, something had to let you choose
+// between them.
+const configCategories: Extra = (tab, el) => renderConfigCategories(tab, el);
 
 const discard: Extra = (tab, el) => {
     new Setting(el)
@@ -152,6 +153,6 @@ const discard: Extra = (tab, el) => {
 export const SECTION_EXTRAS: Record<string, Extra> = {
     connect,
     server,
-    "plugin-table": pluginTable,
+    "config-categories": configCategories,
     discard,
 };

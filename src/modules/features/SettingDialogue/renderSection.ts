@@ -29,17 +29,9 @@ const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
         name: "Sync app settings and plugins",
         desc: "Choose what travels below. Window layout always stays on the device it belongs to.",
     },
-    // The eight category rows carry no descriptions. Obsidian's own Sync labels
-    // them and stops, because "Hotkeys" needs no gloss — and a paragraph under
-    // each of eight adjacent switches is how a short list becomes a wall.
-    syncConfigApp: { name: "App settings" },
-    syncConfigAppearance: { name: "Appearance" },
-    syncConfigThemesAndSnippets: { name: "Themes and snippets" },
-    syncConfigHotkeys: { name: "Hotkeys" },
-    syncConfigCorePluginList: { name: "Active core plugins" },
-    syncConfigCorePluginSettings: { name: "Core plugin settings" },
-    syncConfigCommunityPluginList: { name: "Active community plugins" },
-    syncConfigCommunityPluginSettings: { name: "Community plugins and their settings" },
+    // The eight category settings are no longer rendered one-to-one; five rows
+    // cover them, and their names live with the grouping that produces them in
+    // `controls/ConfigCategories.ts`.
     encrypt: {
         name: "Encrypt this vault",
         desc: "Every device must use the same passphrase, or they cannot read each other's notes.",

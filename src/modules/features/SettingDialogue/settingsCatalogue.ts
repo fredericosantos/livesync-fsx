@@ -90,17 +90,10 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
         title: "App settings and plugins",
         requires: "configured",
         shownWhen: { key: "syncInternalFiles", is: true },
-        keys: [
-            "syncConfigApp",
-            "syncConfigAppearance",
-            "syncConfigThemesAndSnippets",
-            "syncConfigHotkeys",
-            "syncConfigCorePluginList",
-            "syncConfigCorePluginSettings",
-            "syncConfigCommunityPluginList",
-            "syncConfigCommunityPluginSettings",
-        ],
-        extra: "plugin-table",
+        // The eight category settings are rendered as five rows; see
+        // `controls/ConfigCategories.ts` for why the pairs are not separable.
+        keys: [],
+        extra: "config-categories",
     },
     {
         // The one heading that carries information rather than repeating it:
