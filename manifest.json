@@ -1,7 +1,7 @@
 {
   "id": "livesync-fsx",
   "name": "LiveSync (fsx fork)",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "minAppVersion": "1.11.0",
   "description": "CouchDB-only fork of Self-hosted LiveSync. Installs alongside the original; only one of the two should be configured for a given vault.",
   "author": "fredericosantos",
