@@ -14,6 +14,7 @@ import {
     eventHub,
 } from "@/common/events.ts";
 import { renderConfigCategories } from "./controls/ConfigCategories.ts";
+import { renderFileSizeLimit } from "./controls/FileSizeLimit.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import { yieldNextAnimationFrame } from "octagonal-wheels/promises";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
@@ -154,5 +155,6 @@ export const SECTION_EXTRAS: Record<string, Extra> = {
     connect,
     server,
     "config-categories": configCategories,
+    "file-size-limit": (tab, el) => renderFileSizeLimit(tab, el),
     discard,
 };

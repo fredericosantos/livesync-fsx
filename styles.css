@@ -990,6 +990,47 @@ body.is-mobile .livesync-compatibility-review-notice {
     color: var(--text-muted);
 }
 
+/*
+ * A row of sizes, one of which is chosen.
+ *
+ * Chips rather than a dropdown because the whole set is six words long: a
+ * dropdown would hide five of them behind a click to save a line of space, and
+ * the point of offering sizes at all is that you can see which one you are near.
+ * The selected chip takes the accent colour, which is the only thing on the
+ * settings page that does.
+ */
+.lsfsx-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em;
+    margin: 0 0 0.9em;
+}
+
+.lsfsx-chip-button {
+    padding: 0.3em 0.8em;
+    border-radius: 999px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: var(--font-ui-smaller);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.lsfsx-chip-button:hover {
+    background: var(--background-modifier-hover);
+}
+
+.lsfsx-chip-button.is-selected {
+    background: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+.lsfsx-chip-button.is-selected:hover {
+    background: var(--interactive-accent-hover);
+}
+
 /* The "All plugins" row is a setting inside the frame, and heads the list. */
 .lsfsx-plugins > .setting-item {
     border-top: 1px solid var(--background-modifier-border);

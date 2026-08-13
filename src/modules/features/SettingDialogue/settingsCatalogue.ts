@@ -107,10 +107,12 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
         id: "server-storage",
         title: "Server storage",
         requires: "configured",
-        // Was a start-up popup — "We can set a maximum database capacity
-        // warning... Do you want to enable this?" — leading to a dialogue of
-        // four sizes. It is a preference, so it lives where preferences live.
-        keys: ["notifyThresholdOfRemoteStorageSize"],
+        // The remote-capacity warning used to be here, and before that a
+        // start-up popup offering four sizes. It has been set to never warn
+        // since the popup went, and a switch nobody has turned on in the
+        // meantime is a switch that can go.
+        keys: [],
+        extra: "file-size-limit",
     },
     {
         // One way to exclude a file, not three. There used to be, in addition
