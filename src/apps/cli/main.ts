@@ -39,7 +39,7 @@ function printHelp(standardIo: StandardIo): void {
     writeStdoutLine(
         standardIo,
         `
-Self-hosted LiveSync CLI
+LiveSync CLI
 
 Usage:
   livesync-cli <database-path> [options] <command> [command-args]
@@ -372,7 +372,7 @@ export async function main(
         process.exit(1);
     }
 
-    infoLog(`Self-hosted LiveSync CLI`);
+    infoLog(`LiveSync CLI`);
     infoLog(`Database Path: ${databasePath}`);
     infoLog(`Vault Path:    ${vaultPath}`);
     infoLog(`Settings: ${settingsPath}`);

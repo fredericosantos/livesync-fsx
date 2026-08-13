@@ -1,88 +1,160 @@
 /**
  * What earns a toast.
  *
- * A clean start-up on a phone produced six of them, one after another:
- * "Checking for incomplete documents…", "No size mismatches found", a
- * cancelled replication pointing at a Change Log this fork does not have,
- * "Done. Your files will arrive as they are downloaded.", "Database and storage
- * reflection has been resumed!", "Initialize done!" — and then a modal on top.
- * Nothing had gone wrong. The plug-in was narrating its own start-up.
+ * A clean start-up produced six of them in a row, and nothing had gone wrong.
+ * There are 277 `LOG_LEVEL_NOTICE` call sites across this plug-in and the sync
+ * engine — 220 distinct messages — and each was written by someone who thought
+ * their own step was worth announcing. They are individually defensible and
+ * collectively unusable.
  *
- * The cause is structural rather than careless: there are nearly four hundred
- * `LOG_LEVEL_NOTICE` calls across the plug-in and the sync engine, and each was
- * written by someone who thought their own step was worth announcing. They are
- * each defensible and collectively unusable.
+ * This began as a list of messages to suppress, which is the wrong shape: every
+ * upstream release adds new ones, so the quiet has to be re-earned each time.
+ * The rule is now the other way round.
  *
- * The rule applied here:
+ *   A notice interrupts only if it reports something wrong, or the end of
+ *   something the reader started. Everything else goes to the log.
  *
- *   A notice is for something the reader must know or must act on. Anything
- *   that reports the plug-in doing its job belongs in the log.
+ * Nothing is discarded: "Show log" still shows every line, and the file log
+ * still records them.
  *
- * This is a boundary rather than a rewrite of every call site because most of
- * those call sites are in `livesync-commonlib`, which still tracks upstream.
- * Silencing them there would be a merge conflict on every release; deciding
- * here costs nothing and keeps the log complete — nothing is discarded, and
- * "Show log" still shows all of it.
+ * The failure half is matched by pattern rather than enumerated, deliberately.
+ * An unknown failure must never be silent, so the default for anything that
+ * reads like a fault is to interrupt — including faults added upstream that
+ * this fork has never seen. The success half is enumerated, because a success
+ * nobody listed is by definition not one the reader was waiting for.
  */
 
 /**
- * Messages that report progress or completion of work nobody asked about.
+ * Messages this fork has replaced with a surface of its own.
  *
- * Matched whole, not by fragment. A fragment would be more robust against
- * upstream rewording, and that is exactly the wrong trade: `includes("Checking
- * for incomplete documents")` would also swallow "Checking for incomplete
- * documents failed: the database is unreadable". Whole messages fail in the
- * safe direction — reworded upstream text starts appearing again, which is
- * noise, rather than disappearing, which is a hidden fault.
+ * Checked before anything else, because each of these reads like a fault and
+ * would otherwise interrupt twice — once as the engine's wording, once as the
+ * dialogue that already says it better.
  */
-const INTERNAL_PROGRESS: ReadonlySet<string> = new Set([
-    // The start-up scan announcing that it is looking, then that it found
-    // nothing: two interruptions for a non-event.
-    "Checking for incomplete documents...",
-    "No size mismatches found",
-
-    // Initialisation and rebuild milestones. The reader started these from a
-    // dialogue that already said what would happen, and the vault visibly
-    // fills when they finish.
-    "Initialize done!",
-    "Database and storage reflection has been resumed!",
-
-    // Steps within a fetch or rebuild. The reader started one operation from a
-    // dialogue that told them what it would do; these are its internals
-    // reporting to themselves. "Local Database Reset" in particular reads as
-    // something alarming having happened, when it is a fetch clearing the
-    // local copy before filling it.
-    "Initializing",
-    "Local Database Reset",
-    "Suspending reflection: Database and storage changes will not be reflected in each other until completely finished the fetching.",
-
-    // The compatibility pause's own side effect. This fork presents the pause
-    // in a dialogue it owns; the sync engine additionally logs upstream's
-    // wording for the same thing, which names a Change Log that does not exist
-    // here and reads as a second, unrelated failure.
+const REPLACED_BY_OUR_OWN_UI: ReadonlySet<string> = new Set([
+    // The compatibility pause. This fork presents it as a dialogue with named
+    // reasons; upstream's line for it names a Change Log that does not exist
+    // here, and reads as an unrelated second failure.
     "An update has been detected. Please open the Settings dialogue and check the Change Log. Replication has been cancelled.",
 ]);
 
 /**
- * The same, for messages that carry a number.
+ * Warnings with no failure vocabulary in them.
  *
- * A prefix cannot be matched loosely for the reason given above, so each of
- * these is a complete clause that only a success can begin — a failure in the
- * same operation is worded as a failure from its first word, and still shows.
+ * Both of these are about someone else's device, and neither says anything that
+ * looks like an error, so the pattern below cannot catch them.
  */
-const INTERNAL_PROGRESS_PREFIXES: readonly string[] = [
-    "Resuming fast database fetch from sequence:",
-    "Fast database fetch completed.",
-];
+const ALWAYS_INTERRUPT = [
+    "Another device is using a newer version of the plug-in.",
+    "The remote database has no compatibility with the running version.",
+] as const;
+
+/**
+ * How a failure is recognised.
+ *
+ * Every one of these appears in real messages from the engine: "Could not
+ * connect to the remote database", "Failed to decrypt configuration item",
+ * "Refusing to overwrite ...", "File ... seems to be corrupted!". Matching the
+ * vocabulary rather than the message means a new failure is loud on the day it
+ * is written.
+ */
+const FAILURE_VOCABULARY = [
+    "could not",
+    "cannot",
+    "can not",
+    "failed",
+    "failure",
+    "error",
+    "unable",
+    "refusing",
+    "prevented",
+    "corrupted",
+    "not found",
+    "not available",
+    // "No active replicator found when trying to reset remote database."
+    "no active",
+    // "DELETE DATABASE did not delete …"
+    "did not",
+    // "… explicit unlocking or chunk clean-up is required."
+    "is required",
+    // "File … seems to be corrupted!"
+    "seems to be",
+    // "No passphrase found for data.json! Verify configuration before syncing."
+    "verify",
+    // Upstream's spelling of "Could not", in "STORAGE <- DB : Cloud not read …".
+    "cloud not",
+    "not matched",
+    "not ready",
+    "missing",
+    "denied",
+    "invalid",
+    "exceed",
+    "too large",
+    "went wrong",
+    "no longer",
+    "unsynchronised",
+    "conflict",
+    "warning",
+    "offline",
+    "skipped",
+    "problem",
+    "must ",
+    "please ",
+] as const;
+
+/**
+ * Successes worth interrupting for: each one ends an operation the reader
+ * started by hand and then waited for.
+ *
+ * Matched as prefixes, because several carry a count. A prefix here is a whole
+ * clause that only a success can begin.
+ */
+const ANSWERED_A_QUESTION = [
+    // Setup and recovery, all begun from a dialogue or the command palette.
+    "Done. Your files will arrive as they are downloaded.",
+    "Done. The server now holds this vault.",
+    "Connection settings saved.",
+    "Recovery finished.",
+    "Synchronisation paused.",
+    "Synchronisation resumed.",
+    "Repairing synchronisation.",
+    "Setup URI copied to clipboard",
+    "Copied to the clipboard.",
+
+    // Conflict resolution, which the reader triggers and watches.
+    "Conflicts resolved.",
+    "There are no conflicted documents",
+    "Resolving conflicts by keeping the newer file.",
+
+    // Long transfers. These update one notice in place rather than stacking,
+    // so they are feedback on a wait the reader is already enduring.
+    "Fast fetch progress:",
+    "↑ Uploading chunks",
+    "Processing:",
+    "Check and Processing",
+
+    // Repairs that changed the vault. Silence here would hide a real edit.
+    "Repaired ",
+
+    // Restart, which is about to take the window away.
+    "Obsidian will be restarted soon!",
+    "Everything is suspended:",
+] as const;
 
 /**
  * Whether a notice-level message should actually interrupt the reader.
  *
- * Every entry in the set above describes success, so no failure can be
- * suppressed by it: a failure is a different message.
+ * Failure first: a message that reads like a fault always shows, even if it
+ * also matches a success prefix.
  */
 export function deservesNotice(message: string): boolean {
     const trimmed = message.trim();
-    if (INTERNAL_PROGRESS.has(trimmed)) return false;
-    return !INTERNAL_PROGRESS_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
+    if (trimmed === "") return false;
+    if (REPLACED_BY_OUR_OWN_UI.has(trimmed)) return false;
+    if (ALWAYS_INTERRUPT.some((prefix) => trimmed.startsWith(prefix))) return true;
+
+    const lowered = trimmed.toLowerCase();
+    if (FAILURE_VOCABULARY.some((word) => lowered.includes(word))) return true;
+
+    return ANSWERED_A_QUESTION.some((prefix) => trimmed.startsWith(prefix));
 }

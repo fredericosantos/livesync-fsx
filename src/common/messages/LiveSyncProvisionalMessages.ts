@@ -176,6 +176,8 @@ export const liveSyncProvisionalEnglishMessages = {
         "Scan every Vault file and live local-database revision for conflicts, missing chunks, and differences. Each result provides actions for the exact revision.",
     "Begin inspection": "Begin inspection",
     "Connection settings": "Connection settings",
+    "This vault is not syncing yet.": "This vault is not syncing yet.",
+    "Connecting it to your server takes about a minute.": "Connecting it to your server takes about a minute.",
     "Saved connections": "Saved connections",
 } as const;
 

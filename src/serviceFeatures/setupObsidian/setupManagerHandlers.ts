@@ -13,8 +13,11 @@ export async function openOnboarding(setupManager: SetupManager) {
 }
 
 export function showOnboardingInvitation(host: NecessaryServices<"UI", never>, setupManager: SetupManager): void {
-    const message = `${$msg("Welcome to Self-hosted LiveSync")} ${$msg(
-        "We will now guide you through a few questions to simplify the synchronisation setup."
+    // The first thing anyone reads after installing. It named upstream's
+    // plug-in, then promised "a few questions" — of which there are three, all
+    // about the server, so the sentence can simply say what happens next.
+    const message = `${$msg("This vault is not syncing yet.")} ${$msg(
+        "Connecting it to your server takes about a minute."
     )} {HERE}`;
     host.services.UI.confirm.askInPopup(
         "initial-onboarding",
