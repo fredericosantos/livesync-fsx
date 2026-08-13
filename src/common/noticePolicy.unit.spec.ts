@@ -10,8 +10,19 @@ describe("what earns a toast", () => {
         "An update has been detected. Please open the Settings dialogue and check the Change Log. Replication has been cancelled.",
         "Database and storage reflection has been resumed!",
         "Initialize done!",
+        "Initializing",
+        "Local Database Reset",
+        "Suspending reflection: Database and storage changes will not be reflected in each other until completely finished the fetching.",
+        "Resuming fast database fetch from sequence: 41220",
+        "Fast database fetch completed. Total documents in local database: 3184",
     ])("stays in the log: %s", (message) => {
         expect(deservesNotice(message)).toBe(false);
+    });
+
+    // A long download is worth watching; it updates one notice in place rather
+    // than stacking, so it is feedback, not spam.
+    it("still shows progress while a fetch is running", () => {
+        expect(deservesNotice("Fast fetch progress: 512 / 3184\nTotal bytes fetched: 41.2MB")).toBe(true);
     });
 
     // The line that has to survive: it is the answer to "did my fetch work?",

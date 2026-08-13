@@ -47,6 +47,15 @@ const INTERNAL_PROGRESS: ReadonlySet<string> = new Set([
     "Initialize done!",
     "Database and storage reflection has been resumed!",
 
+    // Steps within a fetch or rebuild. The reader started one operation from a
+    // dialogue that told them what it would do; these are its internals
+    // reporting to themselves. "Local Database Reset" in particular reads as
+    // something alarming having happened, when it is a fetch clearing the
+    // local copy before filling it.
+    "Initializing",
+    "Local Database Reset",
+    "Suspending reflection: Database and storage changes will not be reflected in each other until completely finished the fetching.",
+
     // The compatibility pause's own side effect. This fork presents the pause
     // in a dialogue it owns; the sync engine additionally logs upstream's
     // wording for the same thing, which names a Change Log that does not exist
@@ -55,11 +64,25 @@ const INTERNAL_PROGRESS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * The same, for messages that carry a number.
+ *
+ * A prefix cannot be matched loosely for the reason given above, so each of
+ * these is a complete clause that only a success can begin — a failure in the
+ * same operation is worded as a failure from its first word, and still shows.
+ */
+const INTERNAL_PROGRESS_PREFIXES: readonly string[] = [
+    "Resuming fast database fetch from sequence:",
+    "Fast database fetch completed.",
+];
+
+/**
  * Whether a notice-level message should actually interrupt the reader.
  *
  * Every entry in the set above describes success, so no failure can be
  * suppressed by it: a failure is a different message.
  */
 export function deservesNotice(message: string): boolean {
-    return !INTERNAL_PROGRESS.has(message.trim());
+    const trimmed = message.trim();
+    if (INTERNAL_PROGRESS.has(trimmed)) return false;
+    return !INTERNAL_PROGRESS_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
 }
