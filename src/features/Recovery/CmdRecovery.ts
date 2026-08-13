@@ -21,8 +21,13 @@ export class CmdRecovery extends LiveSyncCommands {
     }
 
     onload(): void {
+        // Obsidian already namespaces a command as `<plugin id>:<id>`, so the
+        // prefix these three carried made them `livesync-fsx:livesync-fsx-…`.
+        // The older commands here keep their inherited `livesync-` ids: those
+        // are not the plug-in's id, nothing is duplicated by them, and an id is
+        // what a configured hotkey is bound to.
         this.plugin.addCommand({
-            id: "livesync-fsx-rebuild-remote",
+            id: "rebuild-remote",
             name: "Repair sync: replace files on server",
             callback: () => {
                 void this.confirmAndRebuild(
@@ -34,7 +39,7 @@ export class CmdRecovery extends LiveSyncCommands {
         });
 
         this.plugin.addCommand({
-            id: "livesync-fsx-fetch-local",
+            id: "fetch-local",
             name: "Repair sync: replace files on this device",
             callback: () => {
                 void this.confirmAndRebuild(
@@ -53,7 +58,7 @@ export class CmdRecovery extends LiveSyncCommands {
         // clear. A reader who paused and reopened Obsidian could not tell which
         // of the two they had used, or why it had come back on.
         this.plugin.addCommand({
-            id: "livesync-fsx-resume",
+            id: "resume",
             name: "Pause or resume synchronisation",
             callback: () => {
                 void (this.isPaused() ? this.resume() : this.pause());

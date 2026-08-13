@@ -97,6 +97,17 @@ export default defineConfig([
         },
     },
     {
+        files: ["**/*.spec.ts", "**/*.test.ts"],
+        rules: {
+            // Obsidian's DOM helpers (`createDiv` and friends) are extensions
+            // Obsidian installs on its own document. A test running in jsdom
+            // does not have them, so preferring them here is advice that cannot
+            // be taken.
+            "obsidianmd/prefer-create-el": "off",
+            "obsidianmd/prefer-active-doc": "off",
+        },
+    },
+    {
         files: ["src/apps/**/*.ts"],
         rules: {
             // Platform adapters implement asynchronous contracts even when a local operation is synchronous.

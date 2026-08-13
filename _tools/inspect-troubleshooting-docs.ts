@@ -1,3 +1,5 @@
+import { allMessages } from "../src/common/messages/combinedMessages.prod.ts";
+
 const fsPromises = process.getBuiltinModule("node:fs/promises");
 const path = process.getBuiltinModule("node:path");
 const url = process.getBuiltinModule("node:url");
@@ -72,9 +74,12 @@ export async function inspectTroubleshootingDocs(
     }
 
     const troubleshooting = documents.get("docs/troubleshooting.md")!;
-    const { allMessages } = await import(path.resolve(repositoryRoot, messageCataloguePath));
+    // Imported statically. It was a dynamic `import()` of a path assembled at
+    // run time, which is both flagged as unsanitised and untyped — the
+    // catalogue is one fixed module in this repository, so there was never
+    // anything to resolve.
     const catalogue = Object.fromEntries(
-        Object.entries(allMessages as Record<string, Record<string, string>>).map(([key, value]) => [key, value.def])
+        Object.entries(allMessages).map(([key, value]) => [key, value.def])
     ) as Record<string, string>;
     const requiredMessageKeys = [
         "TweakMismatchResolve.Action.UseConfigured",

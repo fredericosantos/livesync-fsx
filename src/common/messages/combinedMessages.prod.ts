@@ -1,5 +1,11 @@
 // Generated from the English catalogue. This fork ships English only; see docs/fork/01-design-principles.md.
-const englishMessages: Readonly<Record<string, string>> = {
+// `satisfies`, not an annotation. Annotating this as `Record<string, string>`
+// widened its keys to `string`, so `MessageKeys` below was `string`, so every
+// union built on it collapsed to `string` too — and `$msg("anything at all")`
+// type-checked. The catalogue exists to make a mistyped message key a
+// compile error; for as long as this said `:` instead of `satisfies`, it could
+// not do that. `satisfies` still checks that every value is a string.
+const englishMessages = {
     ", please select the option that best describes the current state of your Vault. The application will then check your files in the most appropriate way based on your selection.": ", please select the option that best describes the current state of your Vault. The application will then check your files in the most appropriate way based on your selection.",
     "(Active)": "(Active)",
     "(BETA) Always overwrite with a newer file": "(BETA) Always overwrite with a newer file",
@@ -1451,7 +1457,7 @@ const englishMessages: Readonly<Record<string, string>> = {
     "You can configure in the Obsidian Plugin Settings.": "You can configure in the Obsidian Plugin Settings.",
     "You should create a new synchronisation destination and rebuild your data there.": "You should create a new synchronisation destination and rebuild your data there.",
     "You should perform this operation only in exceptional circumstances, such as when the server data is completely corrupted, when changes on all other devices are no longer needed, or when the database size has become unusually large in comparison to the Vault size.": "You should perform this operation only in exceptional circumstances, such as when the server data is completely corrupted, when changes on all other devices are no longer needed, or when the database size has become unusually large in comparison to the Vault size.",
-};
+} satisfies Readonly<Record<string, string>>;
 
 export type MessageKeys = keyof typeof englishMessages;
 

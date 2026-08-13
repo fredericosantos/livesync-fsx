@@ -7,6 +7,31 @@
  * remove it from this map in the same change.
  */
 export const liveSyncProvisionalEnglishMessages = {
+    // The setup wizard's own words, rewritten in this fork. They reached the
+    // screen through `$msg` without ever being catalogued: the key type had
+    // been widened to `string`, so any text at all type-checked, and the
+    // translator passes an unknown key through unchanged. They rendered
+    // correctly and were invisible to translation.
+    "Scan the QR code": "Scan the QR code",
+    "Paste the setup link": "Paste the setup link",
+    "Connect to your server": "Connect to your server",
+    Continue: "Continue",
+    Text: "Text",
+    "End-to-end encryption": "End-to-end encryption",
+    "Encrypt this vault": "Encrypt this vault",
+    "Your notes are encrypted on this device before they are sent. The server stores only the encrypted form.":
+        "Your notes are encrypted on this device before they are sent. The server stores only the encrypted form.",
+    "Every device must use exactly this passphrase, or they cannot read each other's notes.":
+        "Every device must use exactly this passphrase, or they cannot read each other's notes.",
+    "The passphrase is not checked until synchronisation starts. Entering the wrong one on a second device corrupts what is already on the server, and nothing can recover a forgotten passphrase.":
+        "The passphrase is not checked until synchronisation starts. Entering the wrong one on a second device corrupts what is already on the server, and nothing can recover a forgotten passphrase.",
+    "Replace files on this device": "Replace files on this device",
+    "The remote vault will overwrite this vault. Any changes made here that have not synced to the server are kept as a second copy of the file.":
+        "The remote vault will overwrite this vault. Any changes made here that have not synced to the server are kept as a second copy of the file.",
+    "Replace files on server": "Replace files on server",
+    "This vault will overwrite the remote vault. Any changes made on other devices that have not synced to this device will be lost.":
+        "This vault will overwrite the remote vault. Any changes made on other devices that have not synced to this device will be lost.",
+
     "This first setup has several short steps because it confirms encryption, the connection method, and which device provides the initial data. Once it is complete, additional devices can reuse a Setup URI.":
         "This first setup has several short steps because it confirms encryption, the connection method, and which device provides the initial data. Once it is complete, additional devices can reuse a Setup URI.",
     "Setup Complete: Preparing to Fetch from Another Device": "Setup Complete: Preparing to Fetch from Another Device",
