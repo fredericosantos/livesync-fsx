@@ -40,11 +40,11 @@ async function leaveSettings(tab: ObsidianLiveSyncSettingTab): Promise<void> {
 /**
  * Where this vault syncs: two values and the word between them.
  *
- * As one run of grey text, "notes on db.example.com" reads as a
- * sentence, and the two things in it that are actually *values* — the ones you
- * would check against another device, or read aloud to someone — are
- * indistinguishable from the preposition joining them. Setting each in a chip
- * says which parts are data.
+ * As one run of grey text, "notes on db.example.com" reads as a sentence, and
+ * the two things in it that are actually *values* — the ones you would check
+ * against another device, or read aloud to someone — are indistinguishable from
+ * the preposition joining them. Setting each in a chip says which parts are
+ * data.
  */
 function describeConnection(el: HTMLElement, uri: string, database: string): void {
     if (!uri) {
