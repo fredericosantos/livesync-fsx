@@ -57,18 +57,19 @@ export interface CompatibilityEvaluationInput {
 
 function databaseVersionReason(
     acknowledgedVersion: string | null,
-    currentVersion: number,
-    isNewVault: boolean
+    currentVersion: number
 ): DatabaseCompatibilityReason | undefined {
-    if (acknowledgedVersion === null || acknowledgedVersion === "") {
-        if (isNewVault) return undefined;
-        return {
-            source: "database-version",
-            state: "missing",
-            currentVersion,
-            resumable: true,
-        };
-    }
+    // No marker means this device has never recorded one — a phone that has
+    // just been set up, or a vault restored from a backup. There is nothing to
+    // compare against, so there is nothing a person could usefully review: the
+    // dialogue asked them to confirm a difference it could not name.
+    //
+    // It fired on every new device, which is exactly when the reader knows
+    // least and the words "Sync paused" are most alarming. The marker is
+    // recorded instead, and the comparison it enables starts from now. A
+    // genuine downgrade — a marker ahead of this build — is still caught below,
+    // and is still the one case nobody may resume past.
+    if (acknowledgedVersion === null || acknowledgedVersion === "") return undefined;
 
     const parsed = Number(acknowledgedVersion);
     if (!Number.isSafeInteger(parsed)) {
@@ -104,9 +105,8 @@ function databaseVersionReason(
  * The caller owns persistence, user interaction, and the actual replication gate.
  */
 export function evaluateCompatibilityPause(input: CompatibilityEvaluationInput): CompatibilityEvaluation {
-    const isNewVault = input.migrationState?.isNewVault === true;
     const reasons: CompatibilityPauseReason[] = [];
-    const databaseReason = databaseVersionReason(input.acknowledgedVersion, input.currentVersion, isNewVault);
+    const databaseReason = databaseVersionReason(input.acknowledgedVersion, input.currentVersion);
     if (databaseReason) reasons.push(databaseReason);
 
     if (input.migrationState?.requiresSyncReview === true) {
@@ -130,8 +130,7 @@ export function evaluateCompatibilityPause(input: CompatibilityEvaluationInput):
 
     if (reasons.length === 0) {
         return {
-            initialiseAcknowledgedVersion:
-                isNewVault && (input.acknowledgedVersion === null || input.acknowledgedVersion === ""),
+            initialiseAcknowledgedVersion: input.acknowledgedVersion === null || input.acknowledgedVersion === "",
         };
     }
 

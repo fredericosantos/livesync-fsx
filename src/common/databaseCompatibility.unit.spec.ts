@@ -68,16 +68,33 @@ describe("database compatibility evaluation", () => {
         });
     });
 
-    it("requires review when an existing Vault has no valid acknowledged version", () => {
-        for (const acknowledgedVersion of [null, "invalid"]) {
+    // A marker that is present but unreadable is a different thing from one
+    // that was never written: something wrote it, and this build cannot tell
+    // what it meant.
+    it("requires review when the acknowledged version cannot be read", () => {
+        const result = evaluateCompatibilityPause({
+            acknowledgedVersion: "invalid",
+            currentVersion: 12,
+            migrationState: migrationState(),
+            legacyReviewMessage: "",
+        });
+        expect(result.pause?.resumable).toBe(true);
+        expect(result.pause?.reasons[0]).toMatchObject({ source: "database-version" });
+    });
+
+    // No marker means no comparison is possible, so there is nothing to
+    // review. This paused every newly set-up device — a phone that had just
+    // fetched was told "Sync paused" before it had done anything.
+    it("records the version instead of pausing when no marker has ever been written", () => {
+        for (const acknowledgedVersion of [null, ""]) {
             const result = evaluateCompatibilityPause({
                 acknowledgedVersion,
                 currentVersion: 12,
                 migrationState: migrationState(),
                 legacyReviewMessage: "",
             });
-            expect(result.pause?.resumable).toBe(true);
-            expect(result.pause?.reasons[0]).toMatchObject({ source: "database-version" });
+            expect(result.pause).toBeUndefined();
+            expect(result.initialiseAcknowledgedVersion).toBe(true);
         }
     });
 

@@ -125,10 +125,12 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
             return Promise.resolve(true);
         }
 
+        // Announced to the log, not to the reader. This runs once per vault at
+        // start-up and almost always finds nothing, so "Checking for incomplete
+        // documents…" followed by "No size mismatches found" was two
+        // interruptions to report a non-event. The group below still opens when
+        // there is something to say.
         const noticeGroups = this.core.services.context.noticeGroups;
-        noticeGroups.setItem(INCOMPLETE_DOCUMENT_NOTICE_GROUP, "checking", {
-            message: "Checking for incomplete documents...",
-        });
         this._log("Checking for incomplete documents...", LOG_LEVEL_VERBOSE);
 
         try {
@@ -190,9 +192,6 @@ export class ModuleMigration extends AbstractModule<LiveSyncCore> {
             }
             if (errorFiles.length == 0) {
                 Logger("No size mismatches found", LOG_LEVEL_INFO);
-                noticeGroups.setItem(INCOMPLETE_DOCUMENT_NOTICE_GROUP, "result", {
-                    message: "No size mismatches found",
-                });
                 await this.core.kvDB.set("checkIncompleteDocs", true);
                 return Promise.resolve(true);
             }

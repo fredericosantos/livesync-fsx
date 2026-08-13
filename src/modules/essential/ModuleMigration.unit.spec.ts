@@ -52,18 +52,16 @@ function createMigration(findAllNormalDocs: typeof noDocuments | typeof failedDo
 }
 
 describe("ModuleMigration incomplete-document notice", () => {
-    it("keeps the check and its result in one persistent named group", async () => {
+    // This check runs once per vault at start-up and almost always finds
+    // nothing. It used to say so twice — "Checking for incomplete documents…",
+    // then "No size mismatches found" — two interruptions reporting that
+    // nothing happened.
+    it("says nothing at all when the scan finds nothing", async () => {
         const { migration, noticeGroups } = createMigration();
 
         await expect(migration.hasIncompleteDocs()).resolves.toBe(true);
 
-        expect(noticeGroups.setItem).toHaveBeenNthCalledWith(1, "startup-integrity-check", "checking", {
-            message: "Checking for incomplete documents...",
-        });
-        expect(noticeGroups.setItem).toHaveBeenNthCalledWith(2, "startup-integrity-check", "result", {
-            message: "No size mismatches found",
-        });
-        expect(noticeGroups.finish).toHaveBeenCalledWith("startup-integrity-check");
+        expect(noticeGroups.setItem).not.toHaveBeenCalled();
     });
 
     it("finishes the group with a failure result when the scan throws", async () => {

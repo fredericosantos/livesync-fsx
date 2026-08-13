@@ -90,28 +90,19 @@ describe("compatibility review controller", () => {
         expect(fixture.saveSettingData).not.toHaveBeenCalled();
     });
 
-    it("defers a missing database marker while the Vault remains unconfigured", async () => {
-        const fixture = createFixture({ marker: null, isConfigured: false });
+    // The device this was reported from: a phone set up that afternoon, which
+    // fetched the vault and was then told "Sync paused" over the top of five
+    // other notices. There was no incompatibility — only the absence of a
+    // marker it had never had the chance to write.
+    it("records the marker and keeps syncing on a device that has never written one", async () => {
+        const fixture = createFixture({ marker: null, isConfigured: true });
 
         await expect(fixture.controller.initialise()).resolves.toBe(true);
 
         expect(fixture.controller.pendingPause).toBeUndefined();
         expect(fixture.settings.versionUpFlash).toBe("");
-        expect(fixture.local.has(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe(false);
-        expect(fixture.saveSettingData).not.toHaveBeenCalled();
-
-        fixture.settings.isConfigured = true;
-        await expect(fixture.controller.initialise()).resolves.toBe(true);
-
-        expect(fixture.controller.pendingPause?.reasons).toContainEqual({
-            source: "database-version",
-            state: "missing",
-            currentVersion: 12,
-            resumable: true,
-        });
-        expect(fixture.settings.versionUpFlash).toBe(COMPATIBILITY_PAUSE_SETTING_MESSAGE);
-        expect(fixture.local.has(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe(false);
-        expect(fixture.saveSettingData).toHaveBeenCalledOnce();
+        expect(fixture.local.get(DATABASE_COMPATIBILITY_VERSION_KEY)).toBe("12");
+        expect(fixture.ui.showSummary).not.toHaveBeenCalled();
     });
 
     it("preserves preferences and advances the marker only after an upgrade review is resumed", async () => {

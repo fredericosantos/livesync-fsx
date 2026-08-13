@@ -12,6 +12,7 @@ import { fireAndForget, isDirty, throttle } from "@vrtmrz/livesync-commonlib/com
 import { AbstractObsidianModule } from "@/modules/AbstractObsidianModule.ts";
 import { debounce, normalizePath, Notice, setIcon, stringifyYaml, type WorkspaceLeaf } from "@/deps.ts";
 import { LOG_LEVEL_NOTICE, setGlobalLogFunction } from "octagonal-wheels/common/logger";
+import { deservesNotice } from "@/common/noticePolicy.ts";
 import { LogPaneView, VIEW_TYPE_LOG } from "./Log/LogPaneView.ts";
 import { serialized } from "octagonal-wheels/concurrency/lock";
 import { P2PLogCollector } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/P2PLogCollector";
@@ -307,7 +308,7 @@ ${stringifyYaml(info)}
         }
         this.logLines.push({ ttl: now.getTime() + 3000, message: newMessage });
 
-        if (level >= LOG_LEVEL_NOTICE) {
+        if (level >= LOG_LEVEL_NOTICE && deservesNotice(messageContent)) {
             if (!key) key = messageContent;
             if (key in this.notifies) {
                 // @ts-ignore

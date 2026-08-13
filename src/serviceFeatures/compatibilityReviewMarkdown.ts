@@ -14,9 +14,11 @@ import type { CompatibilityPause, CompatibilityPauseReason } from "@/common/data
  * What was left after removing both was the only line that told anyone anything.
  */
 export function compatibilityReviewSummaryMarkdown(pause: CompatibilityPause): string {
+    // "Self-hosted LiveSync" is upstream's plug-in, not this one. A reader told
+    // to update it would go looking for something they do not have installed.
     return !pause.resumable
-        ? "This version is too old to read what is on the server. Update Self-hosted LiveSync to continue."
-        : "Update Self-hosted LiveSync on every device that uses this server, then resume.";
+        ? "This version is too old to read what is on the server. Update this plugin to continue."
+        : "Update this plugin on every device that uses this server, then resume.";
 }
 
 function reasonMarkdown(reason: CompatibilityPauseReason): string {
