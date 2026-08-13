@@ -7,16 +7,24 @@ import {
     type LOG_LEVEL,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { type LogEntry, logMessages } from "@vrtmrz/livesync-commonlib/compat/mock_and_interop/stores";
-import { cancelTask, scheduleTask } from "octagonal-wheels/concurrency/task";
+import { scheduleTask } from "octagonal-wheels/concurrency/task";
 import { fireAndForget, isDirty, throttle } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { AbstractObsidianModule } from "@/modules/AbstractObsidianModule.ts";
 import { debounce, normalizePath, Notice, setIcon, stringifyYaml, type WorkspaceLeaf } from "@/deps.ts";
 import { LOG_LEVEL_NOTICE, setGlobalLogFunction } from "octagonal-wheels/common/logger";
-import { deservesNotice } from "@/common/noticePolicy.ts";
+import { isProblem } from "@/common/noticePolicy.ts";
 import { LogPaneView, VIEW_TYPE_LOG } from "./Log/LogPaneView.ts";
 import { serialized } from "octagonal-wheels/concurrency/lock";
 import { P2PLogCollector } from "@vrtmrz/livesync-commonlib/compat/replication/trystero/P2PLogCollector";
-import { STATUS_ACTIVITY, STATUS_ATTENTION, presentStatus, type StatusLevel } from "./StatusPresentation.ts";
+import {
+    STATUS_OFFLINE,
+    STATUS_PROBLEM,
+    STATUS_SYNCED,
+    STATUS_SYNCING,
+    SYNCED_VISIBILITY_MS,
+    presentStatus,
+    type StatusLevel,
+} from "./StatusPresentation.ts";
 import { syncHold } from "@/common/syncHold.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
@@ -86,21 +94,35 @@ export class ModuleLog extends AbstractObsidianModule {
 
     statusBarLabels!: ReactiveValue<{ icon: string; message: string; level: StatusLevel; detail: string }>;
     statusLog = reactiveSource("");
-    notifies: { [key: string]: { notice: Notice; count: number } } = {};
+    /**
+     * The most recent thing that went wrong, or "" once it has been read.
+     *
+     * Held rather than shown. Most failures never stop replication — a file
+     * that could not be written, a chunk that could not be decrypted — so
+     * without this they would have no representation at all now that the toasts
+     * are gone.
+     */
+    lastProblem = reactiveSource("");
     p2pLogCollector = new P2PLogCollector(this.services.context.events);
 
     observeForLogs() {
         // Tracks how long the current burst of work has been in flight, so that
         // brief activity is never surfaced. See docs/fork/01-design-principles.md.
         let busySince: number | undefined;
+        // When the last burst of work ended, so the icon can show a green tick
+        // for a moment afterwards. Undefined until the first one finishes: a
+        // vault that has done nothing has nothing to confirm.
+        let syncedAt: number | undefined;
         const activeForMs = (busy: boolean): number => {
             if (!busy) {
+                if (busySince !== undefined) syncedAt = Date.now();
                 busySince = undefined;
                 return 0;
             }
             busySince ??= Date.now();
             return Date.now() - busySince;
         };
+        const sinceSyncedMs = (): number | undefined => (syncedAt === undefined ? undefined : Date.now() - syncedAt);
 
         const statusPresentation = computed(() => {
             const stats = this.services.replicator.replicationStatics.value;
@@ -123,7 +145,9 @@ export class ModuleLog extends AbstractObsidianModule {
                 conflicts: this.services.conflict.conflictProcessQueueCount.value,
                 restartRequired: this.services.appLifecycle.isReloadingScheduled(),
                 hold: syncHold.value,
+                problem: this.lastProblem.value || undefined,
                 activeForMs: activeForMs(busy),
+                sinceSyncedMs: sinceSyncedMs(),
             });
         });
 
@@ -165,12 +189,20 @@ export class ModuleLog extends AbstractObsidianModule {
                 if (icon) setIcon(this.statusBar, icon);
             }
             this.statusBar.toggleClass("livesync-status--hidden", icon === "");
-            this.statusBar.toggleClass("livesync-status--attention", level === STATUS_ATTENTION);
-            this.statusBar.toggleClass("livesync-status--activity", level === STATUS_ACTIVITY);
-            // The icon alone cannot say which of the stopped states it is, so
-            // the words go where a hover and a screen reader both find them.
+            this.statusBar.toggleClass("livesync-status--problem", level === STATUS_PROBLEM);
+            this.statusBar.toggleClass("livesync-status--syncing", level === STATUS_SYNCING);
+            this.statusBar.toggleClass("livesync-status--synced", level === STATUS_SYNCED);
+            this.statusBar.toggleClass("livesync-status--offline", level === STATUS_OFFLINE);
+            // The icon alone cannot say which of the states it is, so the words
+            // go where a hover and a screen reader both find them.
             const tooltip = [message, detail].filter((e) => e).join("\n");
             this.statusBar.ariaLabel = tooltip || null;
+
+            // The green tick expires on a timer rather than on an event, so
+            // something has to come back and clear it.
+            if (level === STATUS_SYNCED) {
+                scheduleTask("status-synced-expiry", SYNCED_VISIBILITY_MS, () => this.applyStatusBarText());
+            }
         });
 
         scheduleTask("log-hide", 3000, () => {
@@ -236,6 +268,14 @@ ${stringifyYaml(info)}
         if (statusBar) {
             statusBar.addClass("syncstatusbar");
             statusBar.addClass("livesync-status--hidden");
+            // The icon is now the only thing that reports a failure, so it has
+            // to lead somewhere. Pressing it opens the log — the full text of
+            // what went wrong, at the moment the reader chose to look — and
+            // clears the red, because it has now been read.
+            statusBar.addEventListener("click", () => {
+                this.lastProblem.value = "";
+                void this.services.API.showWindow(VIEW_TYPE_LOG);
+            });
             this.statusBar = statusBar;
         }
         this._log("Log module loaded", LOG_LEVEL_INFO);
@@ -308,40 +348,12 @@ ${stringifyYaml(info)}
         }
         this.logLines.push({ ttl: now.getTime() + 3000, message: newMessage });
 
-        if (level >= LOG_LEVEL_NOTICE && deservesNotice(messageContent)) {
-            if (!key) key = messageContent;
-            if (key in this.notifies) {
-                // @ts-ignore
-                const isShown = this.notifies[key].notice.noticeEl?.isShown();
-                if (!isShown) {
-                    this.notifies[key].notice = new Notice(messageContent, 0);
-                }
-                cancelTask(`notify-${key}`);
-                if (key == messageContent) {
-                    this.notifies[key].count++;
-                    this.notifies[key].notice.setMessage(`(${this.notifies[key].count}):${messageContent}`);
-                } else {
-                    this.notifies[key].notice.setMessage(`${messageContent}`);
-                }
-            } else {
-                const notify = new Notice(messageContent, 0);
-                this.notifies[key] = {
-                    count: 0,
-                    notice: notify,
-                };
-            }
-            const timeout = 5000;
-            if (!key.startsWith("keepalive-") || messageContent.indexOf(MARK_DONE) !== -1) {
-                scheduleTask(`notify-${key}`, timeout, () => {
-                    const notify = this.notifies[key].notice;
-                    delete this.notifies[key];
-                    try {
-                        notify.hide();
-                    } catch {
-                        // NO OP
-                    }
-                });
-            }
+        // Where a toast used to be created. Notice-level lines now reach the
+        // reader as one icon: red if this was a fault, nothing otherwise. The
+        // text is held so that pressing the icon can show what happened, which
+        // is the point at which the reader has chosen to care.
+        if (level >= LOG_LEVEL_NOTICE && isProblem(messageContent)) {
+            this.lastProblem.value = messageContent;
         }
     }
     override onBindFunction(core: LiveSyncCore, services: typeof core.services): void {

@@ -1,63 +1,21 @@
 /**
- * What earns a toast.
+ * Which log lines mean something went wrong.
  *
- * A clean start-up produced six of them in a row, and nothing had gone wrong.
- * There are 277 `LOG_LEVEL_NOTICE` call sites across this plug-in and the sync
- * engine — 220 distinct messages — and each was written by someone who thought
- * their own step was worth announcing. They are individually defensible and
- * collectively unusable.
+ * This was a policy for deciding which of 220 messages deserved a toast. There
+ * are no toasts now: a message that interrupts you to say a thing worked is a
+ * message you have to dismiss to get back to writing, and one that interrupts
+ * to say a thing failed is a message you will have closed before you understood
+ * it. Both go to the log, and the status icon says which kind arrived.
  *
- * This began as a list of messages to suppress, which is the wrong shape: every
- * upstream release adds new ones, so the quiet has to be re-earned each time.
- * The rule is now the other way round.
+ * So the only question left is the one below: is this line a fault? If it is,
+ * the icon turns red and holds this text until it is read. If it is not, it
+ * goes to the log and nothing moves on screen.
  *
- *   A notice interrupts only if it reports something wrong, or the end of
- *   something the reader started. Everything else goes to the log.
- *
- * Nothing is discarded: "Show log" still shows every line, and the file log
- * still records them.
- *
- * The failure half is matched by pattern rather than enumerated, deliberately.
- * An unknown failure must never be silent, so the default for anything that
- * reads like a fault is to interrupt — including faults added upstream that
- * this fork has never seen. The success half is enumerated, because a success
- * nobody listed is by definition not one the reader was waiting for.
+ * The vocabulary is matched rather than the message, deliberately. An unknown
+ * failure must never be silent — including one added upstream that this fork
+ * has never seen — so anything that reads like a fault counts as one.
  */
 
-/**
- * Messages this fork has replaced with a surface of its own.
- *
- * Checked before anything else, because each of these reads like a fault and
- * would otherwise interrupt twice — once as the engine's wording, once as the
- * dialogue that already says it better.
- */
-const REPLACED_BY_OUR_OWN_UI: ReadonlySet<string> = new Set([
-    // The compatibility pause. This fork presents it as a dialogue with named
-    // reasons; upstream's line for it names a Change Log that does not exist
-    // here, and reads as an unrelated second failure.
-    "An update has been detected. Please open the Settings dialogue and check the Change Log. Replication has been cancelled.",
-]);
-
-/**
- * Warnings with no failure vocabulary in them.
- *
- * Both of these are about someone else's device, and neither says anything that
- * looks like an error, so the pattern below cannot catch them.
- */
-const ALWAYS_INTERRUPT = [
-    "Another device is using a newer version of the plug-in.",
-    "The remote database has no compatibility with the running version.",
-] as const;
-
-/**
- * How a failure is recognised.
- *
- * Every one of these appears in real messages from the engine: "Could not
- * connect to the remote database", "Failed to decrypt configuration item",
- * "Refusing to overwrite ...", "File ... seems to be corrupted!". Matching the
- * vocabulary rather than the message means a new failure is loud on the day it
- * is written.
- */
 const FAILURE_VOCABULARY = [
     "could not",
     "cannot",
@@ -96,65 +54,38 @@ const FAILURE_VOCABULARY = [
     "conflict",
     "warning",
     "offline",
-    "skipped",
     "problem",
-    "must ",
-    "please ",
 ] as const;
 
 /**
- * Successes worth interrupting for: each one ends an operation the reader
- * started by hand and then waited for.
+ * Faults with no failure vocabulary in them.
  *
- * Matched as prefixes, because several carry a count. A prefix here is a whole
- * clause that only a success can begin.
+ * Both are about another device, and neither says anything that looks like an
+ * error, so the patterns above cannot catch them.
  */
-const ANSWERED_A_QUESTION = [
-    // Setup and recovery, all begun from a dialogue or the command palette.
-    "Done. Your files will arrive as they are downloaded.",
-    "Done. The server now holds this vault.",
-    "Connection settings saved.",
-    "Recovery finished.",
-    "Synchronisation paused.",
-    "Synchronisation resumed.",
-    "Repairing synchronisation.",
-    "Setup URI copied to clipboard",
-    "Copied to the clipboard.",
-
-    // Conflict resolution, which the reader triggers and watches.
-    "Conflicts resolved.",
-    "There are no conflicted documents",
-    "Resolving conflicts by keeping the newer file.",
-
-    // Long transfers. These update one notice in place rather than stacking,
-    // so they are feedback on a wait the reader is already enduring.
-    "Fast fetch progress:",
-    "↑ Uploading chunks",
-    "Processing:",
-    "Check and Processing",
-
-    // Repairs that changed the vault. Silence here would hide a real edit.
-    "Repaired ",
-
-    // Restart, which is about to take the window away.
-    "Obsidian will be restarted soon!",
-    "Everything is suspended:",
+const ALWAYS_A_PROBLEM = [
+    "Another device is using a newer version of the plug-in.",
+    "The remote database has no compatibility with the running version.",
 ] as const;
 
 /**
- * Whether a notice-level message should actually interrupt the reader.
+ * Lines that read like faults but are not this fork's to report.
  *
- * Failure first: a message that reads like a fault always shows, even if it
- * also matches a success prefix.
+ * The compatibility pause is presented as a dialogue with named reasons. The
+ * sync engine additionally logs upstream's wording for the same thing, which
+ * names a Change Log that does not exist here.
  */
-export function deservesNotice(message: string): boolean {
+const NOT_OURS_TO_REPORT: ReadonlySet<string> = new Set([
+    "An update has been detected. Please open the Settings dialogue and check the Change Log. Replication has been cancelled.",
+]);
+
+/** Whether a log line should turn the status icon red. */
+export function isProblem(message: string): boolean {
     const trimmed = message.trim();
     if (trimmed === "") return false;
-    if (REPLACED_BY_OUR_OWN_UI.has(trimmed)) return false;
-    if (ALWAYS_INTERRUPT.some((prefix) => trimmed.startsWith(prefix))) return true;
+    if (NOT_OURS_TO_REPORT.has(trimmed)) return false;
+    if (ALWAYS_A_PROBLEM.some((prefix) => trimmed.startsWith(prefix))) return true;
 
     const lowered = trimmed.toLowerCase();
-    if (FAILURE_VOCABULARY.some((word) => lowered.includes(word))) return true;
-
-    return ANSWERED_A_QUESTION.some((prefix) => trimmed.startsWith(prefix));
+    return FAILURE_VOCABULARY.some((word) => lowered.includes(word));
 }

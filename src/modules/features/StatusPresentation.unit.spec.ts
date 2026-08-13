@@ -2,9 +2,12 @@ import { HOLD_COMPATIBILITY, HOLD_REMOTE_REBUILT } from "@/common/syncHold.ts";
 import { describe, expect, it } from "vitest";
 import {
     ACTIVITY_VISIBILITY_THRESHOLD_MS,
-    STATUS_ACTIVITY,
-    STATUS_ATTENTION,
     STATUS_IDLE,
+    STATUS_OFFLINE,
+    STATUS_PROBLEM,
+    STATUS_SYNCED,
+    STATUS_SYNCING,
+    SYNCED_VISIBILITY_MS,
     presentStatus,
     type StatusInput,
 } from "./StatusPresentation.ts";
@@ -35,129 +38,110 @@ describe("presentStatus", () => {
         it("shows nothing at all when healthy and current", () => {
             const result = presentStatus(healthy());
             expect(result.level).toBe(STATUS_IDLE);
-            expect(result.text).toBe("");
-            expect(result.detail).toBeUndefined();
-        });
-
-        it("stays silent while connected with no work in flight, however long it has been up", () => {
-            expect(presentStatus(healthy({ activeForMs: 600_000 })).text).toBe("");
-        });
-
-        it("does not flash for work that completes faster than the visibility threshold", () => {
-            const result = presentStatus(
-                healthy({ pendingUpload: 12, activeForMs: ACTIVITY_VISIBILITY_THRESHOLD_MS - 1 })
-            );
-            expect(result.level).toBe(STATUS_IDLE);
+            expect(result.icon).toBe("");
             expect(result.text).toBe("");
         });
-    });
 
-    describe("activity", () => {
-        it("reports uploads in words once sustained", () => {
-            const result = presentStatus(busy({ pendingUpload: 3 }));
-            expect(result.level).toBe(STATUS_ACTIVITY);
-            expect(result.text).toBe("Uploading 3");
-        });
-
-        it("reports downloads separately from uploads", () => {
-            expect(presentStatus(busy({ pendingDownload: 5 })).text).toBe("Downloading 5");
-        });
-
-        it("combines both directions into a single total", () => {
-            const result = presentStatus(busy({ pendingUpload: 2, pendingDownload: 4 }));
-            expect(result.text).toBe("Syncing 6 changes");
-            expect(result.detail).toBe("Uploading 2 changes, downloading 4.");
-        });
-
-        it("falls back to local processing when nothing is in flight remotely", () => {
-            expect(presentStatus(busy({ processing: 1, queued: 2 })).text).toBe("Processing 3");
-        });
-
-        it("singularises a lone change", () => {
-            expect(presentStatus(busy({ pendingUpload: 1 })).detail).toBe("Sending 1 change to the remote server.");
+        it("says nothing about work that finishes quickly", () => {
+            expect(presentStatus(healthy({ pendingUpload: 3, activeForMs: 200 })).level).toBe(STATUS_IDLE);
         });
     });
 
-    describe("attention outranks activity", () => {
-        it("reports conflicts rather than the transfer they occurred during", () => {
-            const result = presentStatus(busy({ pendingUpload: 99, conflicts: 2 }));
-            expect(result.level).toBe(STATUS_ATTENTION);
-            expect(result.text).toBe("2 conflicts");
+    describe("syncing", () => {
+        it("turns while work is in flight", () => {
+            const result = presentStatus(busy({ pendingUpload: 4 }));
+            expect(result.level).toBe(STATUS_SYNCING);
+            expect(result.icon).toBe("refresh-cw");
         });
 
-        it("puts a required restart above everything else", () => {
-            const result = presentStatus(
-                busy({ restartRequired: true, conflicts: 3, errored: true, pendingUpload: 10 })
-            );
-            expect(result.text).toBe("Restart required");
+        it("counts both directions together", () => {
+            expect(presentStatus(busy({ pendingUpload: 2, pendingDownload: 3 })).text).toBe("Syncing 5 changes");
         });
 
-        it("surfaces an error with its cause in the tooltip", () => {
-            const result = presentStatus(healthy({ errored: true, errorDetail: "Authentication failed." }));
-            expect(result.level).toBe(STATUS_ATTENTION);
-            expect(result.text).toBe("Sync error");
-            expect(result.detail).toBe("Authentication failed.");
-        });
-
-        it("still explains an error that arrived without a cause", () => {
-            expect(presentStatus(healthy({ errored: true })).detail).toBeTruthy();
-        });
-
-        it("reports a pause, which is a state the user chose and must undo", () => {
-            expect(presentStatus(healthy({ paused: true })).text).toBe("Sync paused");
-        });
-
-        it("reports a missing connection", () => {
-            expect(presentStatus(healthy({ connected: false })).text).toBe("Not connected");
-        });
-
-        // A Vault whose triggers are all off never attempts a connection, so it
-        // is also "not connected" — and saying so sends the reader to check
-        // their server, their password and their firewall for a state that has
-        // nothing to do with any of them.
-        it("does not blame the network when nothing was ever going to sync", () => {
-            const result = presentStatus(healthy({ connected: false, anyTriggerEnabled: false }));
-
-            expect(result.text).toBe("Sync is switched off");
-            expect(result.detail).toContain("connected to a server");
-        });
-
-        it("singularises a lone conflict", () => {
-            expect(presentStatus(healthy({ conflicts: 1 })).text).toBe("1 conflict");
+        it("covers local work with no network work", () => {
+            expect(presentStatus(busy({ processing: 1, queued: 2 })).level).toBe(STATUS_SYNCING);
         });
     });
 
-    describe("presentation contract", () => {
-        it("gives every non-idle state a tooltip, and the idle state none", () => {
-            expect(presentStatus(healthy()).detail).toBeUndefined();
-            for (const state of [healthy({ conflicts: 1 }), busy({ pendingUpload: 1 })]) {
-                expect(presentStatus(state).detail).toBeTruthy();
-            }
+    describe("synced", () => {
+        // The one confirmation left, and it expires on its own.
+        it("shows a tick for a moment after work finishes", () => {
+            const result = presentStatus(healthy({ sinceSyncedMs: 200 }));
+            expect(result.level).toBe(STATUS_SYNCED);
+            expect(result.icon).toBe("check");
+            expect(result.text).toBe("Synced");
         });
 
-        it("treats negative counters as zero rather than rendering them", () => {
-            const result = presentStatus(busy({ pendingUpload: -5, pendingDownload: -1, processing: -2, queued: -3 }));
-            expect(result.level).toBe(STATUS_IDLE);
+        it("returns to silence once the moment has passed", () => {
+            expect(presentStatus(healthy({ sinceSyncedMs: SYNCED_VISIBILITY_MS })).level).toBe(STATUS_IDLE);
+        });
+
+        it("says nothing on a device that has not synchronised yet", () => {
+            expect(presentStatus(healthy()).level).toBe(STATUS_IDLE);
+        });
+
+        it("never interrupts work in flight to confirm the last batch", () => {
+            expect(presentStatus(busy({ pendingUpload: 1, sinceSyncedMs: 10 })).level).toBe(STATUS_SYNCING);
         });
     });
-});
 
-describe("a hold outranks everything else", () => {
-    it("shows why synchronisation is not running, even while work is in flight", () => {
-        // The two holds used to be modal dialogues. Whatever else is happening,
-        // the reason nothing is syncing is the thing worth the one slot there is.
-        const result = presentStatus(
-            busy({ pendingUpload: 9, hold: HOLD_REMOTE_REBUILT, activeForMs: 60_000 })
-        );
-        expect(result.level).toBe(STATUS_ATTENTION);
-        expect(result.text).toBe("Sync held back");
-        expect(result.detail).toContain("replace files on this device");
+    describe("offline is not a fault", () => {
+        it("is its own state, not red", () => {
+            const result = presentStatus(healthy({ connected: false }));
+            expect(result.level).toBe(STATUS_OFFLINE);
+            expect(result.icon).toBe("refresh-cw-off");
+        });
     });
 
-    it("says something different for each reason", () => {
-        const rebuilt = presentStatus(busy({ hold: HOLD_REMOTE_REBUILT }));
-        const compatibility = presentStatus(busy({ hold: HOLD_COMPATIBILITY }));
-        expect(rebuilt.detail).not.toBe(compatibility.detail);
-        expect(compatibility.detail).toContain("different version");
+    describe("problems are red, and say what happened when pressed", () => {
+        it("reports a failure that did not stop replication", () => {
+            const result = presentStatus(healthy({ problem: "Could not write notes/a.md" }));
+            expect(result.level).toBe(STATUS_PROBLEM);
+            expect(result.icon).toBe("alert-circle");
+            expect(result.detail).toBe("Could not write notes/a.md");
+        });
+
+        it("carries the reason when replication itself stopped", () => {
+            const result = presentStatus(healthy({ errored: true, problem: "Server refused the connection" }));
+            expect(result.level).toBe(STATUS_PROBLEM);
+            expect(result.detail).toBe("Server refused the connection");
+        });
+
+        it.each([
+            ["a restart is owed", healthy({ restartRequired: true })],
+            ["a decision is owed", healthy({ conflicts: 2 })],
+            ["synchronisation is paused", healthy({ paused: true })],
+            ["nothing will ever sync", healthy({ anyTriggerEnabled: false })],
+            ["synchronisation is held back", healthy({ hold: HOLD_COMPATIBILITY })],
+        ])("is red when %s", (_, input) => {
+            expect(presentStatus(input).level).toBe(STATUS_PROBLEM);
+        });
+
+        it("outranks work in flight", () => {
+            expect(presentStatus(busy({ pendingUpload: 9, conflicts: 1 })).level).toBe(STATUS_PROBLEM);
+        });
+
+        // Two holds can share a headline — the icon has room for one phrase —
+        // but each has to name its own way out, because that is what the reader
+        // came for when they pressed it.
+        it("distinguishes the holds from one another", () => {
+            const rebuilt = presentStatus(busy({ hold: HOLD_REMOTE_REBUILT }));
+            const compatibility = presentStatus(busy({ hold: HOLD_COMPATIBILITY }));
+            expect(rebuilt.detail).not.toBe(compatibility.detail);
+        });
+    });
+
+    it("always explains itself when it shows anything", () => {
+        for (const state of [
+            healthy({ connected: false }),
+            healthy({ conflicts: 1 }),
+            healthy({ problem: "Something failed" }),
+            healthy({ sinceSyncedMs: 10 }),
+            busy({ pendingUpload: 1 }),
+        ]) {
+            const result = presentStatus(state);
+            expect(result.text).not.toBe("");
+            expect(result.detail).toBeTruthy();
+        }
     });
 });

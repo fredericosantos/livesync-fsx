@@ -1,10 +1,18 @@
 /**
- * Maps synchronisation state onto what the user should actually see.
+ * The whole of what synchronisation says about itself: one icon.
  *
- * The governing rule is that a working system shows nothing: when sync is
- * healthy and current, {@link presentStatus} returns an idle presentation whose
- * text is empty. Transient work is only surfaced once it has lasted long enough
- * to be worth reading, and anything requiring a decision outranks it.
+ * This used to be a status bar plus two hundred and twenty toasts. The toasts
+ * are gone — every one of them, including the successes — because a message
+ * that interrupts you to say a thing worked is a message you have to dismiss to
+ * get back to writing. What is left is four states, in one corner:
+ *
+ *   offline   nothing is reaching the server
+ *   syncing   work in flight, the icon turns
+ *   synced    it just finished, briefly, in green
+ *   problem   something is wrong, in red — press it to find out what
+ *
+ * Everything the toasts used to say is still in the log, and the log is one
+ * click away on the icon. The difference is who chooses when to read it.
  *
  * See `docs/fork/01-design-principles.md`.
  */
@@ -12,33 +20,55 @@
 import { describeSyncHold, type SyncHoldReason } from "@/common/syncHold.ts";
 
 export const STATUS_IDLE = "idle";
-export const STATUS_ACTIVITY = "activity";
-export const STATUS_ATTENTION = "attention";
+export const STATUS_SYNCING = "syncing";
+export const STATUS_SYNCED = "synced";
+export const STATUS_OFFLINE = "offline";
+export const STATUS_PROBLEM = "problem";
 
-export type StatusLevel = typeof STATUS_IDLE | typeof STATUS_ACTIVITY | typeof STATUS_ATTENTION;
+export type StatusLevel =
+    | typeof STATUS_IDLE
+    | typeof STATUS_SYNCING
+    | typeof STATUS_SYNCED
+    | typeof STATUS_OFFLINE
+    | typeof STATUS_PROBLEM;
 
 /**
- * Minimum time work must be in flight before it is shown. Anything faster
- * would flash and disappear, which reads as noise rather than information.
+ * Minimum time work must be in flight before the icon appears. Anything faster
+ * would flash and vanish, which reads as a glitch rather than as information.
  */
 export const ACTIVITY_VISIBILITY_THRESHOLD_MS = 1_000;
+
+/**
+ * How long the green tick stays after work finishes.
+ *
+ * Long enough to be seen if you happened to be looking, short enough that it is
+ * never the reason the corner of your eye moves twice.
+ */
+export const SYNCED_VISIBILITY_MS = 2_000;
 
 export interface StatusInput {
     /** True once a remote connection has been established at least once. */
     connected: boolean;
     /**
-     * At least one thing is set to cause replication — continuous sync, a
-     * periodic timer, or one of the on-save/on-open triggers. When nothing is,
-     * "not connected" is true but says the wrong thing: no connection was
-     * attempted, and none ever will be.
+     * At least one thing is set to cause replication. When nothing is, "not
+     * connected" says the wrong thing: no connection was attempted, and none
+     * ever will be.
      */
     anyTriggerEnabled: boolean;
     /** Replication is deliberately suspended. */
     paused: boolean;
     /** Replication stopped because of an error. */
     errored: boolean;
-    /** Human-readable reason for {@link errored}, if one is known. */
-    errorDetail?: string;
+    /**
+     * The most recent thing that went wrong, in the words it was logged in.
+     *
+     * This is what the icon turns red about, and what it shows when pressed.
+     * It arrives from the log rather than from replication state, because most
+     * failures — a file that could not be written, a chunk that could not be
+     * decrypted — never stop replication at all, and used to be reported only
+     * by a toast that has now gone.
+     */
+    problem?: string;
     /** Documents still to send. */
     pendingUpload: number;
     /** Documents still to receive. */
@@ -55,16 +85,16 @@ export interface StatusInput {
     hold?: SyncHoldReason;
     /** Milliseconds the current burst of work has been in flight. */
     activeForMs: number;
+    /**
+     * Milliseconds since the last burst of work finished, or undefined if none
+     * has finished since start-up. Drives the green tick.
+     */
+    sinceSyncedMs?: number;
 }
 
 export interface StatusPresentation {
     readonly level: StatusLevel;
-    /**
-     * Lucide icon name. Empty when idle — the status bar renders nothing at
-     * all. The status bar is one icon, as Obsidian's own Sync does it: a
-     * running count of documents is a progress bar for a process nobody asked
-     * to watch, and it moves in the corner of the eye while you write.
-     */
+    /** Lucide icon name. Empty when idle — the status bar renders nothing. */
     readonly icon: string;
     /** What the icon means, in words. Empty when idle. Used as the tooltip. */
     readonly text: string;
@@ -72,12 +102,14 @@ export interface StatusPresentation {
     readonly detail?: string;
 }
 
-/** Not syncing, and not because it is busy. */
-const ICON_STOPPED = "refresh-cw-off";
-/** Syncing right now. */
-const ICON_WORKING = "refresh-cw";
-/** Waiting on a person, not on the network. */
-const ICON_DECIDE = "alert-circle";
+/** Nothing is reaching the server. */
+const ICON_OFFLINE = "refresh-cw-off";
+/** Work in flight. Spun by CSS. */
+const ICON_SYNCING = "refresh-cw";
+/** Just finished. */
+const ICON_SYNCED = "check";
+/** Something is wrong, or a decision is owed. */
+const ICON_PROBLEM = "alert-circle";
 
 const IDLE: StatusPresentation = { level: STATUS_IDLE, icon: "", text: "" };
 
@@ -85,106 +117,78 @@ function pluralise(count: number, singular: string, plural = `${singular}s`): st
     return `${count} ${count === 1 ? singular : plural}`;
 }
 
+function problem(text: string, detail: string): StatusPresentation {
+    return { level: STATUS_PROBLEM, icon: ICON_PROBLEM, text, detail };
+}
+
 /**
- * Resolves the single thing worth showing, in strict priority order:
- * attention states first, then sustained activity, then silence.
+ * Resolves the single thing worth showing, in strict priority order: anything
+ * wrong, then work in flight, then the moment after it, then silence.
  */
 export function presentStatus(input: StatusInput): StatusPresentation {
-    // --- Attention: something needs a human decision. Outranks all activity. ---
+    // --- Red. Something is wrong or a decision is owed. ---
     if (input.restartRequired) {
-        return {
-            level: STATUS_ATTENTION,
-            icon: ICON_DECIDE,
-            text: "Restart required",
-            detail: "Obsidian must be restarted before the new settings take effect.",
-        };
+        return problem("Restart required", "Obsidian must be restarted before the new settings take effect.");
     }
     if (input.hold) {
-        return { level: STATUS_ATTENTION, icon: ICON_DECIDE, ...describeSyncHold(input.hold) };
+        const held = describeSyncHold(input.hold);
+        return problem(held.text, held.detail);
     }
     if (input.conflicts > 0) {
-        return {
-            level: STATUS_ATTENTION,
-            icon: ICON_DECIDE,
-            text: pluralise(input.conflicts, "conflict"),
-            detail: "The same file was edited on more than one device. Select which version to keep.",
-        };
+        return problem(
+            pluralise(input.conflicts, "conflict"),
+            "The same file was edited on more than one device. Select which version to keep."
+        );
     }
     if (input.errored) {
-        return {
-            level: STATUS_ATTENTION,
-            icon: ICON_STOPPED,
-            text: "Sync error",
-            detail: input.errorDetail ?? "Synchronisation stopped because of an error.",
-        };
+        return problem("Sync error", input.problem ?? "Synchronisation stopped because of an error.");
+    }
+    if (input.problem) {
+        // Replication is still running: something failed inside it. Red is
+        // still right — it is the only thing that will ever mention this.
+        return problem("Something went wrong", input.problem);
     }
     if (input.paused) {
-        return {
-            level: STATUS_ATTENTION,
-            icon: ICON_STOPPED,
-            text: "Sync paused",
-            detail: "Synchronisation is suspended. Resume it from the settings pane.",
-        };
+        return problem("Sync paused", "Synchronisation is suspended. Resume it from the settings pane.");
     }
-    // Nothing will ever ask for replication, so the connection is never even
-    // attempted. Reporting that as "Not connected" blames the network for a
-    // decision in the settings, and sends the reader to check their server.
     if (!input.anyTriggerEnabled) {
-        return {
-            level: STATUS_ATTENTION,
-            icon: ICON_STOPPED,
-            text: "Sync is switched off",
-            detail: "This vault is connected to a server, but nothing is set to synchronise with it.",
-        };
+        return problem(
+            "Sync is switched off",
+            "This vault is connected to a server, but nothing is set to synchronise with it."
+        );
     }
+
+    // --- Grey. Not an error: the server may simply be unreachable. ---
     if (!input.connected) {
-        // Not an error on its own — the remote may simply be unreachable right now.
         return {
-            level: STATUS_ATTENTION,
-            icon: ICON_STOPPED,
+            level: STATUS_OFFLINE,
+            icon: ICON_OFFLINE,
             text: "Not connected",
             detail: "No connection to the remote server.",
         };
     }
 
-    // --- Activity: real work, but only once it has lasted long enough to read. ---
-    if (input.activeForMs < ACTIVITY_VISIBILITY_THRESHOLD_MS) return IDLE;
-
+    // --- Turning. Real work, once it has lasted long enough to read. ---
     const upload = Math.max(0, input.pendingUpload);
     const download = Math.max(0, input.pendingDownload);
     const local = Math.max(0, input.processing) + Math.max(0, input.queued);
+    const busy = upload + download + local > 0;
 
-    if (upload > 0 && download > 0) {
-        return {
-            level: STATUS_ACTIVITY,
-            icon: ICON_WORKING,
-            text: `Syncing ${upload + download} changes`,
-            detail: `Uploading ${pluralise(upload, "change")}, downloading ${download}.`,
-        };
+    if (busy && input.activeForMs >= ACTIVITY_VISIBILITY_THRESHOLD_MS) {
+        const text =
+            upload > 0 && download > 0
+                ? `Syncing ${upload + download} changes`
+                : upload > 0
+                  ? `Uploading ${upload}`
+                  : download > 0
+                    ? `Downloading ${download}`
+                    : `Processing ${local}`;
+        return { level: STATUS_SYNCING, icon: ICON_SYNCING, text, detail: "Synchronising with the server." };
     }
-    if (upload > 0) {
-        return {
-            level: STATUS_ACTIVITY,
-            icon: ICON_WORKING,
-            text: `Uploading ${upload}`,
-            detail: `Sending ${pluralise(upload, "change")} to the remote server.`,
-        };
-    }
-    if (download > 0) {
-        return {
-            level: STATUS_ACTIVITY,
-            icon: ICON_WORKING,
-            text: `Downloading ${download}`,
-            detail: `Receiving ${pluralise(download, "change")} from the remote server.`,
-        };
-    }
-    if (local > 0) {
-        return {
-            level: STATUS_ACTIVITY,
-            icon: ICON_WORKING,
-            text: `Processing ${local}`,
-            detail: `Reading or writing ${pluralise(local, "file")}.`,
-        };
+
+    // --- Green, briefly. It just finished. ---
+    if (!busy && input.sinceSyncedMs !== undefined && input.sinceSyncedMs < SYNCED_VISIBILITY_MS) {
+        return { level: STATUS_SYNCED, icon: ICON_SYNCED, text: "Synced", detail: "Everything is up to date." };
     }
 
     // Connected, current, nothing in flight. Show nothing.

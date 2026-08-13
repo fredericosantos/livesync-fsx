@@ -103,16 +103,40 @@
     display: none;
 }
 
-.syncstatusbar.livesync-status--activity {
+/* Pressable, because it is now the only route to what went wrong. */
+.syncstatusbar {
+    cursor: pointer;
+}
+
+/* Not connected. A state, not a fault: grey, like the rest of the status bar. */
+.syncstatusbar.livesync-status--offline {
     color: var(--text-muted);
 }
 
-.syncstatusbar.livesync-status--activity .svg-icon {
+/* Syncing. Muted, and turning — motion carries this one, not colour. */
+.syncstatusbar.livesync-status--syncing {
+    color: var(--text-muted);
+}
+
+.syncstatusbar.livesync-status--syncing .svg-icon {
     animation: livesync-spin 1.6s linear infinite;
 }
 
-.syncstatusbar.livesync-status--attention {
-    color: var(--text-warning);
+/*
+ * Synced. The only confirmation left, so it is allowed to be green — and it
+ * fades out on its own rather than waiting to be dismissed.
+ */
+.syncstatusbar.livesync-status--synced {
+    color: var(--text-success);
+}
+
+.syncstatusbar.livesync-status--synced .svg-icon {
+    animation: livesync-confirm 2s ease-out forwards;
+}
+
+/* A problem. The one thing that stays until it has been read. */
+.syncstatusbar.livesync-status--problem {
+    color: var(--text-error);
 }
 
 @keyframes livesync-spin {
@@ -121,8 +145,26 @@
     }
 }
 
+@keyframes livesync-confirm {
+    0% {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    15% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .syncstatusbar.livesync-status--activity .svg-icon {
+    .syncstatusbar.livesync-status--syncing .svg-icon,
+    .syncstatusbar.livesync-status--synced .svg-icon {
         animation: none;
     }
 }
