@@ -107,22 +107,24 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
             await tab.saveAllDirtySettings();
         };
 
+        // A `Setting` per plug-in, so these rows are the same control as every
+        // other switch on the page. They were checkboxes in a hand-built list,
+        // which made the one part of this page that is not Obsidian's own idea
+        // look like it belonged to a different program.
         for (const row of rows) {
-            const line = container.createDiv({ cls: "lsfsx-plugins__row" });
-            const label = line.createEl("label", { cls: "lsfsx-plugins__label" });
-            const box = label.createEl("input", { type: "checkbox", cls: "lsfsx-plugins__check" });
-            box.checked = isPluginSelected(tab.editingSettings, row.id);
-            label.createSpan({ cls: "lsfsx-plugins__name", text: row.name });
+            const setting = new Setting(container).setName(row.name);
             // Obsidian's own list dims what is installed but switched off, and
             // a reader comparing the two lists should not have to work out why
             // one has more entries.
             if (!row.enabled) {
-                line.addClass("lsfsx-plugins__row--disabled");
-                label.createSpan({ cls: "lsfsx-plugins__state", text: "Disabled here" });
+                setting.setDesc("Disabled here");
+                setting.settingEl.addClass("lsfsx-plugins__row--disabled");
             }
-            box.addEventListener("change", () => {
-                void commit(row.id, box.checked);
-            });
+            setting.addToggle((toggle) =>
+                toggle
+                    .setValue(isPluginSelected(tab.editingSettings, row.id))
+                    .onChange((value) => void commit(row.id, value))
+            );
         }
     };
 

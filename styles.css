@@ -941,52 +941,14 @@ body.is-mobile .livesync-compatibility-review-notice {
     overflow: hidden;
 }
 
-.lsfsx-plugins__head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5em;
-    padding: 0.45em 0.75em;
-    background: var(--background-secondary);
-    font-size: var(--font-ui-smaller);
-    color: var(--text-muted);
-}
-
-.lsfsx-plugins__count {
-    font-variant-numeric: tabular-nums;
-}
-
 .lsfsx-plugins__empty {
     padding: 0.7em 0.75em;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
 
-.lsfsx-plugins__row {
-    border-top: 1px solid var(--background-modifier-border);
-}
-
-.lsfsx-plugins__label {
-    display: flex;
-    align-items: center;
-    gap: 0.6em;
-    padding: 0.4em 0.75em;
-    cursor: pointer;
-}
-
-.lsfsx-plugins__name {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.lsfsx-plugins__state {
-    color: var(--text-faint);
-    font-size: var(--font-ui-smaller);
-    white-space: nowrap;
-}
-
-.lsfsx-plugins__row--disabled .lsfsx-plugins__name {
+/* Installed but switched off here: dimmed, as Obsidian's own list dims it. */
+.lsfsx-plugins__row--disabled .setting-item-name {
     color: var(--text-muted);
 }
 
