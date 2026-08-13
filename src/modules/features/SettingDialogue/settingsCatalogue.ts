@@ -69,11 +69,6 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
         extra: "server",
     },
     {
-        id: "sync",
-        title: "Sync",
-        keys: ["syncInternalFiles"],
-    },
-    {
         // Obsidian's own Sync names these categories, in these words, and a
         // reader who has seen that screen should recognise this one. What is
         // added beyond it is the plug-in table: Obsidian has a single switch
@@ -86,10 +81,15 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
         // filing system, not synchronisation, and it obliged a second mechanism
         // to exist inside Hidden File Sync purely to keep the two from fighting
         // over the same file.
+        //
+        // The switch that governs all of this is inside the group rather than
+        // in one of its own above it. It was a separate card headed "Sync", so
+        // the card that appeared when it was turned on had no visible relation
+        // to the thing that turned it on — a heading, a switch, and then a
+        // second heading with everything the switch controls.
         id: "config-categories",
         title: "App settings and plugins",
         requires: "configured",
-        shownWhen: { key: "syncInternalFiles", is: true },
         // The eight category settings are rendered as five rows; see
         // `controls/ConfigCategories.ts` for why the pairs are not separable.
         keys: [],

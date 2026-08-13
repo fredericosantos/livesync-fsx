@@ -19,16 +19,11 @@ import type { SettingKey, SettingSection } from "./settingsCatalogue.ts";
 import { AllSettingDefault, type AllSettingItemKey } from "./settingConstants.ts";
 import { renderPassphrase } from "./controls/Passphrase.ts";
 import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
-import { HiddenFileSync } from "@/features/HiddenFileSync/CmdHiddenFileSync.ts";
 
 type KeyRenderer = (tab: ObsidianLiveSyncSettingTab, el: HTMLElement) => void;
 
 /** Copy we deliberately override, applied after the schema name and description. */
 const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
-    syncInternalFiles: {
-        name: "Sync app settings and plugins",
-        desc: "Choose what travels below. Window layout always stays on the device it belongs to.",
-    },
     // The eight category settings are no longer rendered one-to-one; five rows
     // cover them, and their names live with the grouping that produces them in
     // `controls/ConfigCategories.ts`.
@@ -47,46 +42,7 @@ const KEY_RENDERERS: Partial<Record<SettingKey, KeyRenderer>> = {
     // field would still invite the reader to wonder what it is for.
     passphrase: (tab, el) => renderPassphrase(tab, el, visibleOnly(() => tab.isConfiguredAs("encrypt", true))),
     ignoreFiles: (tab, el) => renderIgnoreFileList(tab, el),
-    syncInternalFiles: (tab, el) => renderConfigSyncSwitch(tab, el),
 };
-
-/**
- * Turning this on has to *do* something, which is the part that was missing.
- *
- * Storing `syncInternalFiles: true` only tells the file watcher to stop
- * ignoring the configuration folder from now on. The files already sitting in
- * it — every theme, hotkey and plug-in setting that existed before the switch
- * was flipped — are enumerated by a separate initialisation, and nothing was
- * calling it. So the switch went on, stayed on, and synchronised nothing until
- * one of those files happened to be edited.
- *
- * `MERGE` is the direction, and it is not offered as a choice: it keeps both
- * sides and takes the newer of each file, which is the answer that cannot lose
- * anything. "Take the server's" and "take mine" both discard a device's
- * settings, and the reader enabling a switch called "Sync app settings and
- * plugins" has not been told they are about to choose that.
- */
-function renderConfigSyncSwitch(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
-    const copy = COPY.syncInternalFiles!;
-    new Setting(el)
-        .setName(copy.name)
-        .setDesc(copy.desc ?? "")
-        .addToggle((toggle) =>
-            toggle.setValue(tab.editingSettings.syncInternalFiles === true).onChange(async (value) => {
-                const hiddenFileSync = tab.core.addOns.find((addOn) => addOn instanceof HiddenFileSync);
-                if (!hiddenFileSync) return;
-                await hiddenFileSync.configureHiddenFileSync(value ? "MERGE" : "DISABLE_HIDDEN");
-                tab.editingSettings.syncInternalFiles = tab.core.settings.syncInternalFiles;
-                // Redrawn outright rather than nudged. The rest of this section
-                // — the categories and the plug-in list — is revealed by this
-                // switch, and the parts that reveal it were built for a value
-                // changing under an open page, not for the page's own control
-                // changing it. The result was a switch that moved and a page
-                // that did not.
-                tab.display();
-            })
-        );
-}
 
 /**
  * The default control for a key: whatever its schema default's type implies.
