@@ -7,14 +7,11 @@ import svelteParser from "svelte-eslint-parser";
 import importAlias from "@dword-design/eslint-plugin-import-alias";
 import { baseRules, ImportAliasRules, obsidianRules } from "./eslint.config.common.mjs";
 const warnWhileDev = "off"; // Change to "warn" to enable warnings for rules that are currently disabled.
-const lintProjects = [
-    "./tsconfig.json",
-    "./src/apps/browser/tsconfig.json",
-    "./src/apps/cli/tsconfig.json",
-    "./src/apps/webapp/tsconfig.json",
-    "./src/apps/webpeer/tsconfig.app.json",
-    "./src/apps/webpeer/tsconfig.node.json",
-];
+// The browser, WebApp and WebPeer applications went with P2P and Object
+// Storage. Their tsconfigs went with them, and every file linted here reported
+// "Cannot read file .../src/apps/browser/tsconfig.json" — 29 parsing errors
+// that were not about the code being linted.
+const lintProjects = ["./tsconfig.json", "./src/apps/cli/tsconfig.json"];
 export default defineConfig([
     globalIgnores([
         // Build outputs and legacy files
@@ -108,14 +105,6 @@ export default defineConfig([
             "@typescript-eslint/no-base-to-string": "warn",
             "@typescript-eslint/no-unnecessary-type-assertion": "warn",
             "@typescript-eslint/restrict-template-expressions": "warn",
-        },
-    },
-    {
-        files: ["src/apps/browser/**/*.{ts,svelte}", "src/apps/webapp/**/*.ts"],
-        rules: {
-            // Browser applications use the DOM rather than Obsidian's DOM extensions.
-            "obsidianmd/prefer-create-el": "off",
-            "obsidianmd/prefer-active-doc": "off",
         },
     },
 ]);

@@ -46,16 +46,15 @@ export interface CLICommandContext {
     vaultPath: string;
     core: LiveSyncBaseCore<NodeServiceContext, never>;
     settingsPath: string;
-    originalSyncSettings: Pick<
-        ObsidianLiveSyncSettings,
-        | "liveSync"
-        | "syncOnStart"
-        | "periodicReplication"
-        | "syncOnSave"
-        | "syncOnEditorSave"
-        | "syncOnFileOpen"
-        | "syncAfterMerge"
-    >;
+    /**
+     * What synchronisation was set to before the start-up scan suspended it.
+     *
+     * Seven keys once answered "when do we sync?", and this captured all of
+     * them. Continuous replication is now the only mode there is, so there is
+     * one switch to put back. It is still captured rather than assumed: the
+     * daemon must restore what the settings file asked for, not what it hopes.
+     */
+    originalSyncSettings: Pick<ObsidianLiveSyncSettings, "liveSync">;
 }
 
 export const VALID_COMMANDS = new Set([

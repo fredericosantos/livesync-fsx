@@ -180,11 +180,11 @@ export async function runCommand(options: CLIOptions, context: CLICommandContext
             // openReplication directly — it races with the handler and causes dedup/termination.
             log("LiveSync active");
             const currentSettings = core.services.setting.currentSettings();
-            if (!currentSettings.liveSync && !currentSettings.syncOnStart) {
+            if (!currentSettings.liveSync) {
                 writeStderrLine(
                     standardIo,
-                    "[Daemon] Warning: liveSync and syncOnStart are both disabled in settings. " +
-                        "No sync will occur. Set liveSync=true in your settings file for continuous sync, " +
+                    "[Daemon] Warning: liveSync is disabled in settings, so nothing will synchronise. " +
+                        "Set liveSync=true in your settings file for continuous sync, " +
                         "or use --interval for polling mode."
                 );
             }

@@ -552,12 +552,6 @@ export async function main(
         const settingsBeforeSuspend = core.services.setting.currentSettings();
         const originalSyncSettings = {
             liveSync: settingsBeforeSuspend.liveSync,
-            syncOnStart: settingsBeforeSuspend.syncOnStart,
-            periodicReplication: settingsBeforeSuspend.periodicReplication,
-            syncOnSave: settingsBeforeSuspend.syncOnSave,
-            syncOnEditorSave: settingsBeforeSuspend.syncOnEditorSave,
-            syncOnFileOpen: settingsBeforeSuspend.syncOnFileOpen,
-            syncAfterMerge: settingsBeforeSuspend.syncAfterMerge,
         };
         await core.services.setting.suspendAllSync();
         await core.services.control.onReady();

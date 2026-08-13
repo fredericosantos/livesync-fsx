@@ -26,8 +26,6 @@ export async function generateSetupUriFromSettings(settingsFile: string, setupPa
         "  settings.couchDB_USER = 'dummy';",
         "  settings.couchDB_PASSWORD = 'dummy';",
         "  settings.liveSync = false;",
-        "  settings.syncOnStart = false;",
-        "  settings.syncOnSave = false;",
         "  const uri = await encodeSettingsToSetupURI(settings, passphrase);",
         "  process.stdout.write(uri.trim());",
         "})();",
@@ -101,8 +99,6 @@ export async function applyCouchdbSettings(
     data.couchDB_DBNAME = couchdbDbname;
     if (liveSync) {
         data.liveSync = true;
-        data.syncOnStart = false;
-        data.syncOnSave = false;
         data.usePluginSync = false;
     }
     data.isConfigured = true;
@@ -146,8 +142,6 @@ export async function applyRemoteSyncSettings(
     }
 
     data.liveSync = true;
-    data.syncOnStart = false;
-    data.syncOnSave = false;
     data.usePluginSync = false;
     data.encrypt = options.encrypt === true;
     data.passphrase = options.encrypt ? (options.passphrase ?? "") : "";

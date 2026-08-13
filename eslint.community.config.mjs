@@ -33,14 +33,8 @@ export default defineConfig(
                 hostPlatform: "readonly",
             },
             parserOptions: {
-                project: [
-                    "./tsconfig.json",
-                    "./src/apps/browser/tsconfig.json",
-                    "./src/apps/cli/tsconfig.json",
-                    "./src/apps/webapp/tsconfig.json",
-                    "./src/apps/webpeer/tsconfig.app.json",
-                    "./src/apps/webpeer/tsconfig.node.json",
-                ],
+                // Only these two projects still exist; see eslint.config.mjs.
+                project: ["./tsconfig.json", "./src/apps/cli/tsconfig.json"],
                 tsconfigRootDir: import.meta.dirname,
             },
         },
@@ -70,10 +64,4 @@ export default defineConfig(
             "@typescript-eslint/restrict-template-expressions": "warn",
         },
     },
-    {
-        files: ["src/apps/browser/**/*.ts", "src/apps/webapp/**/*.ts"],
-        rules: {
-            "obsidianmd/prefer-active-doc": "off",
-        },
-    }
 );

@@ -78,12 +78,6 @@ const baseContext = {
     settingsPath: "/tmp/vault/.livesync/settings.json",
     originalSyncSettings: {
         liveSync: true,
-        syncOnStart: false,
-        periodicReplication: false,
-        syncOnSave: false,
-        syncOnEditorSave: false,
-        syncOnFileOpen: false,
-        syncAfterMerge: false,
     },
 } as any;
 
@@ -156,11 +150,10 @@ describe("daemon command", () => {
         expect(core.services.control.applySettings).toHaveBeenCalledTimes(1);
     });
 
-    it("liveSync mode: logs warning when both liveSync and syncOnStart are false", async () => {
+    it("liveSync mode: warns when liveSync is off, because then nothing synchronises", async () => {
         const core = createCoreMock();
         core.services.setting.currentSettings = vi.fn(() => ({
             liveSync: false,
-            syncOnStart: false,
         }));
         vi.mocked(offlineScanner.performFullScan).mockResolvedValue(true);
 
@@ -169,7 +162,7 @@ describe("daemon command", () => {
         expect(result).toBe(true);
         const warningCalls = core.services.context.standardIo.writeStderr.mock.calls.filter(
             ([chunk]: [string | Uint8Array]) =>
-                typeof chunk === "string" && chunk.includes("liveSync and syncOnStart are both disabled")
+                typeof chunk === "string" && chunk.includes("liveSync is disabled in settings")
         );
         expect(warningCalls.length).toBeGreaterThan(0);
     });

@@ -16,6 +16,22 @@ declare module "obsidian" {
     }
 }
 
+/**
+ * The handler type as the base class declares it.
+ *
+ * `ObsHttpHandler` extends `FetchHttpHandler` — but the copy of
+ * `@smithy/fetch-http-handler` resolved here and the one resolved inside
+ * `livesync-commonlib` are two installations of the same package, and a private
+ * field (`config`) makes two declarations of a class nominally distinct however
+ * identical they are. So the subclass was not assignable to its own base's
+ * return type, and every service hub that held this service failed with it:
+ * eleven errors from one duplicated dependency.
+ *
+ * Taking the type from the base class rather than importing it means there is
+ * only ever one declaration in play, whichever copy each side resolves.
+ */
+type CommonFetchHttpHandler = ReturnType<InjectableAPIService<ObsidianServiceContext>["getCustomFetchHandler"]>;
+
 export class ObsidianAPIService extends InjectableAPIService<ObsidianServiceContext> {
     _customHandler: ObsHttpHandler | undefined;
     _confirmInstance: Confirm;
@@ -23,9 +39,9 @@ export class ObsidianAPIService extends InjectableAPIService<ObsidianServiceCont
         super(context);
         this._confirmInstance = new ObsidianConfirm(context);
     }
-    getCustomFetchHandler(): ObsHttpHandler {
+    getCustomFetchHandler(): CommonFetchHttpHandler {
         if (!this._customHandler) this._customHandler = new ObsHttpHandler(undefined, undefined);
-        return this._customHandler;
+        return this._customHandler as unknown as CommonFetchHttpHandler;
     }
 
     async showWindow(viewType: string): Promise<void> {

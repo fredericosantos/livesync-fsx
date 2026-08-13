@@ -5,10 +5,10 @@
     import UserDecisions from "@/modules/services/LiveSyncUI/components/UserDecisions.svelte";
 
     import { SETUP_UNREACHABLE, type SetupPlan } from "@/modules/features/SetupWizard/setupPlan";
-    import { TYPE_APPLY, TYPE_CANCELLED, type OutroExistingUserResultType } from "./setupDialogTypes";
+    import { TYPE_APPLY, TYPE_CANCELLED, type SetupPlanResultType } from "./setupDialogTypes";
 
     type Props = {
-        setResult: (result: OutroExistingUserResultType) => void;
+        setResult: (result: SetupPlanResultType) => void;
         getInitialData?: () => SetupPlan | undefined;
     };
     const { setResult, getInitialData }: Props = $props();

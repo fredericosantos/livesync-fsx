@@ -71,11 +71,24 @@ Baseline verification, all on the 0.1.2 branch:
 - commonlib `npm test` — 69 files, 1216 tests, green
 - plugin `npm run build` — 3.7M `main.js`
 - plugin `npm run test:unit` — 86 files, 604 tests, green
-- plugin `npm run tsc-check` — **20 errors, all pre-existing upstream**
+- plugin `npm run tsc-check` — was **20 errors, all pre-existing upstream**
   (`ObsidianServiceHub.ts` ×10, `createLiveSyncBrowserServiceHub.ts` ×8,
-  `ObsidianAPIService.ts`, `LiveSyncBrowserAPIService.ts`). Verified identical
-  against the published 0.1.2 package: the local link introduces none of them.
-  Do not treat `tsc-check` as a clean gate until these are fixed upstream or by us.
+  `ObsidianAPIService.ts`, `LiveSyncBrowserAPIService.ts`).
+
+  **Fixed, 13th August 2026: both typechecks are clean, and are now a gate.**
+  Nearly all of it was one cause. `ObsHttpHandler extends FetchHttpHandler`, but
+  the copy of `@smithy/fetch-http-handler` resolved by the plug-in and the copy
+  resolved inside `livesync-commonlib` are two installations of the same
+  package, and a private field makes two declarations of a class nominally
+  distinct however identical they are. So the subclass was not assignable to its
+  own base's return type, and every hub holding that service failed with it.
+  `ObsidianAPIService` now takes the type from the base class instead of
+  importing it, so only one declaration is ever in play.
+
+  The rest was ours: the CLI still read `syncOnStart`, `periodicReplication`,
+  `syncOnSave`, `syncOnEditorSave`, `syncOnFileOpen` and `syncAfterMerge` after
+  those settings were removed. Continuous replication is the only mode, so the
+  daemon captures and restores `liveSync` alone.
 
 Owning commonlib means owning sync correctness. Policy: **track, do not diverge.**
 Merge `upstream/main` regularly, keep patches thin and on top. The 1216-test suite
