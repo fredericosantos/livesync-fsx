@@ -964,8 +964,17 @@ body.is-mobile .livesync-compatibility-review-notice {
 .lsfsx-chips {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 0.4em;
-    margin: 0 0 0.9em;
+    /*
+     * Inset to the same edge as the setting row above, and given the bottom
+     * space that row's padding would have provided. Without it the chips sat
+     * hard against the card's left edge and its floor, reading as something
+     * that had escaped the card rather than the second half of the question
+     * asked in it.
+     */
+    padding: 0 var(--size-4-4) var(--size-4-4);
+    margin: 0;
 }
 
 .lsfsx-chip-button {
