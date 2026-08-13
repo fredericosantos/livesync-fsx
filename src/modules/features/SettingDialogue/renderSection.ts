@@ -89,7 +89,13 @@ function renderConfigSyncSwitch(tab: ObsidianLiveSyncSettingTab, el: HTMLElement
                 if (!hiddenFileSync) return;
                 await hiddenFileSync.configureHiddenFileSync(value ? "MERGE" : "DISABLE_HIDDEN");
                 tab.editingSettings.syncInternalFiles = tab.core.settings.syncInternalFiles;
-                tab.requestReload();
+                // Redrawn outright rather than nudged. The rest of this section
+                // — the categories and the plug-in list — is revealed by this
+                // switch, and the parts that reveal it were built for a value
+                // changing under an open page, not for the page's own control
+                // changing it. The result was a switch that moved and a page
+                // that did not.
+                tab.display();
             })
         );
 }

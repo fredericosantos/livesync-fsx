@@ -990,10 +990,15 @@ body.is-mobile .livesync-compatibility-review-notice {
     color: var(--text-muted);
 }
 
-/* The trailing "Plugins installed later" row is a setting inside the frame. */
+/* The "All plugins" row is a setting inside the frame, and heads the list. */
 .lsfsx-plugins > .setting-item {
     border-top: 1px solid var(--background-modifier-border);
     padding: 0.5em 0.75em;
+}
+
+.lsfsx-plugins > .setting-item:first-child {
+    border-top: none;
+    background: var(--background-secondary);
 }
 
 

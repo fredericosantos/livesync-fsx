@@ -1,15 +1,15 @@
 /**
  * Which community plug-ins travel between devices.
  *
- * This is the one thing here that Obsidian's own Sync does not offer: it has a
+ * This is the one thing here Obsidian's own Sync does not offer: it has a
  * single switch for all community plug-ins and their settings, so a plug-in you
- * want only on the desktop obliges you to turn the whole category off. The
- * table below is that switch, per plug-in.
+ * want only on the desktop obliges you to turn the whole category off. Here it
+ * is one switch per plug-in, over a list of what is installed.
  *
- * It lists what is *installed on this device*, which is the only list a device
- * can honestly show. A plug-in installed elsewhere and not yet arrived here has
- * no row, so the answer for it is the one stated once at the foot of the table
- * rather than guessed per plug-in.
+ * The list is of what is installed *on this device*, which is the only list a
+ * device can honestly show. A plug-in installed elsewhere and not yet arrived
+ * here has no row, so the answer for it is the one stated once at the foot of
+ * the list rather than guessed per plug-in.
  */
 
 import { LiveSyncSetting as Setting } from "@/modules/features/SettingDialogue/LiveSyncSetting.ts";
@@ -40,9 +40,8 @@ function installedPlugins(tab: ObsidianLiveSyncSettingTab): PluginRow[] {
     try {
         manager = getObsidianCommunityPluginManager(tab.plugin.app);
     } catch {
-        // A future Obsidian could stop exposing this. The categories above still
-        // work; only the per-plug-in refinement is unavailable, and saying so is
-        // better than showing an empty table that looks like "none installed".
+        // A future Obsidian could stop exposing this. Saying so is better than
+        // an empty list that looks like "none installed".
         return [];
     }
     const self = ownPluginId(tab);
@@ -62,11 +61,34 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
     const draw = () => {
         container.empty();
 
-        if (!tab.editingSettings.syncInternalFiles || !tab.editingSettings.syncConfigCommunityPluginSettings) {
-            return;
-        }
+        // Only the master switch hides this. It used to be hidden by the
+        // community-plugin category as well, which is the switch this list is
+        // supposed to replace: turning that off to exclude one plug-in removed
+        // the very control that could have excluded it.
+        if (!tab.editingSettings.syncInternalFiles) return;
 
         const rows = installedPlugins(tab);
+
+        // Every plug-in, present and future, in one switch. Off means the list
+        // below decides; on means it does not have to be maintained at all.
+        const all = rows.length > 0 && rows.every((row) => isPluginSelected(tab.editingSettings, row.id));
+        new Setting(container)
+            .setName("All plugins")
+            .setDesc("Sync every plugin below, and any installed later.")
+            .addToggle((toggle) =>
+                toggle.setValue(all && tab.editingSettings.syncConfigNewPlugins !== false).onChange(async (value) => {
+                    tab.editingSettings.syncConfigNewPlugins = value;
+                    // The per-plugin exceptions are cleared either way: after
+                    // "all on" there is nothing to except, and after "all off"
+                    // a stale exception would silently sync one plug-in.
+                    tab.editingSettings.syncConfigPluginSelection = value
+                        ? {}
+                        : Object.fromEntries(rows.map((row) => [row.id, false]));
+                    await tab.saveAllDirtySettings();
+                    draw();
+                })
+            );
+
         if (rows.length === 0) {
             container.createDiv({
                 cls: "lsfsx-plugins__empty",
@@ -85,19 +107,15 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
             await tab.saveAllDirtySettings();
         };
 
-        const head = container.createDiv({ cls: "lsfsx-plugins__head" });
-        head.createSpan({ text: "Plugin" });
-        head.createSpan({ cls: "lsfsx-plugins__count", text: `${rows.length}` });
-
         for (const row of rows) {
             const line = container.createDiv({ cls: "lsfsx-plugins__row" });
             const label = line.createEl("label", { cls: "lsfsx-plugins__label" });
             const box = label.createEl("input", { type: "checkbox", cls: "lsfsx-plugins__check" });
             box.checked = isPluginSelected(tab.editingSettings, row.id);
             label.createSpan({ cls: "lsfsx-plugins__name", text: row.name });
-            // Obsidian's own list dims what is installed but switched off, and a
-            // reader comparing the two lists should not have to work out why one
-            // has more entries.
+            // Obsidian's own list dims what is installed but switched off, and
+            // a reader comparing the two lists should not have to work out why
+            // one has more entries.
             if (!row.enabled) {
                 line.addClass("lsfsx-plugins__row--disabled");
                 label.createSpan({ cls: "lsfsx-plugins__state", text: "Disabled here" });
@@ -106,20 +124,9 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
                 void commit(row.id, box.checked);
             });
         }
-
-        new Setting(container)
-            .setName("Plugins installed later")
-            .setDesc("Applies to plugins that appear on another device and have no row above yet.")
-            .addToggle((toggle) => {
-                toggle.setValue(tab.editingSettings.syncConfigNewPlugins ?? true).onChange(async (value) => {
-                    tab.editingSettings.syncConfigNewPlugins = value;
-                    await tab.saveSettings(["syncConfigNewPlugins"]);
-                    draw();
-                });
-            });
     };
 
     draw();
     tab.addOnSaved("syncInternalFiles", () => draw());
-    tab.addOnSaved("syncConfigCommunityPluginSettings", () => draw());
+    tab.addOnSaved("syncConfigNewPlugins", () => draw());
 }
