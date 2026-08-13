@@ -1,6 +1,6 @@
 import { InjectableAPIService } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableAPIService";
 import type { ObsidianServiceContext } from "@/modules/services/ObsidianServiceContext";
-import { Platform, type Command, type ViewCreator } from "@/deps.ts";
+import { apiVersion, Platform, type Command, type ViewCreator } from "@/deps.ts";
 import { ObsHttpHandler } from "@/modules/essentialObsidian/APILib/ObsHttpHandler";
 import { ObsidianConfirm } from "./ObsidianConfirm";
 import type { Confirm } from "@vrtmrz/livesync-commonlib/compat/interfaces/Confirm";
@@ -117,13 +117,21 @@ export class ObsidianAPIService extends InjectableAPIService<ObsidianServiceCont
         return this.app.vault.getName();
     }
 
+    /**
+     * Obsidian's own version, as it reports it.
+     *
+     * This used to be scraped out of the user agent, which works on the desktop
+     * because Electron puts `obsidian/1.13.4` there, and does not work on iOS or
+     * Android because Obsidian is not the browser. So every phone recorded
+     * itself in the server's device list as version `0.0.0` — the number that
+     * says "we could not tell", presented as a fact.
+     *
+     * `apiVersion` is exported by Obsidian for exactly this, on every platform.
+     */
     override getAppVersion(): string {
+        if (apiVersion) return apiVersion;
         const navigatorString = compatGlobal.navigator?.userAgent ?? "";
-        const match = navigatorString.match(/obsidian\/([0-9]+\.[0-9]+\.[0-9]+)/);
-        if (match && match.length >= 2) {
-            return match[1];
-        }
-        return "0.0.0";
+        return navigatorString.match(/obsidian\/([0-9]+\.[0-9]+\.[0-9]+)/)?.[1] ?? "0.0.0";
     }
 
     override getPluginVersion(): string {

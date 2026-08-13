@@ -2,6 +2,7 @@ import { type FilePath } from "@vrtmrz/livesync-commonlib/compat/common/types";
 
 export {
     addIcon,
+    apiVersion,
     App,
     debounce,
     Editor,
