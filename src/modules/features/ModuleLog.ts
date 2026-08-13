@@ -26,6 +26,7 @@ import {
     type StatusLevel,
 } from "./StatusPresentation.ts";
 import { syncHold } from "@/common/syncHold.ts";
+import { restartToApplySettings } from "@/common/pendingRestart.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
@@ -144,6 +145,7 @@ export class ModuleLog extends AbstractObsidianModule {
                 queued,
                 conflicts: this.services.conflict.conflictProcessQueueCount.value,
                 restartRequired: this.services.appLifecycle.isReloadingScheduled(),
+                restartToApplySettings: restartToApplySettings.value,
                 hold: syncHold.value,
                 problem: this.lastProblem.value || undefined,
                 activeForMs: activeForMs(busy),

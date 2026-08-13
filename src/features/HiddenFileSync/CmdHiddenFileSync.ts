@@ -56,6 +56,7 @@ import { tryGetFilePath } from "@vrtmrz/livesync-commonlib/compat/common/utils.d
 import { configureHiddenFileSyncMode, type ConfigureHiddenFileSyncResult } from "./configureHiddenFileSyncMode.ts";
 import type { OptionalSyncFeatureMode } from "@/features/optionalSyncFeatures.ts";
 import { getObsidianCommunityPluginManager } from "@/common/obsidianCommunityPlugins.ts";
+import { restartToApplySettings } from "@/common/pendingRestart.ts";
 type SyncDirection = "push" | "pull" | "safe" | "pullForce" | "pushForce";
 
 type HiddenFileInitialisationProgress = {
@@ -63,9 +64,6 @@ type HiddenFileInitialisationProgress = {
     once(message: string): void;
     done(message?: string): void;
 };
-
-const HIDDEN_FILE_NOTICE_GROUP = "hidden-file-changes";
-const HIDDEN_FILE_NOTICE_DURATION_MS = 20_000;
 
 function getComparingMTime(
     doc: (MetaEntry | LoadedEntry | false) | UXFileInfo | UXStat | null | undefined,
@@ -1193,64 +1191,50 @@ Offline Changed files: ${files.length}`;
 
     // --> Notification for Config Change
     queuedNotificationFiles = new Set<string>();
+
+    /**
+     * A plug-in's files arrived from another device, so the plug-in is reloaded.
+     *
+     * This used to ask: "Files in Iconic were updated." with a "Reload Iconic"
+     * button. The question has one sensible answer. Someone who has switched on
+     * plug-in synchronisation and then chosen that plug-in in the list has
+     * already said they want its settings to travel; being asked again, per
+     * plug-in, per change, is the plug-in refusing to finish the job it was
+     * told to do. The alternative to reloading is not "no reload" — it is a
+     * plug-in running settings that no longer exist on disk.
+     *
+     * It reloads only plug-ins that are enabled here, and never itself: this
+     * one is excluded from synchronisation entirely, and a plug-in that
+     * unloaded itself mid-replication would be unloading the thing doing the
+     * replicating.
+     */
     notifyConfigChange() {
         const updatedFolders = [...this.queuedNotificationFiles];
         this.queuedNotificationFiles.clear();
-        const noticeGroups = this.services.context.noticeGroups;
-        let hasNoticeItems = false;
         try {
             const pluginManager = getObsidianCommunityPluginManager(this.app);
-            const enabledPluginManifests = pluginManager.manifests.filter((manifest) =>
-                pluginManager.enabledPlugins.has(manifest.id)
-            );
-            const modifiedManifests = enabledPluginManifests.filter((e) => updatedFolders.indexOf(e?.dir ?? "") >= 0);
+            const self = this.plugin.manifest.id;
+            const modifiedManifests = pluginManager.manifests
+                .filter((manifest) => pluginManager.enabledPlugins.has(manifest.id))
+                .filter((manifest) => manifest.id !== self)
+                .filter((manifest) => updatedFolders.indexOf(manifest?.dir ?? "") >= 0);
             for (const manifest of modifiedManifests) {
-                // If notified about plug-ins, reloading Obsidian may not be necessary.
-                const updatePluginId = manifest.id;
-                const updatePluginName = manifest.name;
-                const itemKey = `plugin:${updatePluginId}`;
-                noticeGroups.setItem(HIDDEN_FILE_NOTICE_GROUP, itemKey, {
-                    message: `Files in ${updatePluginName} were updated.`,
-                    action: {
-                        label: `Reload ${updatePluginName}`,
-                        onSelect: () => {
-                            fireAndForget(async () => {
-                                this._log(`Unloading plugin: ${updatePluginName}`, LOG_LEVEL_INFO);
-                                await pluginManager.unloadPlugin(updatePluginId);
-                                await pluginManager.loadPlugin(updatePluginId);
-                                this._log(`Plugin reloaded: ${updatePluginName}`, LOG_LEVEL_INFO);
-                                noticeGroups.removeItem(HIDDEN_FILE_NOTICE_GROUP, itemKey);
-                            });
-                        },
-                    },
+                fireAndForget(async () => {
+                    this._log(`Reloading ${manifest.name}: its files changed on another device`, LOG_LEVEL_INFO);
+                    await pluginManager.unloadPlugin(manifest.id);
+                    await pluginManager.loadPlugin(manifest.id);
+                    this._log(`Reloaded ${manifest.name}`, LOG_LEVEL_INFO);
                 });
-                hasNoticeItems = true;
             }
         } catch (ex) {
-            this._log("Error on checking plugin status.");
+            this._log("Could not reload the plugins whose files changed.");
             this._log(ex, LOG_LEVEL_VERBOSE);
         }
 
-        // If something changes left, notify for reloading Obsidian.
+        // Obsidian's own preferences, which it read when it opened. Nothing can
+        // apply those but a restart, and a restart is the reader's to choose.
         if (updatedFolders.indexOf(this.services.API.getSystemConfigDir()) >= 0) {
-            if (!this.services.appLifecycle.isReloadingScheduled()) {
-                noticeGroups.setItem(HIDDEN_FILE_NOTICE_GROUP, "restart", {
-                    message: "Other Obsidian settings files were updated.",
-                    action: {
-                        label: "Schedule an Obsidian restart",
-                        onSelect: () => {
-                            this.services.appLifecycle.scheduleRestart();
-                            noticeGroups.removeItem(HIDDEN_FILE_NOTICE_GROUP, "restart");
-                        },
-                    },
-                });
-                hasNoticeItems = true;
-            } else {
-                noticeGroups.removeItem(HIDDEN_FILE_NOTICE_GROUP, "restart");
-            }
-        }
-        if (hasNoticeItems) {
-            noticeGroups.finish(HIDDEN_FILE_NOTICE_GROUP, { durationMs: HIDDEN_FILE_NOTICE_DURATION_MS });
+            restartToApplySettings.value = true;
         }
     }
 

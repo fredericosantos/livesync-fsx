@@ -33,6 +33,7 @@ vi.mock("./configureHiddenFileSyncMode.ts", () => ({
 
 import { HiddenFileSync } from "./CmdHiddenFileSync.ts";
 import { configureHiddenFileSyncMode } from "./configureHiddenFileSyncMode.ts";
+import { restartToApplySettings } from "@/common/pendingRestart.ts";
 
 function createHiddenRevisionOperation() {
     const path = ".obsidian/plugins/example/data.json" as FilePath;
@@ -152,28 +153,20 @@ describe("HiddenFileSync configuration-change notices", () => {
         expect(hiddenFileSync.isReady()).toBe(false);
     });
 
-    it("groups plug-in reloads and an Obsidian restart into one finished Notice", async () => {
-        const noticeGroups = {
-            setItem: vi.fn(),
-            finish: vi.fn(() => true),
-            removeItem: vi.fn(() => true),
-        };
+    // It used to ask, per plug-in, per change: "Files in Iconic were updated."
+    // with a "Reload Iconic" button. Somebody who switched plug-in sync on and
+    // then chose that plug-in in the list has already answered.
+    it("reloads a plug-in whose files arrived, without asking", async () => {
         const plugin = {
+            manifest: { id: "livesync-fsx" },
             app: {
                 plugins: {
                     manifests: {
-                        alpha: {
-                            id: "alpha",
-                            name: "Alpha",
-                            dir: ".obsidian/plugins/alpha",
-                        },
-                        beta: {
-                            id: "beta",
-                            name: "Beta",
-                            dir: ".obsidian/plugins/beta",
-                        },
+                        alpha: { id: "alpha", name: "Alpha", dir: ".obsidian/plugins/alpha" },
+                        self: { id: "livesync-fsx", name: "LiveSync", dir: ".obsidian/plugins/livesync-fsx" },
+                        off: { id: "off", name: "Off", dir: ".obsidian/plugins/off" },
                     },
-                    enabledPlugins: new Set(["alpha", "beta"]),
+                    enabledPlugins: new Set(["alpha", "livesync-fsx"]),
                     unloadPlugin: vi.fn(async () => undefined),
                     loadPlugin: vi.fn(async () => undefined),
                 },
@@ -182,54 +175,63 @@ describe("HiddenFileSync configuration-change notices", () => {
         const core = {
             confirm: { askInPopup: vi.fn() },
             services: {
-                context: { noticeGroups },
+                context: { noticeGroups: { setItem: vi.fn(), finish: vi.fn(), removeItem: vi.fn() } },
                 API: { getSystemConfigDir: vi.fn(() => ".obsidian") },
-                appLifecycle: {
-                    isReloadingScheduled: vi.fn(() => false),
-                    scheduleRestart: vi.fn(),
-                },
+                appLifecycle: { isReloadingScheduled: vi.fn(() => false), scheduleRestart: vi.fn() },
             },
         };
+        restartToApplySettings.value = false;
         const hiddenFileSync = Object.create(HiddenFileSync.prototype) as HiddenFileSync;
         Object.assign(hiddenFileSync, {
             plugin,
             core,
-            queuedNotificationFiles: new Set([".obsidian/plugins/alpha", ".obsidian/plugins/beta", ".obsidian"]),
+            queuedNotificationFiles: new Set([
+                ".obsidian/plugins/alpha",
+                ".obsidian/plugins/livesync-fsx",
+                ".obsidian/plugins/off",
+            ]),
             _log: vi.fn(),
         });
 
         hiddenFileSync.notifyConfigChange();
 
-        expect(noticeGroups.setItem).toHaveBeenNthCalledWith(1, "hidden-file-changes", "plugin:alpha", {
-            message: "Files in Alpha were updated.",
-            action: expect.objectContaining({ label: "Reload Alpha" }),
-        });
-        expect(noticeGroups.setItem).toHaveBeenNthCalledWith(2, "hidden-file-changes", "plugin:beta", {
-            message: "Files in Beta were updated.",
-            action: expect.objectContaining({ label: "Reload Beta" }),
-        });
-        expect(noticeGroups.setItem).toHaveBeenNthCalledWith(3, "hidden-file-changes", "restart", {
-            message: "Other Obsidian settings files were updated.",
-            action: expect.objectContaining({ label: "Schedule an Obsidian restart" }),
-        });
-        expect(noticeGroups.setItem.mock.calls.every(([groupKey]) => groupKey === "hidden-file-changes")).toBe(true);
-        expect(noticeGroups.finish).toHaveBeenCalledWith("hidden-file-changes", { durationMs: 20_000 });
-        expect(core.confirm.askInPopup).not.toHaveBeenCalled();
-
-        const reloadAction = (noticeGroups.setItem.mock.calls[0]?.[2] as { action: { onSelect: () => void } }).action
-            .onSelect;
-        reloadAction();
         await vi.waitFor(() => {
             expect(plugin.app.plugins.unloadPlugin).toHaveBeenCalledWith("alpha");
             expect(plugin.app.plugins.loadPlugin).toHaveBeenCalledWith("alpha");
-            expect(noticeGroups.removeItem).toHaveBeenCalledWith("hidden-file-changes", "plugin:alpha");
+        });
+        // Never itself: unloading the plug-in mid-replication would unload the
+        // thing doing the replicating. Never one that is switched off here.
+        expect(plugin.app.plugins.unloadPlugin).toHaveBeenCalledTimes(1);
+        expect(core.services.context.noticeGroups.setItem).not.toHaveBeenCalled();
+        expect(core.confirm.askInPopup).not.toHaveBeenCalled();
+    });
+
+    // Obsidian read its own preferences when it opened, so only a restart
+    // applies them — and a restart takes the window away, which makes it the
+    // reader's decision rather than a replication's.
+    it("waits in the status icon when Obsidian's own settings arrive", () => {
+        const core = {
+            confirm: { askInPopup: vi.fn() },
+            services: {
+                context: { noticeGroups: { setItem: vi.fn(), finish: vi.fn(), removeItem: vi.fn() } },
+                API: { getSystemConfigDir: vi.fn(() => ".obsidian") },
+                appLifecycle: { isReloadingScheduled: vi.fn(() => false), scheduleRestart: vi.fn() },
+            },
+        };
+        restartToApplySettings.value = false;
+        const hiddenFileSync = Object.create(HiddenFileSync.prototype) as HiddenFileSync;
+        Object.assign(hiddenFileSync, {
+            plugin: { manifest: { id: "livesync-fsx" }, app: { plugins: undefined } },
+            core,
+            queuedNotificationFiles: new Set([".obsidian"]),
+            _log: vi.fn(),
         });
 
-        const restartAction = (noticeGroups.setItem.mock.calls[2]?.[2] as { action: { onSelect: () => void } }).action
-            .onSelect;
-        restartAction();
-        expect(core.services.appLifecycle.scheduleRestart).toHaveBeenCalledOnce();
-        expect(noticeGroups.removeItem).toHaveBeenCalledWith("hidden-file-changes", "restart");
+        hiddenFileSync.notifyConfigChange();
+
+        expect(restartToApplySettings.value).toBe(true);
+        expect(core.services.appLifecycle.scheduleRestart).not.toHaveBeenCalled();
+        expect(core.services.context.noticeGroups.setItem).not.toHaveBeenCalled();
     });
 
     it("keeps subordinate initialisation phases below Notice level so one progress Notice owns the scan", async () => {

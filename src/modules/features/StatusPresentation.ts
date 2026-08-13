@@ -81,6 +81,14 @@ export interface StatusInput {
     conflicts: number;
     /** A restart is required before settings take effect. */
     restartRequired: boolean;
+    /**
+     * Obsidian's own preferences arrived from another device.
+     *
+     * Obsidian reads them once, when it opens, so nothing but a restart applies
+     * them — and a restart takes the window away, which makes it the reader's
+     * decision rather than a replication's. It waits here.
+     */
+    restartToApplySettings?: boolean;
     /** Synchronisation is held back for a reason the user can act on. */
     hold?: SyncHoldReason;
     /** Milliseconds the current burst of work has been in flight. */
@@ -129,6 +137,12 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     // --- Red. Something is wrong or a decision is owed. ---
     if (input.restartRequired) {
         return problem("Restart required", "Obsidian must be restarted before the new settings take effect.");
+    }
+    if (input.restartToApplySettings) {
+        return problem(
+            "Restart to apply settings",
+            "Obsidian's own settings arrived from another device. It reads them when it opens, so they take effect after a restart. Nothing is lost by waiting."
+        );
     }
     if (input.hold) {
         const held = describeSyncHold(input.hold);
