@@ -1,4 +1,5 @@
 import { fireAndForget } from "octagonal-wheels/promises";
+import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { type RemoteDBSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { LiveSyncCouchDBReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/couchdb/LiveSyncReplicator";
 import type { LiveSyncAbstractReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/LiveSyncAbstractReplicator";
@@ -26,8 +27,23 @@ export class ModuleReplicatorCouchDB extends AbstractModule {
             // And note that we do not open the conflict detection dialogue directly during this process.
             // This should be raised explicitly if needed.
             fireAndForget(async () => {
-                const canReplicate = await this.services.replication.isReplicationReady(false);
-                if (!canReplicate) return;
+                // Asked with `showMessage`, and the refusal is recorded.
+                //
+                // This used to be `isReplicationReady(false)` followed by a
+                // bare `return`, so a vault that was declined at start-up
+                // simply never connected and never said so: no replicator
+                // lines, no error, and a status icon reporting "Not connected"
+                // with nothing anywhere to explain it. A refusal to start
+                // synchronising is exactly the thing worth writing down.
+                const canReplicate = await this.services.replication.isReplicationReady(true);
+                if (!canReplicate) {
+                    this._log(
+                        "Continuous replication was not started: something declined it. The reason is logged above.",
+                        LOG_LEVEL_NOTICE
+                    );
+                    return;
+                }
+                this._log("Starting continuous replication.", LOG_LEVEL_INFO);
                 void this.core.replicator.openReplication(this.settings, true, false, false);
             });
         }
