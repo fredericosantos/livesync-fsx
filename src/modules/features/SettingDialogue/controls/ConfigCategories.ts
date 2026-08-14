@@ -92,8 +92,9 @@ function renderMasterSwitch(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): v
                 await hiddenFileSync.configureHiddenFileSync(value ? "MERGE" : "DISABLE_HIDDEN");
                 tab.editingSettings.syncInternalFiles = tab.core.settings.syncInternalFiles;
                 // Redrawn outright rather than nudged: everything below this
-                // switch appears and disappears with it.
-                tab.display();
+                // switch appears and disappears with it. `update()` rather than
+                // `display()`, which the declarative page never calls.
+                tab.update();
             })
         );
 }

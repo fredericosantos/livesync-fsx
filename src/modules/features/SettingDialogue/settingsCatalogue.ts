@@ -9,7 +9,7 @@
  *
  * Deliberately *not* here: labels, descriptions, defaults, or the must-match
  * set. Those already exist upstream and duplicating them would guarantee drift.
- * Copy we deliberately override lives in `sectionCopy` in `renderSection.ts`.
+ * Copy we deliberately override lives in `COPY` in `settingDefinitions.ts`.
  */
 
 import type { ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/settings";
@@ -34,7 +34,7 @@ export interface SettingSection {
     readonly requires?: "configured" | "unconfigured";
     /** Shown only while another setting holds this value. */
     readonly shownWhen?: { readonly key: SettingKey; readonly is: unknown };
-    /** Settings, in reading order. Rendered from the schema; see `renderSection`. */
+    /** Settings, in reading order. Declared from the schema; see `settingDefinitions`. */
     readonly keys: readonly SettingKey[];
     /**
      * Identifier of an extra renderer appended after the keys, for the things

@@ -1,4 +1,12 @@
-import { App, Component, PluginSettingTab, SettingGroup } from "@/deps.ts";
+import { App, Component, PluginSettingTab } from "@/deps.ts";
+import {
+    enableOnly,
+    type OnSavedHandler,
+    type OnSavedHandlerFunc,
+    type OnUpdateFunc,
+    type OnUpdateResult,
+    type UpdateFunction,
+} from "./SettingPane.ts";
 import {
     type ObsidianLiveSyncSettings,
     type RemoteDBSettings,
@@ -26,21 +34,10 @@ import {
     getConfName,
 } from "./settingConstants.ts";
 import { $msg } from "@/common/translation";
+import type { SettingDefinitionItem } from "obsidian";
+import { buildSettingDefinitions } from "./settingDefinitions.ts";
 import { LiveSyncSetting as Setting } from "./LiveSyncSetting.ts";
-import { fireAndForget, yieldNextAnimationFrame } from "octagonal-wheels/promises";
 import { EVENT_REQUEST_RELOAD_SETTING_TAB, eventHub } from "@/common/events.ts";
-import {
-    enableOnly,
-    visibleOnly,
-    type OnSavedHandler,
-    type OnSavedHandlerFunc,
-    type OnUpdateFunc,
-    type OnUpdateResult,
-    type UpdateFunction,
-} from "./SettingPane.ts";
-import { sectionsFor } from "./settingsCatalogue.ts";
-import { renderSection } from "./renderSection.ts";
-import { SECTION_EXTRAS } from "./sectionExtras.ts";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 import { closeObsidianSettings } from "@/common/obsidianSettings.ts";
 
@@ -354,7 +351,11 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
                 }
             }
             if (hasLoaded) {
-                this.display();
+                // `update()`, not `display()`: the page is declared now, and
+                // `display()` is never called once `getSettingDefinitions()`
+                // returns anything. `update()` re-asks for the definitions and
+                // re-renders from them.
+                this.update();
             } else {
                 this.requestUpdate();
             }
@@ -514,96 +515,54 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         this.closeSetting();
     }
 
-    override display(): void {
-        // Make sure lifetime component is loaded for markdown rendering in panes.
+    /**
+     * The page, described for Obsidian to render and — the point — to index.
+     *
+     * Returning a non-empty array here stops `display()` from being called at
+     * all, so this is the whole page. See `settingDefinitions.ts`.
+     */
+    override getSettingDefinitions(): SettingDefinitionItem[] {
         this._lifetimeComponent.load();
-        const { containerEl } = this;
-        this.settingComponents.length = 0;
-        this.controlledElementFunc.length = 0;
-        this.onSavedHandlers.length = 0;
         if (this._editingSettings == undefined || this.initialSettings == undefined) {
             this.reloadAllSettings();
         }
-        if (this.editingSettings === undefined || this.initialSettings == undefined) {
-            return;
-        }
+        if (this._editingSettings == undefined) return [];
+        this.settingComponents.length = 0;
+        this.controlledElementFunc.length = 0;
+        this.onSavedHandlers.length = 0;
         this.isShown = true;
-
-        containerEl.empty();
-
-        containerEl.addClass("lsfsx-setting");
-        containerEl.removeClass("isWizard");
-
-        // No tiers. There were four — advanced, power user, edge case, debug
-        // tools — three of which put a class on this element so that stylesheet
-        // rules could reveal extra rows, and all four of which had lost the
-        // switches that turned them on. Every setting they hid was therefore
-        // permanently hidden, and every command they gated permanently absent
-        // from the palette, while the branches that read them stayed in the
-        // source looking like live behaviour.
-        //
-        // A tier is a promise that the simple version is enough, made by a
-        // program that does not believe it. Either a setting is worth showing
-        // everyone, or it should not exist; that judgement is the catalogue's
-        // job, and it is made once, here, rather than deferred to the reader in
-        // the form of a switch labelled "advanced".
-
-        // One page. Tabs exist to manage volume; once the volume is cut, they
-        // only hide things a reader could otherwise scan past in a second.
-        // The banner below is attached directly: the wrapper it used to live in
-        // survived the rail's removal as an empty div, and upstream's stylesheet
-        // — loaded alongside ours whenever both plugins are enabled — made it a
-        // sticky, blurred bar that smeared the content scrolling under it.
-
-        this.createEl(
-            containerEl,
-            "div",
-            { cls: "lsfsx-setting-menu-buttons" },
-            (el) => {
-                el.addClass("wizardHidden");
-                el.createEl("label", { text: $msg("obsidianLiveSyncSettingTab.msgChangesNeedToBeApplied") });
-                void this.addEl(
-                    el,
-                    "button",
-                    { text: $msg("obsidianLiveSyncSettingTab.optionApply"), cls: "mod-warning" },
-                    (buttonEl) => {
-                        buttonEl.addEventListener("click", () =>
-                            fireAndForget(async () => await this.confirmRebuild())
-                        );
-                    }
-                );
-            },
-            visibleOnly(() => this.isNeedRebuildLocal() || this.isNeedRebuildRemote())
-        );
-
-        // The whole page: one `SettingGroup` per catalogue section, appended in
-        // catalogue order. `SettingGroup` is Obsidian's own primitive (API
-        // 1.11+) — it renders the heading above a single rounded card, puts
-        // hairline rules between the items, and carries the same vertical
-        // rhythm as every other settings page in the app.
-        //
-        // The groups must be *direct siblings* of one another. Obsidian spaces
-        // them with `.setting-group + .setting-group`, so wrapping each one in
-        // a div of our own — which is what a per-section visibility hook
-        // tempted us into — silently removes every gap on the page.
-        for (const section of sectionsFor(this.editingSettings.isConfigured === true)) {
-            const group = new SettingGroup(containerEl);
-            if (section.title) group.setHeading(section.title);
-            renderSection(this, group.listEl, section);
-            SECTION_EXTRAS[section.extra ?? ""]?.(this, group.listEl);
-            if (section.shownWhen) {
-                const groupEl = group.listEl.closest(".setting-group");
-                if (groupEl instanceof HTMLElement) {
-                    this.handleElement(
-                        groupEl,
-                        visibleOnly(() =>
-                            this.isConfiguredAs(section.shownWhen!.key as never, section.shownWhen!.is as never)
-                        )
-                    );
-                }
-            }
-        }
-
-        void yieldNextAnimationFrame().then(() => this.requestUpdate());
+        this.containerEl.addClass("lsfsx-setting");
+        this.containerEl.removeClass("isWizard");
+        return buildSettingDefinitions(this);
     }
+
+    /**
+     * Reads the value a declared control should show.
+     *
+     * From the *editing* copy rather than the live settings, because that is
+     * what the rest of this page has always edited: changes are staged here and
+     * committed together, so that a rebuild-requiring change can be confirmed
+     * once rather than per keystroke.
+     */
+    override getControlValue(key: string): unknown {
+        return this.editingSettings?.[key as AllSettingItemKey];
+    }
+
+    /**
+     * Stages a change and commits it through the existing save path.
+     *
+     * Not a direct write: `saveAllDirtySettings` is what compares against the
+     * initial values, applies only what actually changed, notifies the
+     * `addOnSaved` handlers, and reloads the buffer.
+     */
+    override async setControlValue(key: string, value: unknown): Promise<void> {
+        if (!this._editingSettings) return;
+        (this._editingSettings as unknown as Record<string, unknown>)[key] = value;
+        await this.saveAllDirtySettings();
+    }
+
+    // No `display()`. Returning definitions from `getSettingDefinitions()`
+    // means Obsidian never calls it, and a method that looks like the thing
+    // that draws the page but has not run since 1.13 is worse than no method:
+    // the next person to change the page changes the wrong one.
 }

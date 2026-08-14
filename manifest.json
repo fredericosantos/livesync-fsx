@@ -1,8 +1,8 @@
 {
     "id": "livesync-fsx",
     "name": "LiveSync",
-    "version": "1.5.0",
-    "minAppVersion": "1.11.0",
+    "version": "1.6.0",
+    "minAppVersion": "1.13.0",
     "description": "Sync this vault with your own CouchDB server, continuously and end-to-end encrypted.",
     "author": "fredericosantos",
     "authorUrl": "https://github.com/fredericosantos/livesync-fsx",
