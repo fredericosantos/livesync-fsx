@@ -214,7 +214,12 @@ const context = await esbuild.context({
 
 if (prod) {
     await context.rebuild();
-    process.exit(0);
+    // Disposed rather than exited out from under: esbuild runs as a child
+    // process, and killing the parent the instant the build returns leaves it
+    // waiting on a request that will never come, which it reports as a Go
+    // deadlock panic after an otherwise successful build. This used to be
+    // masked by a synchronous check that ran in between.
+    await context.dispose();
 } else {
     await context.watch();
 }
