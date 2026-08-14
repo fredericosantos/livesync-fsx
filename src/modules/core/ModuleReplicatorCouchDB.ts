@@ -1,4 +1,5 @@
 import { fireAndForget } from "octagonal-wheels/promises";
+import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
 import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { type RemoteDBSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { LiveSyncCouchDBReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/couchdb/LiveSyncReplicator";
@@ -53,14 +54,28 @@ export class ModuleReplicatorCouchDB extends AbstractModule {
                 // will not accept — became a discarded rejection: no log line,
                 // no status change, and a vault that sits at "Not connected"
                 // for the session with nothing anywhere to explain it.
+                // A watchdog, because the failure mode here is neither a
+                // rejection nor a return: the promise simply never settles, and
+                // an await on it is indistinguishable from success that has not
+                // happened yet. Reporting the wait is the only way a silence of
+                // that shape ever becomes evidence.
+                const watchdog = compatGlobal.setTimeout(() => {
+                    this._log(
+                        "Continuous replication has not reported back after 20 seconds. It has neither connected nor failed.",
+                        LOG_LEVEL_NOTICE
+                    );
+                }, 20_000);
                 try {
-                    await this.core.replicator.openReplication(this.settings, true, true, false);
+                    const opened = await this.core.replicator.openReplication(this.settings, true, true, false);
+                    this._log(`Continuous replication returned: ${JSON.stringify(opened)}`, LOG_LEVEL_INFO);
                 } catch (ex) {
                     this._log(
                         `Could not start continuous replication: ${ex instanceof Error ? ex.message : String(ex)}`,
                         LOG_LEVEL_NOTICE
                     );
                     this._log(ex, LOG_LEVEL_VERBOSE);
+                } finally {
+                    compatGlobal.clearTimeout(watchdog);
                 }
             });
         }
