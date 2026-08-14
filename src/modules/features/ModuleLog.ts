@@ -27,6 +27,7 @@ import {
 } from "./StatusPresentation.ts";
 import { syncHold } from "@/common/syncHold.ts";
 import { restartToApplySettings } from "@/common/pendingRestart.ts";
+import { nextSettingsDecision, settingsDecisions } from "@/common/settingsDecisions.ts";
 import type { LiveSyncCore } from "@/main.ts";
 import { LiveSyncError } from "@vrtmrz/livesync-commonlib/compat/common/LSError";
 import { compatGlobal } from "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
@@ -104,6 +105,21 @@ export class ModuleLog extends AbstractObsidianModule {
      * are gone.
      */
     lastProblem = reactiveSource("");
+
+    /**
+     * How much of the current burst of work is finished.
+     *
+     * The status icon does not need this — it turns, and turning already says
+     * "not yet". The settings page does: it is the one screen you open *because*
+     * you want to know, and a spinner with no end in sight answers the wrong
+     * question there.
+     *
+     * Counted in replication sequence numbers rather than files, because that is
+     * the only total known before the work is done. It is not a file count and
+     * is not shown as one.
+     */
+    syncProgress = reactiveSource({ done: 0, total: 0 });
+
     p2pLogCollector = new P2PLogCollector(this.services.context.events);
 
     observeForLogs() {
@@ -134,6 +150,14 @@ export class ModuleLog extends AbstractObsidianModule {
             const queued = this.services.fileProcessing.totalQueued.value;
             const busy = pendingUpload + pendingDownload + processing + queued > 0;
             const settings = this.services.setting.currentSettings();
+            // Local work has no denominator — a file being written is not "3 of
+            // 40" — so it counts towards the total only while it is outstanding,
+            // which keeps the bar from reaching the end before the work does.
+            const total = stats.maxPushSeq + stats.maxPullSeq + processing + queued;
+            this.syncProgress.value = {
+                done: Math.min(stats.lastSyncPushSeq + stats.lastSyncPullSeq, total),
+                total,
+            };
             return presentStatus({
                 connected: syncStatus !== "NOT_CONNECTED" && syncStatus !== "CLOSED",
                 anyTriggerEnabled: settings.isConfigured !== true || settings.liveSync === true,
@@ -144,6 +168,7 @@ export class ModuleLog extends AbstractObsidianModule {
                 processing,
                 queued,
                 conflicts: this.services.conflict.conflictProcessQueueCount.value,
+                settingsDecisions: settingsDecisions.value.length,
                 restartRequired: this.services.appLifecycle.isReloadingScheduled(),
                 restartToApplySettings: restartToApplySettings.value,
                 hold: syncHold.value,
@@ -275,6 +300,15 @@ ${stringifyYaml(info)}
             // what went wrong, at the moment the reader chose to look — and
             // clears the red, because it has now been read.
             statusBar.addEventListener("click", () => {
+                // A settings decision is the one thing the icon reports that
+                // the log cannot answer: it is a choice, not an account of
+                // something that already happened. So it comes first, and the
+                // red stays until it has actually been dealt with.
+                const decision = nextSettingsDecision();
+                if (decision) {
+                    void decision.ask();
+                    return;
+                }
                 this.lastProblem.value = "";
                 void this.services.API.showWindow(VIEW_TYPE_LOG);
             });

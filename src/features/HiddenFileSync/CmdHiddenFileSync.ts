@@ -15,7 +15,13 @@ import {
     type UXDataWriteOptions,
 } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { type InternalFileInfo, ICHeader, ICHeaderEnd } from "@/common/types.ts";
-import { isConfigPathSynchronised } from "./configCategories.ts";
+import { classifyConfigPath, isConfigPathSynchronised } from "./configCategories.ts";
+import { addSettingsDecision, removeSettingsDecision } from "@/common/settingsDecisions.ts";
+import {
+    describeConfigFile,
+    describeRevision,
+    type ConfigFileDescription,
+} from "@/features/HiddenFileCommon/describeConfigFile.ts";
 import {
     readAsBlob,
     isDocContentSame,
@@ -774,12 +780,30 @@ Offline Changed files: ${processFiles.length}`;
                     const docBMerge = await this.localDatabase.getDBEntry(prefixedPath, { rev: revB });
                     try {
                         if (docAMerge != false && docBMerge != false) {
-                            if (await this.showJSONMergeDialogAndMerge(docAMerge, docBMerge)) {
-                                // Again for other conflicted revisions.
-                                this.requeueConflictCheck(path);
-                            } else {
-                                this.finishConflictCheck(path);
-                            }
+                            // Queued, not asked. Opening a modal here would take
+                            // the keyboard the moment replication delivered the
+                            // conflict; the decision waits in the status icon
+                            // instead, and both revisions wait in the database.
+                            addSettingsDecision({
+                                path: stripAllPrefixes(path),
+                                ask: async () => {
+                                    try {
+                                        if (await this.showJSONMergeDialogAndMerge(docAMerge, docBMerge)) {
+                                            // Again for other conflicted revisions.
+                                            this.requeueConflictCheck(path);
+                                        } else {
+                                            this.finishConflictCheck(path);
+                                        }
+                                    } finally {
+                                        // Dropped either way. If it is still
+                                        // conflicted, the requeued check adds it
+                                        // back; leaving it here on a dismissal
+                                        // would make the icon permanently red
+                                        // with no way to clear it.
+                                        removeSettingsDecision(stripAllPrefixes(path));
+                                    }
+                                },
+                            });
                             return;
                         } else {
                             // If either revision could not read, force resolving by the newer one.
@@ -810,10 +834,22 @@ Offline Changed files: ${processFiles.length}`;
             const storageFilePath = strippedPath;
             const storeFilePath = strippedPath;
             const displayFilename = `${storeFilePath}`;
+            // Named rather than pathed: "Excalidraw settings need a decision"
+            // over `data.json`, instead of the whole path as a heading. The
+            // sides are labelled with who wrote them and when, which is the
+            // only basis the reader has for choosing between two versions of
+            // their own settings.
+            const described = this.describeConflict(strippedPath);
+            const nameA = describeRevision(docA.device, docA.mtime);
+            const nameB = describeRevision(docB.device, docB.mtime);
             // const path = this.prefixedConfigDir2configDir(stripAllPrefixes(docA.path)) || docA.path;
             // Cancel only when replacing an existing dialogue for the same path, not on every queue pass.
             sendSignal(`cancel-internal-conflict:${docA.path}`);
-            const modal = new JsonResolveModal(this.app, storageFilePath, [docA, docB], async (keep, result) => {
+            const modal = new JsonResolveModal(
+                this.app,
+                described.file as FilePath,
+                [docA, docB],
+                async (keep, result) => {
                 // modal.close();
                 try {
                     // const filename = storeFilePath;
@@ -862,11 +898,40 @@ Offline Changed files: ${processFiles.length}`;
                 } catch (ex) {
                     this._log("Could not merge conflicted json");
                     this._log(ex, LOG_LEVEL_VERBOSE);
-                    res(false);
-                }
-            });
+                        res(false);
+                    }
+                },
+                nameA,
+                nameB,
+                undefined,
+                undefined,
+                undefined,
+                described.title
+            );
             modal.open();
         });
+    }
+
+    /**
+     * The heading for a conflicted configuration file.
+     *
+     * Plug-in display names come from what is installed here; a conflict can
+     * arrive for a plug-in this device has never had, and `describeConfigFile`
+     * falls back to its folder name for those.
+     */
+    private describeConflict(path: string): ConfigFileDescription {
+        const configDir = this.services.API.getSystemConfigDir();
+        const relative = path.startsWith(`${configDir}/`) ? path.slice(configDir.length + 1) : path;
+        const names = new Map<string, string>();
+        try {
+            for (const manifest of getObsidianCommunityPluginManager(this.app).manifests) {
+                names.set(manifest.id, manifest.name);
+            }
+        } catch {
+            // A future Obsidian could stop exposing this; ids still identify
+            // the plug-in well enough to choose.
+        }
+        return describeConfigFile(relative, names);
     }
     // <-- Conflict processing
 
@@ -1341,6 +1406,38 @@ Offline Changed files: ${files.length}`;
             }
         }
         return files;
+    }
+
+    /**
+     * Every community plug-in the *vault* has heard of, not just this device.
+     *
+     * The plug-in table used to be built from `app.plugins.manifests`, which is
+     * what is unpacked on this machine. On a device that has only just joined —
+     * a new iPad with nothing but BRAT — that list is one row long, so the one
+     * screen that decides what arrives is empty precisely when it matters most.
+     *
+     * The database knows better: it already holds `plugins/<id>/…` for every
+     * plug-in any device has pushed, and replication brings that metadata here
+     * before the files are written. So the table asks it.
+     *
+     * Deliberately not filtered by `isTargetFile`: a plug-in switched off is
+     * exactly the one whose row must still be there to switch back on.
+     */
+    async getPluginIdsInDatabase(): Promise<Set<string>> {
+        const configDir = this.services.API.getSystemConfigDir();
+        const rows = (
+            await this.localDatabase.allDocsRaw({ startkey: ICHeader, endkey: ICHeaderEnd, include_docs: true })
+        ).rows;
+        const ids = new Set<string>();
+        for (const row of rows) {
+            const doc = row.doc as MetaEntry | undefined;
+            if (!doc || doc.deleted || doc._deleted) continue;
+            const path = stripAllPrefixes(this.getPath(doc));
+            if (!path.startsWith(`${configDir}/`)) continue;
+            const pluginId = classifyConfigPath(path.slice(configDir.length + 1))?.pluginId;
+            if (pluginId) ids.add(pluginId);
+        }
+        return ids;
     }
 
     async rebuildFromDatabase(showNotice: boolean, targetFiles: FilePath[] | false = false, onlyNew = false) {

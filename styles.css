@@ -947,9 +947,87 @@ body.is-mobile .livesync-compatibility-review-notice {
     font-size: var(--font-ui-smaller);
 }
 
-/* Installed but switched off here: dimmed, as Obsidian's own list dims it. */
-.lsfsx-plugins__row--disabled .setting-item-name {
+/*
+ * What synchronisation is doing, at the top of the settings page.
+ *
+ * The bar keeps its space whether or not it is filled, so starting and
+ * finishing a sync does not move every row beneath it.
+ */
+.lsfsx-syncline {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 0.4em;
+    margin-top: 0.4em;
+    /* Smaller than the connection chips above it: where the vault syncs is the
+     * heading, how it is getting on is the footnote. */
+    font-size: var(--font-ui-smaller);
+}
+
+.lsfsx-syncline__icon {
+    display: flex;
+    align-items: center;
     color: var(--text-muted);
+}
+
+.lsfsx-syncline__icon .svg-icon {
+    width: 0.9em;
+    height: 0.9em;
+}
+
+.lsfsx-syncline__text {
+    color: var(--text-muted);
+}
+
+.lsfsx-syncline[data-level="synced"] .lsfsx-syncline__icon,
+.lsfsx-syncline[data-level="idle"] .lsfsx-syncline__icon {
+    color: var(--text-success);
+}
+
+.lsfsx-syncline[data-level="problem"] .lsfsx-syncline__icon {
+    color: var(--text-error);
+}
+
+.lsfsx-syncline__track {
+    grid-column: 1 / -1;
+    height: 2px;
+    max-width: 14em;
+    margin-top: 0.4em;
+    border-radius: 3px;
+    background: var(--background-modifier-border);
+    /* Reserved, not removed: see above. */
+    visibility: hidden;
+}
+
+.lsfsx-syncline__track.is-visible {
+    visibility: visible;
+}
+
+.lsfsx-syncline__fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--interactive-accent);
+    transition: width 0.25s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lsfsx-syncline__fill {
+        transition: none;
+    }
+}
+
+/*
+ * A plug-in's state, beside its name rather than beneath it.
+ *
+ * It was a description, which put "Disabled here" on a second line and made the
+ * rows that had one twice the height of the rows that did not — so a list of
+ * twenty plug-ins rippled, and the eye read the ripple before it read any name.
+ * Half opacity says the same thing and takes no space: present when looked for,
+ * absent when scanning the names.
+ */
+.lsfsx-plugins__tag {
+    opacity: 0.5;
+    font-weight: normal;
 }
 
 /*

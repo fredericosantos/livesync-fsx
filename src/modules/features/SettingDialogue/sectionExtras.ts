@@ -15,6 +15,8 @@ import {
 } from "@/common/events.ts";
 import { renderConfigCategories } from "./controls/ConfigCategories.ts";
 import { renderFileSizeLimit } from "./controls/FileSizeLimit.ts";
+import { renderSyncStatusLine } from "./controls/SyncStatusLine.ts";
+import { HiddenFileSync } from "@/features/HiddenFileSync/CmdHiddenFileSync.ts";
 import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts";
 import { yieldNextAnimationFrame } from "octagonal-wheels/promises";
 import { SetupManager } from "@/modules/features/SetupManager.ts";
@@ -105,6 +107,34 @@ const server: Extra = (tab, el) => {
             })
         );
     describeConnection(connection.descEl, tab.editingSettings.couchDB_URI, tab.editingSettings.couchDB_DBNAME);
+    // Inside the row's own description, under the two chips: it is a fact about
+    // that connection, not a section of its own. Set smaller than the chips for
+    // the same reason — where the vault syncs is the heading, how it is getting
+    // on is the footnote.
+    renderSyncStatusLine(tab, connection.descEl);
+
+    // This device already has a name — it gives itself one at first launch, so
+    // nothing here is ever blank and nothing has to be filled in. It is
+    // editable because the name is now written onto every document this device
+    // saves, and appears as one side of a conflict: "Fred's MacBook" is a
+    // useful thing to be asked to choose between, `DESKTOP-4KQ2P1` is not.
+    //
+    // Device-local, never synchronised: the whole point is to tell this device
+    // apart from the others.
+    new Setting(el)
+        .setName("This device is called")
+        .setDesc("Used to say which device changed a file when two of them disagree.")
+        .addText((text) =>
+            text.setValue(tab.services.setting.getDeviceAndVaultName()).onChange((value) => {
+                const name = value.trim();
+                // An empty box means "no name", not a device called "". The
+                // rename takes effect on the next document written; revisions
+                // already saved keep the name they were saved under, because
+                // that is who wrote them.
+                tab.services.setting.setDeviceAndVaultName(name);
+                tab.services.setting.saveDeviceAndVaultName();
+            })
+        );
 
     new Setting(el)
         .setName("Add another device")
@@ -124,6 +154,53 @@ const server: Extra = (tab, el) => {
 // needed one: with a copy stored per device, something had to let you choose
 // between them.
 const configCategories: Extra = (tab, el) => renderConfigCategories(tab, el);
+
+/**
+ * Make the server match this device.
+ *
+ * Everything else in this plug-in merges: two devices that disagree end up with
+ * both versions, and the reader picks. That is right almost always and useless
+ * in the one case where a device is simply *correct* — a half-finished fetch, a
+ * server rebuilt from the wrong machine, a vault restored from backup. Without
+ * this the only route back was to discard the connection and set it up again.
+ *
+ * The confirmation names the real hazard, which is not the server. Replacing it
+ * leaves every *other* device holding a database that no longer matches, and
+ * each must download the vault again before it syncs; anything a device had
+ * changed but not yet uploaded is gone. "This cannot be undone" would not have
+ * told anyone that.
+ */
+const replaceServer: Extra = (tab, el) => {
+    new Setting(el)
+        .setName("Replace the server with this vault")
+        .setDesc("Use when this device is right and the server is not. Other devices must download the vault again.")
+        .addButton((button) =>
+            button
+                .setButtonText("Replace")
+                .setWarning()
+                .onClick(async () => {
+                    const confirmed = await tab.core.confirm.askYesNoDialog(
+                        "Everything on the server will be deleted and replaced with the files on this device.\n\n" +
+                            "Your other devices will have to download the vault again. Anything changed on them and " +
+                            "not yet uploaded will be lost.\n\nReplace the server?",
+                        { defaultOption: "No" }
+                    );
+                    if (confirmed !== "yes") return;
+                    // Read before the rebuild, which switches it off: this is a
+                    // preference the reader set, not a casualty of the repair.
+                    const wasSyncingConfig = tab.core.settings.syncInternalFiles === true;
+                    await leaveSettings(tab);
+                    await tab.core.rebuilder.$rebuildRemote();
+                    if (wasSyncingConfig) {
+                        // MERGE re-enables it *and* re-enumerates the folder, so
+                        // the settings land on the freshly emptied server rather
+                        // than waiting for someone to edit a hotkey.
+                        const hiddenFileSync = tab.core.addOns.find((addOn) => addOn instanceof HiddenFileSync);
+                        await hiddenFileSync?.configureHiddenFileSync("MERGE");
+                    }
+                })
+        );
+};
 
 const discard: Extra = (tab, el) => {
     new Setting(el)
@@ -154,6 +231,7 @@ const discard: Extra = (tab, el) => {
 export const SECTION_EXTRAS: Record<string, Extra> = {
     connect,
     server,
+    "replace-server": replaceServer,
     "config-categories": configCategories,
     "file-size-limit": (tab, el) => renderFileSizeLimit(tab, el),
     discard,

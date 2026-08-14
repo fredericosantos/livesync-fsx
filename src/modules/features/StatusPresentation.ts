@@ -79,6 +79,15 @@ export interface StatusInput {
     queued: number;
     /** Unresolved conflicts awaiting a decision. */
     conflicts: number;
+    /**
+     * Settings changed on two devices in a way that cannot be merged.
+     *
+     * Counted apart from `conflicts`, which is notes. The wording differs —
+     * nobody thinks of their hotkeys as a file — and so does the remedy: this
+     * one is answered by choosing a device, not by reading two versions of a
+     * note and deciding what you meant.
+     */
+    settingsDecisions?: number;
     /** A restart is required before settings take effect. */
     restartRequired: boolean;
     /**
@@ -152,6 +161,12 @@ export function presentStatus(input: StatusInput): StatusPresentation {
         return problem(
             pluralise(input.conflicts, "conflict"),
             "The same file was edited on more than one device. Select which version to keep."
+        );
+    }
+    if (input.settingsDecisions) {
+        return problem(
+            input.settingsDecisions === 1 ? "A setting needs a decision" : `${input.settingsDecisions} settings need a decision`,
+            "The same setting was changed on two devices and the two changes cannot both be kept. Press to choose."
         );
     }
     if (input.errored) {

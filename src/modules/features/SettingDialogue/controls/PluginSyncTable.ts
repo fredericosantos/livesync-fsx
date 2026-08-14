@@ -6,16 +6,20 @@
  * want only on the desktop obliges you to turn the whole category off. Here it
  * is one switch per plug-in, over a list of what is installed.
  *
- * The list is of what is installed *on this device*, which is the only list a
- * device can honestly show. A plug-in installed elsewhere and not yet arrived
- * here has no row, so the answer for it is the one stated once at the foot of
- * the list rather than guessed per plug-in.
+ * The list is of what the *vault* has, not what this device has. Those are the
+ * same thing on the machine you set up first and nowhere else: a device that
+ * has only just joined holds almost nothing, and building the list from its own
+ * `app.plugins.manifests` offered a choice of one plug-in on the very screen
+ * that decides what the other twenty do. So the installed manifests are merged
+ * with the plug-ins the database already knows about, and a plug-in that has
+ * not arrived here yet says so rather than being absent.
  */
 
 import { LiveSyncSetting as Setting } from "@/modules/features/SettingDialogue/LiveSyncSetting.ts";
 import type { ObsidianLiveSyncSettingTab } from "@/modules/features/SettingDialogue/ObsidianLiveSyncSettingTab.ts";
 import { getObsidianCommunityPluginManager } from "@/common/obsidianCommunityPlugins.ts";
 import { isPluginSelected } from "@/features/HiddenFileSync/configCategories.ts";
+import { HiddenFileSync } from "@/features/HiddenFileSync/CmdHiddenFileSync.ts";
 
 /**
  * This plug-in never carries itself: each device holds its own credentials, and
@@ -32,6 +36,9 @@ function ownPluginId(tab: ObsidianLiveSyncSettingTab): string {
 interface PluginRow {
     readonly id: string;
     readonly name: string;
+    /** Unpacked on this device. */
+    readonly installed: boolean;
+    /** Installed here, and switched on here. */
     readonly enabled: boolean;
 }
 
@@ -40,8 +47,8 @@ function installedPlugins(tab: ObsidianLiveSyncSettingTab): PluginRow[] {
     try {
         manager = getObsidianCommunityPluginManager(tab.plugin.app);
     } catch {
-        // A future Obsidian could stop exposing this. Saying so is better than
-        // an empty list that looks like "none installed".
+        // A future Obsidian could stop exposing this. The database list below
+        // still stands on its own, which is the point of having two sources.
         return [];
     }
     const self = ownPluginId(tab);
@@ -50,13 +57,59 @@ function installedPlugins(tab: ObsidianLiveSyncSettingTab): PluginRow[] {
         .map((manifest) => ({
             id: manifest.id,
             name: manifest.name,
+            installed: true,
             enabled: manager.enabledPlugins.has(manifest.id),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        }));
+}
+
+/**
+ * The installed plug-ins, plus every other one the database has heard of.
+ *
+ * A plug-in known only to the database has no manifest here, so there is no
+ * name to show and its folder name is used instead. That is what the id is —
+ * `obsidian-excalidraw-plugin` rather than "Excalidraw" — and it is still
+ * recognisable enough to decide about, which a missing row is not.
+ */
+function mergeRows(installed: PluginRow[], knownIds: ReadonlySet<string>, self: string): PluginRow[] {
+    const rows = [...installed];
+    const seen = new Set(installed.map((row) => row.id));
+    for (const id of knownIds) {
+        if (seen.has(id) || id === self) continue;
+        rows.push({ id, name: id, installed: false, enabled: false });
+    }
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * The name, and — only when there is one — the state, beside it.
+ *
+ * A fragment rather than two calls, because Obsidian's `Setting` has one slot
+ * for the name and one for a description, and the description is a second line.
+ * The state of a plug-in is an adjective on its name, not a sentence about it.
+ */
+function nameOf(row: PluginRow): DocumentFragment {
+    const fragment = createFragment();
+    fragment.appendText(row.name);
+    const state = !row.installed ? "not installed" : !row.enabled ? "disabled" : undefined;
+    if (state) {
+        fragment.appendText(" ");
+        fragment.createSpan({ cls: "lsfsx-plugins__tag", text: `(${state})` });
+    }
+    return fragment;
+}
+
+function pluginIdsInDatabase(tab: ObsidianLiveSyncSettingTab): Promise<Set<string>> {
+    const hiddenFileSync = tab.core.addOns.find((addOn) => addOn instanceof HiddenFileSync);
+    return hiddenFileSync ? hiddenFileSync.getPluginIdsInDatabase() : Promise.resolve(new Set<string>());
 }
 
 export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
     const container = el.createDiv({ cls: "lsfsx-plugins" });
+
+    // Read once when the pane opens, then held: the table is drawn again on
+    // every toggle, and re-scanning the database each time would make a switch
+    // that answers instantly answer after a pause instead.
+    let knownIds: ReadonlySet<string> = new Set<string>();
 
     const draw = () => {
         container.empty();
@@ -67,7 +120,7 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
         // the very control that could have excluded it.
         if (!tab.editingSettings.syncInternalFiles) return;
 
-        const rows = installedPlugins(tab);
+        const rows = mergeRows(installedPlugins(tab), knownIds, ownPluginId(tab));
 
         // Every plug-in, present and future, in one switch. Off means the list
         // below decides; on means it does not have to be maintained at all.
@@ -92,7 +145,7 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
         if (rows.length === 0) {
             container.createDiv({
                 cls: "lsfsx-plugins__empty",
-                text: "No community plugins are installed on this device.",
+                text: "No community plugins yet, here or on the server.",
             });
             return;
         }
@@ -112,14 +165,7 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
         // which made the one part of this page that is not Obsidian's own idea
         // look like it belonged to a different program.
         for (const row of rows) {
-            const setting = new Setting(container).setName(row.name);
-            // Obsidian's own list dims what is installed but switched off, and
-            // a reader comparing the two lists should not have to work out why
-            // one has more entries.
-            if (!row.enabled) {
-                setting.setDesc("Disabled here");
-                setting.settingEl.addClass("lsfsx-plugins__row--disabled");
-            }
+            const setting = new Setting(container).setName(nameOf(row));
             setting.addToggle((toggle) =>
                 toggle
                     .setValue(isPluginSelected(tab.editingSettings, row.id))
@@ -129,6 +175,12 @@ export function renderPluginSyncTable(tab: ObsidianLiveSyncSettingTab, el: HTMLE
     };
 
     draw();
+    // Drawn twice: once with what this device knows, so the pane is never
+    // blank while a database scan runs, and again when the scan lands.
+    void pluginIdsInDatabase(tab).then((ids) => {
+        knownIds = ids;
+        draw();
+    });
     tab.addOnSaved("syncInternalFiles", () => draw());
     tab.addOnSaved("syncConfigNewPlugins", () => draw());
 }

@@ -141,6 +141,15 @@ export const SETTING_SECTIONS: readonly SettingSection[] = [
     // answers all of it with a single status-bar icon and no question, which
     // is the right answer here too. The defaults are in `PREFERRED_BASE`.
     {
+        // With "Discard", at the bottom: both replace or destroy rather than
+        // adjust, and a destructive action is never above an ordinary one.
+        id: "replace-server",
+        title: "",
+        requires: "configured",
+        keys: [],
+        extra: "replace-server",
+    },
+    {
         // Last, so a destructive action is never above an ordinary one.
         id: "discard",
         title: "",
