@@ -20,8 +20,8 @@ export function renderSyncStatusLine(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
         // settings screen.
         return;
     }
-    // Built in `observeForLogs`, which has not necessarily run yet.
-    if (!log.statusBarLabels) return;
+    // Both are built in `observeForLogs`, which has not necessarily run yet.
+    if (!log.statusBarLabels || !log.syncProgress) return;
 
     const line = el.createDiv({ cls: "lsfsx-syncline" });
     const iconEl = line.createSpan({ cls: "lsfsx-syncline__icon" });

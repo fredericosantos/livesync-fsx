@@ -117,7 +117,7 @@ export class ModuleLog extends AbstractObsidianModule {
      * the only total known before the work is done. It is not a file count and
      * is not shown as one.
      */
-    syncProgress = reactiveSource({ done: 0, total: 0 });
+    syncProgress!: ReactiveValue<{ done: number; total: number }>;
 
     p2pLogCollector = new P2PLogCollector(this.services.context.events);
 
@@ -140,6 +140,23 @@ export class ModuleLog extends AbstractObsidianModule {
         };
         const sinceSyncedMs = (): number | undefined => (syncedAt === undefined ? undefined : Date.now() - syncedAt);
 
+        // Derived, never assigned. This was originally written *inside* the
+        // status computation, which is a write to a reactive source during the
+        // evaluation of a value that depends on it: the graph is left mid-update,
+        // `statusBarLabels` stops notifying, and the status bar keeps the hidden
+        // class it was created with — an icon that never appears again, for the
+        // whole session, with no error anywhere.
+        this.syncProgress = reactive(() => {
+            const stats = this.services.replicator.replicationStatics.value;
+            const processing = this.services.fileProcessing.processing.value;
+            const queued = this.services.fileProcessing.totalQueued.value;
+            // Local work has no denominator — a file being written is not "3 of
+            // 40" — so it counts towards the total only while it is outstanding,
+            // which keeps the bar from reaching the end before the work does.
+            const total = stats.maxPushSeq + stats.maxPullSeq + processing + queued;
+            return { done: Math.min(stats.lastSyncPushSeq + stats.lastSyncPullSeq, total), total };
+        });
+
         const statusPresentation = computed(() => {
             const stats = this.services.replicator.replicationStatics.value;
             const syncStatus = stats.syncStatus;
@@ -149,14 +166,6 @@ export class ModuleLog extends AbstractObsidianModule {
             const queued = this.services.fileProcessing.totalQueued.value;
             const busy = pendingUpload + pendingDownload + processing + queued > 0;
             const settings = this.services.setting.currentSettings();
-            // Local work has no denominator — a file being written is not "3 of
-            // 40" — so it counts towards the total only while it is outstanding,
-            // which keeps the bar from reaching the end before the work does.
-            const total = stats.maxPushSeq + stats.maxPullSeq + processing + queued;
-            this.syncProgress.value = {
-                done: Math.min(stats.lastSyncPushSeq + stats.lastSyncPullSeq, total),
-                total,
-            };
             return presentStatus({
                 connected: syncStatus !== "NOT_CONNECTED" && syncStatus !== "CLOSED",
                 anyTriggerEnabled: settings.isConfigured !== true || settings.liveSync === true,
@@ -312,6 +321,14 @@ ${stringifyYaml(info)}
                 void this.services.API.showWindow(VIEW_TYPE_LOG);
             });
             this.statusBar = statusBar;
+            // Painted once, here, from the state the plug-in loads with.
+            //
+            // Everything else about this icon happens on a *change*, and the
+            // item is created already carrying the hidden class — so a vault
+            // that starts disconnected and stays disconnected never had its
+            // first change, and the icon simply never appeared. The state most
+            // worth reporting is the one that never varies.
+            this.applyStatusBarText();
         }
         this._log("Log module loaded", LOG_LEVEL_INFO);
         this._log("Verbose log", LOG_LEVEL_VERBOSE);
