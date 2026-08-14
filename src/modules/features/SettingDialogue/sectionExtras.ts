@@ -98,14 +98,12 @@ const connect: Extra = (tab, el) => {
 };
 
 const server: Extra = (tab, el) => {
-    const connection = new Setting(el)
-        .setName("Server")
-        .addButton((button) =>
-            button.setButtonText("Reconfigure").onClick(async () => {
-                await leaveSettings(tab);
-                await tab.core.getModule(SetupManager).startOnBoarding();
-            })
-        );
+    const connection = new Setting(el).setName("Server").addButton((button) =>
+        button.setButtonText("Reconfigure").onClick(async () => {
+            await leaveSettings(tab);
+            await tab.core.getModule(SetupManager).startOnBoarding();
+        })
+    );
     describeConnection(connection.descEl, tab.editingSettings.couchDB_URI, tab.editingSettings.couchDB_DBNAME);
     // Inside the row's own description, under the two chips: it is a fact about
     // that connection, not a section of its own. Set smaller than the chips for
@@ -212,9 +210,12 @@ const discard: Extra = (tab, el) => {
                 .setWarning()
                 .onClick(async () => {
                     if (
-                        (await tab.core.confirm.askYesNoDialog($msg("obsidianLiveSyncSettingTab.msgDiscardConfirmation"), {
-                            defaultOption: "No",
-                        })) != "yes"
+                        (await tab.core.confirm.askYesNoDialog(
+                            $msg("obsidianLiveSyncSettingTab.msgDiscardConfirmation"),
+                            {
+                                defaultOption: "No",
+                            }
+                        )) != "yes"
                     ) {
                         return;
                     }

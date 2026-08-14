@@ -294,7 +294,10 @@ export async function main(
 ) {
     const options = parseArgs(standardIo);
     if (options.interval && options.command !== "daemon") {
-        writeStderrLine(standardIo, `Warning: --interval is only used in daemon mode, ignored for '${options.command}'`);
+        writeStderrLine(
+            standardIo,
+            `Warning: --interval is only used in daemon mode, ignored for '${options.command}'`
+        );
     }
     const avoidStdoutNoise =
         options.command === "cat" ||
@@ -423,7 +426,10 @@ export async function main(
     // In daemon mode the default handler must run so changes are applied to the filesystem.
     if (options.command !== "daemon") {
         serviceHubInstance.replication.processSynchroniseResult.addHandler(async () => {
-            writeStderrLine(standardIo, `[Info] Replication result received, but not processed automatically in CLI mode.`);
+            writeStderrLine(
+                standardIo,
+                `[Info] Replication result received, but not processed automatically in CLI mode.`
+            );
             return await Promise.resolve(true);
         }, -100);
     }

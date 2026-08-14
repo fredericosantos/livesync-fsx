@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url";
 
 const project = new Project({ tsConfigFilePath: "../tsconfig.json" });
 project.addSourceFilesAtPaths("../src/**/*.ts");
-project.addSourceFilesAtPaths("../src/**/*.svelte");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

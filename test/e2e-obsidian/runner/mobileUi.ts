@@ -70,9 +70,7 @@ async function applyObsidianMobileTestMode(
             await mkdir(outputDirectory, { recursive: true });
             const screenshotPath = join(
                 outputDirectory,
-                waitForLiveSync
-                    ? "mobile-mode-transition.failure.png"
-                    : "mobile-mode-before-plugin-start.failure.png"
+                waitForLiveSync ? "mobile-mode-transition.failure.png" : "mobile-mode-before-plugin-start.failure.png"
             );
             await page.screenshot({ path: screenshotPath, fullPage: true });
             const detail = error instanceof Error ? error.message : String(error);

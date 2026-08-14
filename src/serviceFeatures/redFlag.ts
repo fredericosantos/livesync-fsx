@@ -5,8 +5,8 @@ import {
     FlagFilesHumanReadable,
     FlagFilesOriginal,
 } from "@vrtmrz/livesync-commonlib/compat/common/models/redflag.const";
-import FetchEverything from "@/modules/features/SetupWizard/dialogs/FetchEverything.svelte";
-import RebuildEverything from "@/modules/features/SetupWizard/dialogs/RebuildEverything.svelte";
+import { fetchEverything } from "@/modules/features/SetupWizard/dialogs/FetchEverything.ts";
+import { rebuildEverything } from "@/modules/features/SetupWizard/dialogs/RebuildEverything.ts";
 import { extractObject } from "octagonal-wheels/object";
 import type { ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/settings";
 import { TweakValuesShouldMatchedTemplate } from "@vrtmrz/livesync-commonlib/compat/common/models/tweak.definition";
@@ -93,7 +93,7 @@ export function createFetchAllFlagHandler(
         // is never wrong. Two routes to one operation, one of them asking the
         // reader to pick a merge policy this fork has already decided.
         const method =
-            await host.services.UI.dialogManager.openWithExplicitCancel<FetchEverythingResult>(FetchEverything);
+            await host.services.UI.dialogManager.openWithExplicitCancel<FetchEverythingResult>(fetchEverything);
         if (method === "cancelled") {
             log("Fetch everything cancelled by user.", LOG_LEVEL_INFO);
             await cleanupFlag();
@@ -333,7 +333,7 @@ export function createRebuildFlagHandler(
         const method = await host.services.UI.dialogManager.openWithExplicitCancel<
             RebuildEverythingResult,
             { isP2P: boolean }
-        >(RebuildEverything, { isP2P: false });
+        >(rebuildEverything, { isP2P: false });
         if (method === "cancelled") {
             log("Rebuild everything cancelled by user.", LOG_LEVEL_INFO);
             await cleanupFlag();

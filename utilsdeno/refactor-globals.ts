@@ -20,7 +20,6 @@ const project = new Project({ tsConfigFilePath: "../tsconfig.json" });
 
 // Manually add files under src/ to ensure those excluded by tsconfig.json are processed if needed.
 project.addSourceFilesAtPaths("../src/**/*.ts");
-project.addSourceFilesAtPaths("../src/**/*.svelte");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -190,7 +189,10 @@ for (const sourceFile of project.getSourceFiles()) {
             if (requiredImports.length > 0) {
                 const existingImport = sourceFile.getImportDeclarations().find((imp) => {
                     const spec = imp.getModuleSpecifierValue();
-                    return spec === "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions" || spec === "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions";
+                    return (
+                        spec === "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions" ||
+                        spec === "@vrtmrz/livesync-commonlib/compat/common/coreEnvFunctions"
+                    );
                 });
 
                 if (existingImport) {

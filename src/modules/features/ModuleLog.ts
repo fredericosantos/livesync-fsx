@@ -93,7 +93,6 @@ export const MARK_DONE = "\u{2009}\u{2009}";
 export class ModuleLog extends AbstractObsidianModule {
     statusBar?: HTMLElement;
 
-
     statusBarLabels!: ReactiveValue<{ icon: string; message: string; level: StatusLevel; detail: string }>;
     statusLog = reactiveSource("");
     /**

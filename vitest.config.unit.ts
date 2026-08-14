@@ -1,3 +1,4 @@
+import path from "path";
 /**
  * @file vitest.config.unit.ts
  * @description Configuration for running unit tests in Node.js (excluding browser harnesses, E2E, and database integration tests).
@@ -12,7 +13,9 @@ export default mergeConfig(
     defineConfig({
         resolve: {
             alias: {
-                obsidian: "", // prevent accidental imports of obsidian types in unit tests,
+                // Resolvable, but every member throws when touched. See the
+                // stub for why that is better than refusing to resolve at all.
+                obsidian: path.resolve(__dirname, "./test/stubs/obsidian.ts"),
             },
         },
         test: {

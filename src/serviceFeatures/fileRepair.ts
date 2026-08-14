@@ -29,11 +29,7 @@ export type FileRepairInspection = {
     requiresAttention: boolean;
 };
 
-export type DiscardUnreadableRevisionResult =
-    | "discarded"
-    | "failed"
-    | "no-longer-live"
-    | "revision-is-readable";
+export type DiscardUnreadableRevisionResult = "discarded" | "failed" | "no-longer-live" | "revision-is-readable";
 
 export type DiscardLiveBranchResult = "discarded" | "failed" | "no-longer-live" | "only-live-revision";
 
@@ -67,9 +63,7 @@ export async function inspectFileRepair(core: FileRepairCore, path: string): Pro
     const winnerRepresentsStoredFile = winner !== undefined && !winner.metadata.deleted;
     const databaseAndStorageDiffer =
         information.storage.exists !== winnerRepresentsStoredFile ||
-        (information.storage.exists &&
-            winnerRepresentsStoredFile &&
-            winner.contentMatchesStorage === false);
+        (information.storage.exists && winnerRepresentsStoredFile && winner.contentMatchesStorage === false);
     const unreadableLiveRevision =
         information.database.unavailableConflictRevisions.length > 0 ||
         revisions.some(({ contentReadable }) => !contentReadable);
@@ -92,10 +86,9 @@ export async function discardUnreadableLiveRevision(
     revision: string
 ): Promise<DiscardUnreadableRevisionResult> {
     const latest = await inspectFileDatabaseInfo(core, path);
-    const liveRevisions = [
-        latest.database.currentRevision,
-        ...latest.database.conflictRevisions,
-    ].filter((candidate): candidate is string => candidate !== null);
+    const liveRevisions = [latest.database.currentRevision, ...latest.database.conflictRevisions].filter(
+        (candidate): candidate is string => candidate !== null
+    );
     if (!liveRevisions.includes(revision)) {
         return "no-longer-live";
     }
@@ -116,10 +109,9 @@ export async function discardLiveBranch(
     revision: string
 ): Promise<DiscardLiveBranchResult> {
     const latest = await inspectFileDatabaseInfo(core, path);
-    const liveRevisions = [
-        latest.database.currentRevision,
-        ...latest.database.conflictRevisions,
-    ].filter((candidate): candidate is string => candidate !== null);
+    const liveRevisions = [latest.database.currentRevision, ...latest.database.conflictRevisions].filter(
+        (candidate): candidate is string => candidate !== null
+    );
     if (!liveRevisions.includes(revision)) {
         return "no-longer-live";
     }

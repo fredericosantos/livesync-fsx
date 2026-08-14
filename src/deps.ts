@@ -31,6 +31,7 @@ export {
     getLanguage,
     requireApiVersion,
     ButtonComponent,
+    ProgressBarComponent,
     TextComponent,
     ToggleComponent,
     DropdownComponent,

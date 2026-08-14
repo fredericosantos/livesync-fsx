@@ -285,8 +285,6 @@ export async function configureCouchDb(
     );
 }
 
-
-
 export async function waitForLiveSyncCoreReady(
     cliBinary: string,
     env: NodeJS.ProcessEnv,

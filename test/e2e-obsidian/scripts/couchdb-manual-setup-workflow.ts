@@ -111,9 +111,7 @@ async function enterManualCouchDBSettings(port: number, couchDb: CouchDbConfig, 
     await withObsidianPage(port, async (page) => {
         const method = modalByTitle(page, "Connection Method");
         await selectRadioOption(method, "Configure a remote manually");
-        await method
-            .getByRole("button", { name: "Proceed with manual configuration" })
-            .click({ timeout: uiTimeoutMs });
+        await method.getByRole("button", { name: "Proceed with manual configuration" }).click({ timeout: uiTimeoutMs });
 
         const encryption = modalByTitle(page, "End-to-End Encryption");
         await encryption.waitFor({ state: "visible", timeout: uiTimeoutMs });

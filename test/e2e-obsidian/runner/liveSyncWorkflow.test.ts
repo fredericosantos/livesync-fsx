@@ -87,9 +87,7 @@ describe("remote fixture preparation", () => {
         await prepareRemote("obsidian-cli", {});
 
         const evaluatedCode = String(evalObsidianJson.mock.calls[0]?.[1] ?? "");
-        expect(evaluatedCode.indexOf("markRemoteResolved")).toBeLessThan(
-            evaluatedCode.indexOf("ensurePBKDF2Salt")
-        );
+        expect(evaluatedCode.indexOf("markRemoteResolved")).toBeLessThan(evaluatedCode.indexOf("ensurePBKDF2Salt"));
         expect(evaluatedCode).toContain("Timed out preparing the remote Security Seed");
     });
 });

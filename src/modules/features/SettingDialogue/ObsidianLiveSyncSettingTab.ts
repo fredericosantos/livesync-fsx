@@ -509,10 +509,7 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
         }
         await this.saveAllDirtySettings();
         await Promise.resolve(this.applyAllSettings());
-        await this.core.storageAccess.writeFileAuto(
-            serverIsReadable ? FLAGMD_REDFLAG3_HR : FLAGMD_REDFLAG2_HR,
-            ""
-        );
+        await this.core.storageAccess.writeFileAuto(serverIsReadable ? FLAGMD_REDFLAG3_HR : FLAGMD_REDFLAG2_HR, "");
         this.services.appLifecycle.scheduleRestart();
         this.closeSetting();
     }
@@ -609,5 +606,4 @@ export class ObsidianLiveSyncSettingTab extends PluginSettingTab {
 
         void yieldNextAnimationFrame().then(() => this.requestUpdate());
     }
-
 }

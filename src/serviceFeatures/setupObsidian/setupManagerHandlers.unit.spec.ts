@@ -1,7 +1,5 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import {
-    EVENT_REQUEST_OPEN_SETUP_URI,
-} from "@vrtmrz/livesync-commonlib/compat/events/coreEvents";
+import { EVENT_REQUEST_OPEN_SETUP_URI } from "@vrtmrz/livesync-commonlib/compat/events/coreEvents";
 import {
     openOnboarding,
     openSetupURI,
@@ -32,7 +30,6 @@ describe("setupObsidian/setupManagerHandlers", () => {
         await openSetupURI(setupManager);
         expect(setupManager.onUseSetupURI).toHaveBeenCalledWith("unknown");
     });
-
 
     it("openOnboarding should delegate to SetupManager.startOnBoarding", async () => {
         const setupManager = {

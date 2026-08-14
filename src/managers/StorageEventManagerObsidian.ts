@@ -1,7 +1,10 @@
 import type { FilePath } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import type ObsidianLiveSyncPlugin from "@/main";
 import type { LiveSyncCore } from "@/main";
-import { StorageEventManagerBase, type StorageEventManagerBaseDependencies } from "@vrtmrz/livesync-commonlib/compat/managers/StorageEventManager";
+import {
+    StorageEventManagerBase,
+    type StorageEventManagerBaseDependencies,
+} from "@vrtmrz/livesync-commonlib/compat/managers/StorageEventManager";
 import { ObsidianStorageEventManagerAdapter } from "./ObsidianStorageEventManagerAdapter";
 
 export class StorageEventManagerObsidian extends StorageEventManagerBase<ObsidianStorageEventManagerAdapter> {

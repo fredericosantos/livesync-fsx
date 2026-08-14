@@ -1,5 +1,4 @@
 import { defaultServerConditions, defaultServerMainFields, defineConfig } from "vite";
-import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { fileURLToPath, fs, isBuiltin, path } from "@vrtmrz/livesync-commonlib/node";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const resolve = (...args: string[]) => path.resolve(...args).replace(/\\/g, "/");
@@ -77,7 +76,7 @@ if (process.env.LIVESYNC_CLI_TEST_SUPPORT === "1") {
 }
 
 export default defineConfig({
-    plugins: [svelte(), injectBanner()],
+    plugins: [injectBanner()],
     resolve: {
         // This bundle runs in Node. Vite's client defaults include the `browser`
         // export condition, which would select Commonlib's inline Web Worker.

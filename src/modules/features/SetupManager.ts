@@ -10,9 +10,9 @@ import { createNewVaultSettings } from "@vrtmrz/livesync-commonlib/settings";
 import { upsertRemoteConfigurationInPlace } from "@vrtmrz/livesync-commonlib/remote-configurations";
 import { keepOnlyTheActiveRemoteConfiguration, soleRemoteConfigurationId } from "@/common/remoteConfiguration.ts";
 import { isObjectDifferent } from "@vrtmrz/livesync-commonlib/compat/common/utils";
-import ScanQRCode from "./SetupWizard/dialogs/ScanQRCode.svelte";
-import UseSetupURI from "./SetupWizard/dialogs/UseSetupURI.svelte";
-import ConfirmSetupPlan from "./SetupWizard/dialogs/ConfirmSetupPlan.svelte";
+import { scanQRCode } from "./SetupWizard/dialogs/ScanQRCode.ts";
+import { useSetupURI } from "./SetupWizard/dialogs/UseSetupURI.ts";
+import { confirmSetupPlan } from "./SetupWizard/dialogs/ConfirmSetupPlan.ts";
 import {
     SETUP_RECONNECT,
     SETUP_SEED,
@@ -22,8 +22,8 @@ import {
     type SetupAction,
 } from "./SetupWizard/setupPlan.ts";
 import { probeCouchDBConnection } from "./SetupWizard/dialogs/couchDBConnectionProbe.ts";
-import SetupRemoteCouchDB from "./SetupWizard/dialogs/SetupRemoteCouchDB.svelte";
-import SetupRemoteE2EE from "./SetupWizard/dialogs/SetupRemoteE2EE.svelte";
+import { setupRemoteCouchDB } from "./SetupWizard/dialogs/SetupRemoteCouchDB.ts";
+import { setupRemoteE2EE } from "./SetupWizard/dialogs/SetupRemoteE2EE.ts";
 import { decodeSettingsFromQRCodeData } from "@vrtmrz/livesync-commonlib/compat/API/processSetting";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
 import type {
@@ -92,8 +92,7 @@ export class SetupManager extends AbstractModule {
     // /**
     //  * Dialog manager for handling Svelte dialogs
     //  */
-    // private dialogManager: SvelteDialogManager = new SvelteDialogManager(this.plugin);
-    get dialogManager() {
+        get dialogManager() {
         return this.services.UI.dialogManager;
     }
 
@@ -113,7 +112,7 @@ export class SetupManager extends AbstractModule {
         const couchConf = await this.dialogManager.openWithExplicitCancel<
             SetupRemoteCouchDBResultType,
             SetupRemoteCouchDBInitialData
-        >(SetupRemoteCouchDB, {
+        >(setupRemoteCouchDB(this.services.replicator), {
             settings: startingPoint,
             mode: isConfigured ? "settings" : "create-or-connect",
         });
@@ -123,7 +122,7 @@ export class SetupManager extends AbstractModule {
         }
 
         const e2eeConf = await this.dialogManager.openWithExplicitCancel<SetupRemoteE2EEResultType, EncryptionSettings>(
-            SetupRemoteE2EE,
+            setupRemoteE2EE,
             { ...startingPoint, ...couchConf }
         );
         if (e2eeConf === "cancelled") {
@@ -144,7 +143,7 @@ export class SetupManager extends AbstractModule {
             wasConfigured: isConfigured,
         });
         const confirmed = await this.dialogManager.openWithExplicitCancel<SetupPlanResultType, typeof plan>(
-            ConfirmSetupPlan,
+            confirmSetupPlan,
             plan
         );
         if (confirmed !== "apply") {
@@ -224,7 +223,7 @@ export class SetupManager extends AbstractModule {
      */
     async onUseSetupURI(userMode: UserMode, setupURI: string = ""): Promise<boolean> {
         const newSetting = await this.dialogManager.openWithExplicitCancel<UseSetupURIResultType, string>(
-            UseSetupURI,
+            useSetupURI,
             setupURI
         );
         if (newSetting === "cancelled") {
@@ -250,7 +249,7 @@ export class SetupManager extends AbstractModule {
         const couchConf = await this.dialogManager.openWithExplicitCancel<
             SetupRemoteCouchDBResultType,
             SetupRemoteCouchDBInitialData
-        >(SetupRemoteCouchDB, {
+        >(setupRemoteCouchDB(this.services.replicator), {
             settings: currentSetting,
             mode:
                 userMode === UserMode.NewUser
@@ -274,8 +273,6 @@ export class SetupManager extends AbstractModule {
         return await this.onConfirmApplySettingsFromWizard(newSetting, userMode, activate);
     }
 
-
-
     /**
      * Handles only E2EE configuration
      * @param userMode
@@ -284,7 +281,7 @@ export class SetupManager extends AbstractModule {
      */
     async onlyE2EEConfiguration(userMode: UserMode, currentSetting: ObsidianLiveSyncSettings): Promise<boolean> {
         const e2eeConf = await this.dialogManager.openWithExplicitCancel<SetupRemoteE2EEResultType, EncryptionSettings>(
-            SetupRemoteE2EE,
+            setupRemoteE2EE,
             currentSetting
         );
         if (e2eeConf === "cancelled") {
@@ -306,7 +303,7 @@ export class SetupManager extends AbstractModule {
      */
     async onConfigureManually(originalSetting: ObsidianLiveSyncSettings, userMode: UserMode): Promise<boolean> {
         const e2eeConf = await this.dialogManager.openWithExplicitCancel<SetupRemoteE2EEResultType, EncryptionSettings>(
-            SetupRemoteE2EE,
+            setupRemoteE2EE,
             originalSetting
         );
         if (e2eeConf === "cancelled") {
@@ -382,7 +379,7 @@ export class SetupManager extends AbstractModule {
             wasConfigured: this.settings.isConfigured === true,
         });
         const confirmed = await this.dialogManager.openWithExplicitCancel<SetupPlanResultType, typeof plan>(
-            ConfirmSetupPlan,
+            confirmSetupPlan,
             plan
         );
         if (confirmed !== "apply") {
@@ -399,7 +396,7 @@ export class SetupManager extends AbstractModule {
      */
 
     async onPromptQRCodeInstruction(): Promise<boolean> {
-        const qrResult = await this.dialogManager.open<ScanQRCodeResultType>(ScanQRCode);
+        const qrResult = await this.dialogManager.open<ScanQRCodeResultType>(scanQRCode);
         this._log("QR Code dialog closed.", LOG_LEVEL_VERBOSE);
         // Result is not used, but log it for debugging.
         this._log(qrResult, LOG_LEVEL_VERBOSE);

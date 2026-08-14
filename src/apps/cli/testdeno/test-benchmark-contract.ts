@@ -1,10 +1,7 @@
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { type BenchmarkCase, buildCases } from "./bench-network-cases.ts";
 import { startCouchdbProxy } from "./bench-couchdb.ts";
-import {
-    parseBenchmarkVerificationMode,
-    selectVerificationEntries,
-} from "./helpers/benchmarkVerification.ts";
+import { parseBenchmarkVerificationMode, selectVerificationEntries } from "./helpers/benchmarkVerification.ts";
 import type { DatasetEntry } from "./helpers/dataset.ts";
 import { createCompressionBenchmarkDataset } from "./helpers/compressionDataset.ts";
 
@@ -25,20 +22,10 @@ function getCase(cases: BenchmarkCase[], name: string): BenchmarkCase {
 
 function parsedLimitations(testCase: BenchmarkCase): string[] {
     const raw = testCase.env.BENCH_LIMITATIONS_JSON;
-    assert(
-        raw,
-        `${testCase.name} must pass BENCH_LIMITATIONS_JSON to benchmark result output`,
-    );
+    assert(raw, `${testCase.name} must pass BENCH_LIMITATIONS_JSON to benchmark result output`);
     const parsed = JSON.parse(raw);
-    assert(
-        Array.isArray(parsed),
-        `${testCase.name} limitations must be an array`,
-    );
-    assert(
-        parsed.every((item) =>
-            typeof item === "string" && item.trim().length > 0
-        ),
-    );
+    assert(Array.isArray(parsed), `${testCase.name} limitations must be an array`);
+    assert(parsed.every((item) => typeof item === "string" && item.trim().length > 0));
     return parsed;
 }
 
@@ -47,36 +34,14 @@ Deno.test("benchmark cases record scope and limitations for paper use", () => {
     assert(cases.length > 0);
 
     for (const testCase of cases) {
-        assert(
-            testCase.description.trim().length > 0,
-            `${testCase.name} must describe the case`,
-        );
-        assert(
-            testCase.dataPath.trim().length > 0,
-            `${testCase.name} must describe the data path`,
-        );
-        assert(
-            testCase.trustBoundary.trim().length > 0,
-            `${testCase.name} must describe the trust boundary`,
-        );
-        assert(
-            testCase.measurementScope.trim().length > 0,
-            `${testCase.name} must describe the measurement scope`,
-        );
-        assert(
-            testCase.limitations.length > 0,
-            `${testCase.name} must list limitations`,
-        );
-        assertEquals(
-            testCase.env.BENCH_MEASUREMENT_SCOPE,
-            testCase.measurementScope,
-        );
+        assert(testCase.description.trim().length > 0, `${testCase.name} must describe the case`);
+        assert(testCase.dataPath.trim().length > 0, `${testCase.name} must describe the data path`);
+        assert(testCase.trustBoundary.trim().length > 0, `${testCase.name} must describe the trust boundary`);
+        assert(testCase.measurementScope.trim().length > 0, `${testCase.name} must describe the measurement scope`);
+        assert(testCase.limitations.length > 0, `${testCase.name} must list limitations`);
+        assertEquals(testCase.env.BENCH_MEASUREMENT_SCOPE, testCase.measurementScope);
         assertEquals(parsedLimitations(testCase), testCase.limitations);
-        assertEquals(
-            testCase.env.BENCH_VERIFY_MODE,
-            "all",
-            `${testCase.name} must verify the complete dataset`,
-        );
+        assertEquals(testCase.env.BENCH_VERIFY_MODE, "all", `${testCase.name} must verify the complete dataset`);
     }
 });
 
@@ -90,7 +55,7 @@ Deno.test("CouchDB latency proxy applies half the requested RTT in each directio
             port: backendPort,
             onListen() {},
         },
-        () => new Response("ok"),
+        () => new Response("ok")
     );
     const proxy = startCouchdbProxy({
         backendUri: `http://127.0.0.1:${backendPort}`,
@@ -162,35 +127,16 @@ Deno.test("compression benchmark dataset covers representative file kinds determ
     try {
         for (const [index, relativePath] of repositoryFiles.entries()) {
             const absolutePath = `${repositoryRoot}/${relativePath}`;
-            await Deno.mkdir(
-                absolutePath.slice(0, absolutePath.lastIndexOf("/")),
-                { recursive: true },
-            );
+            await Deno.mkdir(absolutePath.slice(0, absolutePath.lastIndexOf("/")), { recursive: true });
             await Deno.writeFile(
                 absolutePath,
-                new TextEncoder().encode(
-                    `fixture-${index}-${relativePath}\n`.repeat(20),
-                ),
+                new TextEncoder().encode(`fixture-${index}-${relativePath}\n`.repeat(20))
             );
         }
         await Deno.mkdir(vaultA, { recursive: true });
         await Deno.mkdir(vaultB, { recursive: true });
         const jpegEncoder = async (_input: string, output: string) => {
-            await Deno.writeFile(
-                output,
-                new Uint8Array([
-                    0xff,
-                    0xd8,
-                    0xff,
-                    0xdb,
-                    0,
-                    1,
-                    2,
-                    3,
-                    0xff,
-                    0xd9,
-                ]),
-            );
+            await Deno.writeFile(output, new Uint8Array([0xff, 0xd8, 0xff, 0xdb, 0, 1, 2, 3, 0xff, 0xd9]));
             return "contract JPEG encoder";
         };
         const first = await createCompressionBenchmarkDataset({
@@ -218,16 +164,8 @@ Deno.test("compression benchmark dataset covers representative file kinds determ
         assertEquals(first.totalFiles, 13);
         assertEquals(first.jpegGenerator, "contract JPEG encoder");
         assertEquals(
-            first.entries.map((entry) => [
-                entry.kind,
-                entry.relativePath,
-                entry.size,
-            ]),
-            second.entries.map((entry) => [
-                entry.kind,
-                entry.relativePath,
-                entry.size,
-            ]),
+            first.entries.map((entry) => [entry.kind, entry.relativePath, entry.size]),
+            second.entries.map((entry) => [entry.kind, entry.relativePath, entry.size])
         );
         assert(first.entries.every((entry) => entry.size > 0));
     } finally {
@@ -254,34 +192,22 @@ Deno.test("benchmark verification mode selects either all files or a labelled sa
 
 Deno.test("P2P signalling-shim cases do not claim to shape the note-data path", () => {
     const cases = buildCases();
-    for (
-        const name of [
-            "p2p-signalling-netem-home-wifi",
-            "p2p-signalling-netem-tethering-vpn",
-        ]
-    ) {
+    for (const name of ["p2p-signalling-netem-home-wifi", "p2p-signalling-netem-tethering-vpn"]) {
         const testCase = getCase(cases, name);
         assertEquals(testCase.runner, "p2p");
         assertEquals(testCase.env.BENCH_TURN_SERVERS, "");
         assertEquals(testCase.env.BENCH_SIMULATION_TIER, "2");
-        assertEquals(
-            testCase.env.BENCH_NETWORK_MODEL,
-            "compose-netem-signalling-shim",
-        );
+        assertEquals(testCase.env.BENCH_NETWORK_MODEL, "compose-netem-signalling-shim");
         assertStringIncludes(testCase.dataPath, "WebRTC DataChannel");
         assertStringIncludes(testCase.dataPath, "Nostr signalling");
         assertStringIncludes(testCase.measurementScope, "fresh CLI p2p-sync");
         assert(
-            testCase.limitations.some((limitation) =>
-                limitation.includes("connection establishment")
-            ),
-            `${name} must state that connection establishment is timed`,
+            testCase.limitations.some((limitation) => limitation.includes("connection establishment")),
+            `${name} must state that connection establishment is timed`
         );
         assert(
-            testCase.limitations.some((limitation) =>
-                limitation.includes("does not shape the selected WebRTC")
-            ),
-            `${name} must avoid claiming that the P2P note-data path was shaped`,
+            testCase.limitations.some((limitation) => limitation.includes("does not shape the selected WebRTC")),
+            `${name} must avoid claiming that the P2P note-data path was shaped`
         );
     }
 });
@@ -293,42 +219,31 @@ Deno.test("placeholder and TURN cases are clearly non-evidence for broad P2P per
     assertEquals(smartphone.env.BENCH_SIMULATION_TIER, "unmeasured");
     assertEquals(smartphone.env.BENCH_NETWORK_MODEL, "local-runner-no-netem");
     assert(
-        smartphone.limitations.some((limitation) =>
-            limitation.includes("must not be reported as smartphone")
-        ),
-        "smartphone/VPN placeholder must not be usable as field evidence by accident",
+        smartphone.limitations.some((limitation) => limitation.includes("must not be reported as smartphone")),
+        "smartphone/VPN placeholder must not be usable as field evidence by accident"
     );
 
     const turn = getCase(cases, "p2p-user-turn");
     assertStringIncludes(turn.env.BENCH_TURN_SERVERS, "turn:");
     assert(
         turn.limitations.some((limitation) =>
-            limitation.includes(
-                "does not prove that the selected ICE path was relayed",
-            )
+            limitation.includes("does not prove that the selected ICE path was relayed")
         ),
-        "TURN case must require selected ICE candidate interpretation",
+        "TURN case must require selected ICE candidate interpretation"
     );
 });
 
 Deno.test("CouchDB netem cases are marked as remote-store baselines", () => {
     const cases = buildCases();
-    for (
-        const name of ["couchdb-netem-home-wifi", "couchdb-netem-tethering-vpn"]
-    ) {
+    for (const name of ["couchdb-netem-home-wifi", "couchdb-netem-tethering-vpn"]) {
         const testCase = getCase(cases, name);
         assertEquals(testCase.runner, "couchdb");
         assertEquals(testCase.env.BENCH_SIMULATION_TIER, "2");
-        assertEquals(
-            testCase.env.BENCH_NETWORK_MODEL,
-            "compose-netem-tcp-shim",
-        );
+        assertEquals(testCase.env.BENCH_NETWORK_MODEL, "compose-netem-tcp-shim");
         assertStringIncludes(testCase.measurementScope, "CouchDB");
         assert(
-            testCase.limitations.some((limitation) =>
-                limitation.includes("not the WebRTC P2P data path")
-            ),
-            `${name} must remain scoped to the CouchDB remote-store path`,
+            testCase.limitations.some((limitation) => limitation.includes("not the WebRTC P2P data path")),
+            `${name} must remain scoped to the CouchDB remote-store path`
         );
     }
 });

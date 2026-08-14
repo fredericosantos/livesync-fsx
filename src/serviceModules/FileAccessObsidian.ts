@@ -1,5 +1,8 @@
 import { type App } from "@/deps";
-import { FileAccessBase, type FileAccessBaseDependencies } from "@vrtmrz/livesync-commonlib/compat/serviceModules/FileAccessBase";
+import {
+    FileAccessBase,
+    type FileAccessBaseDependencies,
+} from "@vrtmrz/livesync-commonlib/compat/serviceModules/FileAccessBase";
 import { ObsidianFileSystemAdapter } from "./FileSystemAdapters/ObsidianFileSystemAdapter";
 
 /**

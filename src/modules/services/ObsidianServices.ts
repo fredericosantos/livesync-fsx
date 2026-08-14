@@ -22,10 +22,7 @@ export class ObsidianDatabaseEventService extends InjectableDatabaseEventService
 export class ObsidianReplicatorService extends InjectableReplicatorService<ObsidianServiceContext> {
     readonly boundedLocalApplicationActivityCount = reactiveSource(0);
 
-    async runBoundedLocalApplicationActivity<T>(
-        task: () => T | PromiseLike<T>,
-        options?: ActivityOptions
-    ): Promise<T> {
+    async runBoundedLocalApplicationActivity<T>(task: () => T | PromiseLike<T>, options?: ActivityOptions): Promise<T> {
         this.boundedLocalApplicationActivityCount.value++;
         try {
             return this.dependencies.activityRunner

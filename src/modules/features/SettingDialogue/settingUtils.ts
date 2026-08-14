@@ -1,9 +1,11 @@
 import { escapeStringToHTML } from "octagonal-wheels/string";
-import { E2EEAlgorithmNames, MILESTONE_DOCID, NODEINFO_DOCID, type ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import {
-    pickCouchDBSyncSettings,
-    pickEncryptionSettings,
-} from "@vrtmrz/livesync-commonlib/compat/common/utils";
+    E2EEAlgorithmNames,
+    MILESTONE_DOCID,
+    NODEINFO_DOCID,
+    type ObsidianLiveSyncSettings,
+} from "@vrtmrz/livesync-commonlib/compat/common/types";
+import { pickCouchDBSyncSettings, pickEncryptionSettings } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { getConfig, type AllSettingItemKey } from "./settingConstants";
 import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE, Logger } from "octagonal-wheels/common/logger";
 import { isNotFoundError } from "@vrtmrz/livesync-commonlib/compat/common/utils.doc";

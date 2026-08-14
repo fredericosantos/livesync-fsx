@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FilePathWithPrefix } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import type { FileRepairInspection, FileRepairRevision } from "./fileRepair";
-import {
-    getFileRepairRevisionActions,
-    getFileRepairRevisionComparison,
-} from "./fileRepairPresentation";
+import { getFileRepairRevisionActions, getFileRepairRevisionComparison } from "./fileRepairPresentation";
 
 function createInspection(
     revision: Partial<FileRepairRevision> = {},

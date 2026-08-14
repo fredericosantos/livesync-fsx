@@ -3,7 +3,6 @@ import { DEFAULT_SETTINGS, REMOTE_COUCHDB, REMOTE_MINIO } from "@vrtmrz/livesync
 import { syncActivatedRemoteSettings } from "./remoteConfigBuffer";
 
 describe("syncActivatedRemoteSettings", () => {
-
     it("should clear stale dirty values from a different remote type", () => {
         const target = {
             ...DEFAULT_SETTINGS,

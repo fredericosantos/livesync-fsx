@@ -4,11 +4,7 @@ import {
     LOG_LEVEL_VERBOSE,
     Logger,
 } from "@vrtmrz/livesync-commonlib/compat/common/logger";
-import {
-    EVENT_REQUEST_RUN_DOCTOR,
-    EVENT_REQUEST_RUN_FIX_INCOMPLETE,
-    eventHub,
-} from "@/common/events.ts";
+import { EVENT_REQUEST_RUN_DOCTOR, EVENT_REQUEST_RUN_FIX_INCOMPLETE, eventHub } from "@/common/events.ts";
 import { AbstractModule } from "@/modules/AbstractModule.ts";
 import { HOLD_INSECURE_CHUNKS, syncHold } from "@/common/syncHold.ts";
 import { checkUnsuitableValues } from "@vrtmrz/livesync-commonlib/compat/common/configForDoc";

@@ -40,7 +40,12 @@ const COPY: Partial<Record<SettingKey, { name: string; desc?: string }>> = {
 const KEY_RENDERERS: Partial<Record<SettingKey, KeyRenderer>> = {
     // Meaningless while encryption is off, so it is not shown then. A disabled
     // field would still invite the reader to wonder what it is for.
-    passphrase: (tab, el) => renderPassphrase(tab, el, visibleOnly(() => tab.isConfiguredAs("encrypt", true))),
+    passphrase: (tab, el) =>
+        renderPassphrase(
+            tab,
+            el,
+            visibleOnly(() => tab.isConfiguredAs("encrypt", true))
+        ),
     ignoreFiles: (tab, el) => renderIgnoreFileList(tab, el),
 };
 

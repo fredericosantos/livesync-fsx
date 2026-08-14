@@ -71,7 +71,6 @@ describe("CLI parseArgs", () => {
         expect(combined).toContain("livesync-cli <database-path> [options] <command> [command-args]");
     });
 
-
     it("parses remote-add command", () => {
         process.argv = [
             "node",

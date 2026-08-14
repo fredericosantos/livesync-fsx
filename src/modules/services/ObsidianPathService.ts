@@ -11,7 +11,12 @@ import {
     compareFileFreshness,
     isMarkedAsSameChanges,
 } from "@/common/utils";
-import type { UXFileInfo, AnyEntry, UXFileInfoStub, FilePathWithPrefix } from "@vrtmrz/livesync-commonlib/compat/common/types";
+import type {
+    UXFileInfo,
+    AnyEntry,
+    UXFileInfoStub,
+    FilePathWithPrefix,
+} from "@vrtmrz/livesync-commonlib/compat/common/types";
 export class ObsidianPathService extends PathService<ObsidianServiceContext> {
     override markChangesAreSame(
         old: UXFileInfo | AnyEntry | FilePathWithPrefix,

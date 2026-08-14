@@ -27,7 +27,6 @@ const project = new Project({ tsConfigFilePath: "../tsconfig.json" });
 
 // Manually add files under src/ to ensure those excluded by tsconfig.json (e.g. src/apps) are processed.
 project.addSourceFilesAtPaths("../src/**/*.ts");
-project.addSourceFilesAtPaths("../src/**/*.svelte");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,7 +112,6 @@ for (const sourceFile of project.getSourceFiles()) {
         const hasExtension =
             moduleSpecifier.endsWith(".ts") ||
             moduleSpecifier.endsWith(".js") ||
-            moduleSpecifier.endsWith(".svelte") ||
             moduleSpecifier.endsWith(".d.ts");
 
         if (resolvedPath.startsWith(posixSrc + "/")) {

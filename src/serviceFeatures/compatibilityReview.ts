@@ -18,7 +18,6 @@ export type CompatibilityReviewDetailsAction = "back" | false;
 // handler which stops start-up also prevents this dialogue from competing with it.
 export const COMPATIBILITY_REVIEW_LAYOUT_PRIORITY = 30;
 
-
 export interface CompatibilityReviewUi {
     showSummary(pause: CompatibilityPause): Promise<CompatibilityReviewSummaryAction>;
     showDetails(pause: CompatibilityPause): Promise<CompatibilityReviewDetailsAction>;

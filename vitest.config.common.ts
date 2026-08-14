@@ -1,12 +1,10 @@
 /**
  * @file vitest.config.common.ts
  * @description Shared base configuration for all Vitest test environments in the project,
- * defining common resolve aliases, build defines, and plugins (svelte, inlineWorker).
+ * defining common resolve aliases, build defines, and plugins (inlineWorker).
  * This configuration is not executed directly, but is imported and merged by other specific configuration files.
  */
 import { defineConfig } from "vitest/config";
-import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { sveltePreprocess } from "svelte-preprocess";
 import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
 import path from "path";
 import { fileURLToPath } from "node:url";
@@ -88,15 +86,8 @@ export default defineConfig({
             external: externals,
             treeShaking: true,
         }),
-        svelte({
-            preprocess: sveltePreprocess(),
-            compilerOptions: { css: "injected", preserveComments: false },
-        }),
     ],
     resolve: {
-        // The same single-runtime requirement the plugin build enforces: a
-        // second copy of Svelte breaks context and lifecycle silently.
-        dedupe: ["svelte"],
         alias: {
             "@": path.resolve(__dirname, "./src"),
             src: path.resolve(__dirname, "./src"),

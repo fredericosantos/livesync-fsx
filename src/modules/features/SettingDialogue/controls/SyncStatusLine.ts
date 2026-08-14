@@ -5,7 +5,7 @@
  * only the elements, the icon and the bar.
  */
 
-import { setIcon } from "@/deps.ts";
+import { ProgressBarComponent, setIcon } from "@/deps.ts";
 import type { ObsidianLiveSyncSettingTab } from "@/modules/features/SettingDialogue/ObsidianLiveSyncSettingTab.ts";
 import { ModuleLog } from "@/modules/features/ModuleLog.ts";
 import { presentSyncStatusLine } from "./syncStatusLineView.ts";
@@ -26,10 +26,15 @@ export function renderSyncStatusLine(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
     const line = el.createDiv({ cls: "lsfsx-syncline" });
     const iconEl = line.createSpan({ cls: "lsfsx-syncline__icon" });
     const textEl = line.createSpan({ cls: "lsfsx-syncline__text" });
+    // Obsidian's own bar rather than two divs and a width. It is the same
+    // element the app uses elsewhere, so it inherits the app's accent, its
+    // radius and its reduced-motion behaviour without this file having an
+    // opinion about any of them.
+    //
     // Always present, never removed: a bar that appears and disappears moves
     // every row beneath it, so the page jumps each time work starts.
     const track = line.createDiv({ cls: "lsfsx-syncline__track" });
-    const fill = track.createDiv({ cls: "lsfsx-syncline__fill" });
+    const bar = new ProgressBarComponent(track);
 
     const draw = () => {
         const view = presentSyncStatusLine(log.statusBarLabels.value, log.syncProgress.value);
@@ -41,7 +46,7 @@ export function renderSyncStatusLine(tab: ObsidianLiveSyncSettingTab, el: HTMLEl
         if (view.icon) setIcon(iconEl, view.icon);
         textEl.setText(view.text);
         track.toggleClass("is-visible", view.progress !== undefined);
-        fill.style.width = `${Math.round((view.progress ?? 0) * 100)}%`;
+        bar.setValue(Math.round((view.progress ?? 0) * 100));
     };
 
     draw();

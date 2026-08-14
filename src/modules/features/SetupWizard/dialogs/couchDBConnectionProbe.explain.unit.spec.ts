@@ -13,10 +13,7 @@ describe("explainConnectionFailure", () => {
         expect(explained).toContain("app://obsidian.md");
     });
 
-    it.each(["Name or password is incorrect.", "unauthorized", "Database not found."])(
-        "leaves %s alone",
-        (reason) => {
-            expect(explainConnectionFailure(reason)).toBe(reason);
-        }
-    );
+    it.each(["Name or password is incorrect.", "unauthorized", "Database not found."])("leaves %s alone", (reason) => {
+        expect(explainConnectionFailure(reason)).toBe(reason);
+    });
 });

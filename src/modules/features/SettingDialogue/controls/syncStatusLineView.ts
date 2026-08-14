@@ -64,4 +64,3 @@ export function presentSyncStatusLine(
     }
     return { level: status.level, icon: "check", text: "Sync complete" };
 }
-

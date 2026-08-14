@@ -165,7 +165,9 @@ export function presentStatus(input: StatusInput): StatusPresentation {
     }
     if (input.settingsDecisions) {
         return problem(
-            input.settingsDecisions === 1 ? "A setting needs a decision" : `${input.settingsDecisions} settings need a decision`,
+            input.settingsDecisions === 1
+                ? "A setting needs a decision"
+                : `${input.settingsDecisions} settings need a decision`,
             "The same setting was changed on two devices and the two changes cannot both be kept. Press to choose."
         );
     }

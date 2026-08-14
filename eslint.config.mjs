@@ -2,8 +2,6 @@ import tsParser from "@typescript-eslint/parser";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 import { defineConfig, globalIgnores } from "eslint/config";
-import * as sveltePlugin from "eslint-plugin-svelte";
-import svelteParser from "svelte-eslint-parser";
 import importAlias from "@dword-design/eslint-plugin-import-alias";
 import { baseRules, ImportAliasRules, obsidianRules } from "./eslint.config.common.mjs";
 const warnWhileDev = "off"; // Change to "warn" to enable warnings for rules that are currently disabled.
@@ -51,7 +49,6 @@ export default defineConfig([
         "**/test.ts",
         "**/tests.ts",
     ]),
-    ...sveltePlugin.configs["flat/base"],
     ...obsidianmd.configs.recommended,
     importAlias.configs.recommended,
     {
@@ -74,29 +71,7 @@ export default defineConfig([
             ...ImportAliasRules("."),
         },
     },
-    {
-        files: ["**/*.svelte"],
-        languageOptions: {
-            globals: { ...globals.browser, PouchDB: "readonly" },
-            parser: svelteParser,
-            parserOptions: {
-                parser: tsParser,
-                project: lintProjects,
-                tsconfigRootDir: import.meta.dirname,
-                extraFileExtensions: [".svelte"],
-            },
-        },
-        rules: {
-            // no-unused-vars:
-            // Svelte template's declarations have a lot of false positives and the rule is not worth the effort to fix at this time.
-            // it may improve in the future with some options as like   ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],]
-            "no-unused-vars": "off",
-            ...obsidianRules,
-            "obsidianmd/no-plugin-as-component": "off",
-            ...ImportAliasRules("."),
-        },
-    },
-    {
+        {
         files: ["**/*.spec.ts", "**/*.test.ts"],
         rules: {
             // Obsidian's DOM helpers (`createDiv` and friends) are extensions

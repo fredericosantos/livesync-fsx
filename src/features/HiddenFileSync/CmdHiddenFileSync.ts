@@ -850,54 +850,54 @@ Offline Changed files: ${processFiles.length}`;
                 described.file as FilePath,
                 [docA, docB],
                 async (keep, result) => {
-                // modal.close();
-                try {
-                    // const filename = storeFilePath;
-                    let needFlush = false;
-                    if (!result && !keep) {
-                        this._log(`Skipped merging: ${displayFilename}`);
-                        res(false);
-                        return;
-                    }
-                    //Delete old revisions
-                    if (result || keep) {
-                        for (const doc of docs) {
-                            if (doc._rev != keep) {
-                                if (await this.localDatabase.deleteDBEntry(this.getPath(doc), { rev: doc._rev })) {
-                                    this._log(`Conflicted revision has been deleted: ${displayFilename}`);
-                                    needFlush = true;
+                    // modal.close();
+                    try {
+                        // const filename = storeFilePath;
+                        let needFlush = false;
+                        if (!result && !keep) {
+                            this._log(`Skipped merging: ${displayFilename}`);
+                            res(false);
+                            return;
+                        }
+                        //Delete old revisions
+                        if (result || keep) {
+                            for (const doc of docs) {
+                                if (doc._rev != keep) {
+                                    if (await this.localDatabase.deleteDBEntry(this.getPath(doc), { rev: doc._rev })) {
+                                        this._log(`Conflicted revision has been deleted: ${displayFilename}`);
+                                        needFlush = true;
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (!keep && result) {
-                        const isExists = await this.core.storageAccess.isExistsIncludeHidden(storageFilePath);
-                        if (!isExists) {
-                            await this.core.storageAccess.ensureDir(storageFilePath);
+                        if (!keep && result) {
+                            const isExists = await this.core.storageAccess.isExistsIncludeHidden(storageFilePath);
+                            if (!isExists) {
+                                await this.core.storageAccess.ensureDir(storageFilePath);
+                            }
+                            const stat = await this.writeFile(storageFilePath, result);
+                            if (!stat) {
+                                throw new Error("Stat failed");
+                            }
+                            const mtime = getComparingMTime(stat);
+                            await this.storeInternalFileToDatabase(
+                                { path: storageFilePath, mtime, ctime: stat?.ctime ?? mtime, size: stat?.size ?? 0 },
+                                true
+                            );
+                            await this.triggerEvent(storageFilePath);
+                            this._log(`STORAGE <-- DB:${displayFilename}: written (hidden,merged)`);
                         }
-                        const stat = await this.writeFile(storageFilePath, result);
-                        if (!stat) {
-                            throw new Error("Stat failed");
+                        if (needFlush) {
+                            if (await this.extractInternalFileFromDatabase(storeFilePath, false)) {
+                                this._log(`STORAGE --> DB:${displayFilename}: extracted (hidden,merged)`);
+                            } else {
+                                this._log(`STORAGE --> DB:${displayFilename}: extracted (hidden,merged) Failed`);
+                            }
                         }
-                        const mtime = getComparingMTime(stat);
-                        await this.storeInternalFileToDatabase(
-                            { path: storageFilePath, mtime, ctime: stat?.ctime ?? mtime, size: stat?.size ?? 0 },
-                            true
-                        );
-                        await this.triggerEvent(storageFilePath);
-                        this._log(`STORAGE <-- DB:${displayFilename}: written (hidden,merged)`);
-                    }
-                    if (needFlush) {
-                        if (await this.extractInternalFileFromDatabase(storeFilePath, false)) {
-                            this._log(`STORAGE --> DB:${displayFilename}: extracted (hidden,merged)`);
-                        } else {
-                            this._log(`STORAGE --> DB:${displayFilename}: extracted (hidden,merged) Failed`);
-                        }
-                    }
-                    res(true);
-                } catch (ex) {
-                    this._log("Could not merge conflicted json");
-                    this._log(ex, LOG_LEVEL_VERBOSE);
+                        res(true);
+                    } catch (ex) {
+                        this._log("Could not merge conflicted json");
+                        this._log(ex, LOG_LEVEL_VERBOSE);
                         res(false);
                     }
                 },

@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { startObsidianPluginSession } from "@vrtmrz/obsidian-test-session";
-import {
-    startObsidianLiveSyncSession,
-    type StartObsidianLiveSyncSessionOptions,
-} from "./session.ts";
+import { startObsidianLiveSyncSession, type StartObsidianLiveSyncSessionOptions } from "./session.ts";
 
 vi.mock("@vrtmrz/obsidian-test-session", () => ({
     startObsidianPluginSession: vi.fn(async () => ({

@@ -101,10 +101,7 @@ export function suggestDeviceName(
     taken: readonly string[] = [],
     hostName: string = ""
 ): string {
-    const vault = vaultName
-        .replace(/[/%]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+    const vault = vaultName.replace(/[/%]/g, " ").replace(/\s+/g, " ").trim();
     const host = cleanHostName(hostName);
     const base = host || (vault ? `${describeDevice(platform)} — ${vault}` : describeDevice(platform));
 

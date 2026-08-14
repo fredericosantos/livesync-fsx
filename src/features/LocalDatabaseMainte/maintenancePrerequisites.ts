@@ -1,9 +1,6 @@
 import type { ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 
-type MaintenancePrerequisiteSettings = Pick<
-    ObsidianLiveSyncSettings,
-    "readChunksOnline"
->;
+type MaintenancePrerequisiteSettings = Pick<ObsidianLiveSyncSettings, "readChunksOnline">;
 
 type MaintenancePrerequisiteOptions = {
     operationName: string;

@@ -293,13 +293,7 @@ describe("file database information", () => {
 
         await retryReadFileDatabaseRevision(core as never, "note.md", "2-conflict");
 
-        expect(core.localDatabase.getDBEntry).toHaveBeenCalledWith(
-            "note.md",
-            { rev: "2-conflict" },
-            false,
-            true,
-            true
-        );
+        expect(core.localDatabase.getDBEntry).toHaveBeenCalledWith("note.md", { rev: "2-conflict" }, false, true, true);
     });
 
     it("reports the exact revision as locally available after retry recovers its missing chunk", async () => {
@@ -322,14 +316,10 @@ describe("file database information", () => {
                     : [],
         }));
 
-        await expect(
-            retryReadFileDatabaseRevision(core as never, "note.md", "2-conflict")
-        ).resolves.not.toBe(false);
+        await expect(retryReadFileDatabaseRevision(core as never, "note.md", "2-conflict")).resolves.not.toBe(false);
         const information = await inspectFileDatabaseInfo(core as never, "note.md");
 
-        expect(
-            information.database.revisions.find(({ revision }) => revision === "2-conflict")
-        ).toEqual(
+        expect(information.database.revisions.find(({ revision }) => revision === "2-conflict")).toEqual(
             expect.objectContaining({
                 contentAvailableLocally: true,
                 chunks: [

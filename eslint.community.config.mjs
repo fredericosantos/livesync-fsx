@@ -14,9 +14,6 @@ export default defineConfig(
         "package.json",
         "package-lock.json",
         "versions.json",
-        // Svelte is covered by the project lint and svelte-check; the directory report currently analyses TypeScript.
-        "**/*.svelte",
-        "**/svelte.config.js",
         "**/*.unit.spec.ts",
         "**/test/**",
         "src/apps/_test/**",

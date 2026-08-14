@@ -14,5 +14,8 @@ export function parseIgnoreFileNames(stored: string): string[] {
 export function serialiseIgnoreFileNames(names: readonly string[]): string {
     // No space after the comma: the stored form is compared against remote
     // tweak values, and a whitespace difference would read as a mismatch.
-    return names.map((name) => name.trim()).filter((name) => name !== "").join(",");
+    return names
+        .map((name) => name.trim())
+        .filter((name) => name !== "")
+        .join(",");
 }

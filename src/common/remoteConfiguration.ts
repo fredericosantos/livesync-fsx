@@ -1,8 +1,5 @@
 import { ConnectionStringParser } from "@vrtmrz/livesync-commonlib/compat/common/ConnectionString";
-import {
-    REMOTE_P2P,
-    type ObsidianLiveSyncSettings,
-} from "@vrtmrz/livesync-commonlib/compat/common/types";
+import { REMOTE_P2P, type ObsidianLiveSyncSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 
 /**
  * A vault here syncs with one server, so it stores one server profile.

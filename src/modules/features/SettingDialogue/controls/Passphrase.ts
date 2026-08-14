@@ -10,11 +10,7 @@ import type { OnUpdateFunc } from "@/modules/features/SettingDialogue/SettingPan
  * on a phone keyboard, and must match exactly on every other device. The reveal
  * button is not a convenience, it is how the value gets verified.
  */
-export function renderPassphrase(
-    tab: ObsidianLiveSyncSettingTab,
-    el: HTMLElement,
-    visibility: OnUpdateFunc
-): void {
+export function renderPassphrase(tab: ObsidianLiveSyncSettingTab, el: HTMLElement, visibility: OnUpdateFunc): void {
     const setting = new Setting(el)
         .setName("Passphrase")
         .setDesc("Changing this rebuilds the remote database. Every device must then be given the new passphrase.")

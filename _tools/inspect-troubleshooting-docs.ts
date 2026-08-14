@@ -78,9 +78,10 @@ export async function inspectTroubleshootingDocs(
     // run time, which is both flagged as unsanitised and untyped — the
     // catalogue is one fixed module in this repository, so there was never
     // anything to resolve.
-    const catalogue = Object.fromEntries(
-        Object.entries(allMessages).map(([key, value]) => [key, value.def])
-    ) as Record<string, string>;
+    const catalogue = Object.fromEntries(Object.entries(allMessages).map(([key, value]) => [key, value.def])) as Record<
+        string,
+        string
+    >;
     const requiredMessageKeys = [
         "TweakMismatchResolve.Action.UseConfigured",
         "TweakMismatchResolve.Action.UseMine",

@@ -94,9 +94,7 @@ export class ModuleObsidianEvents extends AbstractObsidianModule {
 
     private keepReplicationActiveInBackground() {
         return (
-            this.settings.keepReplicationActiveInBackground &&
-            this.settings.liveSync &&
-            !this.services.API.isMobile()
+            this.settings.keepReplicationActiveInBackground && this.settings.liveSync && !this.services.API.isMobile()
         );
     }
 
@@ -160,11 +158,7 @@ export class ModuleObsidianEvents extends AbstractObsidianModule {
 
     async watchWindowVisibilityAsync() {
         if (this.settings.suspendFileWatching) {
-            if (
-                this.settings.isConfigured &&
-                this.services.appLifecycle.isReady() &&
-                this.hasBoundedActivity()
-            ) {
+            if (this.settings.isConfigured && this.services.appLifecycle.isReady() && this.hasBoundedActivity()) {
                 const isHidden = activeWindow.document.hidden;
                 this.isLastHidden = isHidden;
                 this.deferredBoundedLifecycle = isHidden ? "suspend-if-hidden" : undefined;

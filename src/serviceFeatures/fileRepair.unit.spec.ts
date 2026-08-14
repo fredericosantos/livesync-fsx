@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-    discardLiveBranch,
-    discardUnreadableLiveRevision,
-    inspectFileRepair,
-} from "./fileRepair";
+import { discardLiveBranch, discardUnreadableLiveRevision, inspectFileRepair } from "./fileRepair";
 
 function createCore() {
     const current = {
@@ -146,12 +142,10 @@ describe("file repair inspection", () => {
     it("rechecks liveness and readability before discarding an exact revision", async () => {
         const { core, deleteRevisionFromDB } = createCore();
 
-        await expect(
-            discardUnreadableLiveRevision(core as never, "note.md", "2-conflict")
-        ).resolves.toBe("discarded");
-        await expect(
-            discardUnreadableLiveRevision(core as never, "note.md", "3-current")
-        ).resolves.toBe("revision-is-readable");
+        await expect(discardUnreadableLiveRevision(core as never, "note.md", "2-conflict")).resolves.toBe("discarded");
+        await expect(discardUnreadableLiveRevision(core as never, "note.md", "3-current")).resolves.toBe(
+            "revision-is-readable"
+        );
 
         expect(deleteRevisionFromDB).toHaveBeenCalledOnce();
         expect(deleteRevisionFromDB).toHaveBeenCalledWith("note.md", "2-conflict");
@@ -175,9 +169,7 @@ describe("file repair inspection", () => {
                 }),
             }),
         ]);
-        await expect(
-            discardUnreadableLiveRevision(core as never, "note.md", "1-root")
-        ).resolves.toBe("discarded");
+        await expect(discardUnreadableLiveRevision(core as never, "note.md", "1-root")).resolves.toBe("discarded");
         expect(deleteRevisionFromDB).toHaveBeenCalledWith("note.md", "1-root");
     });
 
@@ -188,9 +180,9 @@ describe("file repair inspection", () => {
             _conflicts: [],
         });
 
-        await expect(
-            discardUnreadableLiveRevision(core as never, "note.md", "2-conflict")
-        ).resolves.toBe("no-longer-live");
+        await expect(discardUnreadableLiveRevision(core as never, "note.md", "2-conflict")).resolves.toBe(
+            "no-longer-live"
+        );
 
         expect(deleteRevisionFromDB).not.toHaveBeenCalled();
     });
@@ -198,9 +190,7 @@ describe("file repair inspection", () => {
     it("discards an exact readable winner while another live branch remains", async () => {
         const { core, deleteRevisionFromDB } = createCore();
 
-        await expect(
-            discardLiveBranch(core as never, "note.md", "3-current")
-        ).resolves.toBe("discarded");
+        await expect(discardLiveBranch(core as never, "note.md", "3-current")).resolves.toBe("discarded");
 
         expect(deleteRevisionFromDB).toHaveBeenCalledWith("note.md", "3-current");
     });
@@ -209,9 +199,7 @@ describe("file repair inspection", () => {
         const { core, current, deleteRevisionFromDB } = createCore();
         current._conflicts = [];
 
-        await expect(
-            discardLiveBranch(core as never, "note.md", "3-current")
-        ).resolves.toBe("only-live-revision");
+        await expect(discardLiveBranch(core as never, "note.md", "3-current")).resolves.toBe("only-live-revision");
 
         expect(deleteRevisionFromDB).not.toHaveBeenCalled();
     });
@@ -219,9 +207,7 @@ describe("file repair inspection", () => {
     it("refuses to discard a branch which is no longer live", async () => {
         const { core, deleteRevisionFromDB } = createCore();
 
-        await expect(
-            discardLiveBranch(core as never, "note.md", "1-stale")
-        ).resolves.toBe("no-longer-live");
+        await expect(discardLiveBranch(core as never, "note.md", "1-stale")).resolves.toBe("no-longer-live");
 
         expect(deleteRevisionFromDB).not.toHaveBeenCalled();
     });

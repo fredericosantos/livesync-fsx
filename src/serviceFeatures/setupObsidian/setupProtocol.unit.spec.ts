@@ -42,7 +42,10 @@ describe("setupObsidian/setupProtocol", () => {
         } as any;
 
         registerSetupProtocolHandler(host, log, setupManager);
-        expect(host.services.API.registerProtocolHandler).toHaveBeenCalledWith("setuplivesync-fsx", expect.any(Function));
+        expect(host.services.API.registerProtocolHandler).toHaveBeenCalledWith(
+            "setuplivesync-fsx",
+            expect.any(Function)
+        );
 
         await protocolHandler!({ settings: "a b" });
         expect(setupManager.onUseSetupURI).toHaveBeenCalledWith(

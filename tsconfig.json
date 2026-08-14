@@ -1,13 +1,19 @@
 {
-    "extends": "@tsconfig/svelte/tsconfig.json",
     "inlineSourceMap": true,
     "compilerOptions": {
+        // Previously inherited from `@tsconfig/svelte`, which went with
+        // Svelte. Stated here rather than through a base preset named after a
+        // framework this project no longer uses. `verbatimModuleSyntax` and
+        // the source-map setting were already declared below.
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
         "module": "ESNext",
         "target": "ES2018",
         "allowJs": true,
         "noImplicitAny": true,
         "moduleResolution": "bundler",
-        "types": ["svelte", "node"],
+        "types": ["node"],
         // "importsNotUsedAsValues": "error",
         "importHelpers": false,
         "alwaysStrict": true,
@@ -22,7 +28,7 @@
             "@/*": ["./src/*"]
         }
     },
-    "include": ["**/*.ts", "test/**/*.test.ts", "**/*.unit.spec.ts", "**/*.svelte"],
+    "include": ["**/*.ts", "test/**/*.test.ts", "**/*.unit.spec.ts"],
     "exclude": [
         "pouchdb-browser-webpack",
         "utils",

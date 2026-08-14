@@ -1,10 +1,7 @@
 import type { AppLifecycleServiceDependencies } from "@vrtmrz/livesync-commonlib/compat/services/base/AppLifecycleService";
 import type { ServiceContext } from "@vrtmrz/livesync-commonlib/context";
 import { ConfigServiceBrowserCompat } from "@vrtmrz/livesync-commonlib/compat/services/implements/browser/ConfigServiceBrowserCompat";
-import type {
-    ComponentHasResult,
-    SvelteDialogManager,
-} from "@vrtmrz/livesync-commonlib/compat/services/implements/base/SvelteDialog";
+import type { IDialogManager } from "@vrtmrz/livesync-commonlib/compat/services/base/IService";
 import { UIService } from "@vrtmrz/livesync-commonlib/compat/services/implements/base/UIService";
 import { InjectableServiceHub } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableServiceHub";
 import { InjectableAppLifecycleService } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableAppLifecycleService";
@@ -38,18 +35,13 @@ class NodeAppLifecycleService<T extends ServiceContext> extends InjectableAppLif
     }
 }
 
-class NodeDialogManager<T extends ServiceContext> implements SvelteDialogManager<T> {
-    open<TValue, UInitial>(
-        _component: ComponentHasResult<TValue, UInitial>,
-        _initialData?: UInitial
-    ): Promise<TValue | undefined> {
+/** The CLI has no screen; every dialogue is a programming error here. */
+class NodeDialogManager implements IDialogManager {
+    open<TResult>(): Promise<TResult | undefined> {
         return Promise.reject(new Error("Interactive dialogues are not available in the CLI."));
     }
 
-    openWithExplicitCancel<TValue, UInitial>(
-        _component: ComponentHasResult<TValue, UInitial>,
-        _initialData?: UInitial
-    ): Promise<TValue> {
+    openWithExplicitCancel<TResult>(): Promise<TResult> {
         return Promise.reject(new Error("Interactive dialogues are not available in the CLI."));
     }
 }
@@ -72,17 +64,19 @@ class NodeDatabaseService<T extends NodeServiceContext> extends DatabaseService<
     }
 }
 class NodeUIService<T extends ServiceContext> extends UIService<T> {
-    override get dialogToCopy(): never {
-        throw new Error("Method not implemented.");
-    }
+    private readonly dialogs = new NodeDialogManager();
 
     constructor(context: T, dependencies: NodeUIServiceDependencies<T>) {
-        const dialogManager = new NodeDialogManager<T>();
+        super(context, { APIService: dependencies.APIService });
+    }
 
-        super(context, {
-            dialogManager,
-            APIService: dependencies.APIService,
-        });
+    get dialogManager(): IDialogManager {
+        return this.dialogs;
+    }
+
+    /** Nothing here has a clipboard, or a reader to press a button. */
+    promptCopyToClipboard(): Promise<boolean> {
+        return Promise.resolve(false);
     }
 }
 

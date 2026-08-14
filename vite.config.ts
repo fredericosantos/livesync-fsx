@@ -1,6 +1,4 @@
 import { defineConfig } from "vitest/config";
-import { svelte } from "@sveltejs/vite-plugin-svelte";
-import { sveltePreprocess } from "svelte-preprocess";
 import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
 import copy from "rollup-plugin-copy";
 import path from "path";
@@ -111,10 +109,6 @@ export default defineConfig(({ mode }) => {
             inlineWorkerPlugin({
                 external: externals,
                 treeShaking: true,
-            }),
-            svelte({
-                preprocess: sveltePreprocess(),
-                compilerOptions: { css: "injected", preserveComments: false },
             }),
 
             copy({

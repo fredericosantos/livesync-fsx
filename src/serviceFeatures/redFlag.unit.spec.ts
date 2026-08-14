@@ -536,7 +536,6 @@ describe("Red Flag Feature", () => {
     });
 
     describe("Rebuild All Flag Handler", () => {
-
         it("should detect rebuild all flag using original filename", async () => {
             const host = createHostMock();
             const log = createLoggerMock();

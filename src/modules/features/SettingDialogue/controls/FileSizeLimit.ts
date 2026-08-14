@@ -85,18 +85,16 @@ export function renderFileSizeLimit(tab: ObsidianLiveSyncSettingTab, el: HTMLEle
         if (isPreset) return;
 
         new Setting(container).setName("Size in megabytes").addText((text) =>
-            text
-                .setValue(`${current}`)
-                .onChange(async (value) => {
-                    const mb = Number(value);
-                    // Rejected rather than corrected: a half-typed "1" on the
-                    // way to "150" must not be saved as a one-megabyte limit,
-                    // and redrawing on every keystroke would take the field
-                    // away mid-word.
-                    if (!Number.isFinite(mb) || mb <= NO_LIMIT) return;
-                    tab.editingSettings.syncMaxSizeInMB = mb;
-                    await tab.saveSettings(["syncMaxSizeInMB"]);
-                })
+            text.setValue(`${current}`).onChange(async (value) => {
+                const mb = Number(value);
+                // Rejected rather than corrected: a half-typed "1" on the
+                // way to "150" must not be saved as a one-megabyte limit,
+                // and redrawing on every keystroke would take the field
+                // away mid-word.
+                if (!Number.isFinite(mb) || mb <= NO_LIMIT) return;
+                tab.editingSettings.syncMaxSizeInMB = mb;
+                await tab.saveSettings(["syncMaxSizeInMB"]);
+            })
         );
     };
 

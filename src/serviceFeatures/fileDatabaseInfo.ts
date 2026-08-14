@@ -155,7 +155,9 @@ async function getLocalDatabaseMeta(
     const legacy = rawStorageType === null || rawStorageType === "notes";
     const type = legacy ? "notes" : rawStorageType;
     const legacyBodyPresent =
-        legacy && (typeof raw.data === "string" || (Array.isArray(raw.data) && raw.data.every((item) => typeof item === "string")));
+        legacy &&
+        (typeof raw.data === "string" ||
+            (Array.isArray(raw.data) && raw.data.every((item) => typeof item === "string")));
     return {
         _id: raw._id,
         _rev: raw._rev,
@@ -235,9 +237,7 @@ async function collectRevisionDatabaseInfo(
         locallyStoredChunkReferences: children.filter((id) => localChunkStates.get(id)?.state === "available").length,
         contentAvailableLocally: legacy
             ? meta._legacyBodyPresent
-            : uniqueChildren.every(
-                  (id) => embeddedChildren.has(id) || localChunkStates.get(id)?.state === "available"
-              ),
+            : uniqueChildren.every((id) => embeddedChildren.has(id) || localChunkStates.get(id)?.state === "available"),
         chunks: uniqueChildren.map((id) => {
             const localState = localChunkStates.get(id);
             return {
@@ -322,14 +322,11 @@ export async function inspectFileDatabaseInfo(core: FileDatabaseInfoCore, path: 
                 const unavailableSharedRevisions = sharedHistory
                     .filter(
                         ({ revision: historyRevision, status }) =>
-                            status !== "available" ||
-                            conflictHistoryByRevision.get(historyRevision) !== "available"
+                            status !== "available" || conflictHistoryByRevision.get(historyRevision) !== "available"
                     )
                     .map(({ revision: historyRevision }) => historyRevision);
                 const sharedMeta = sharedRevision ? await getRevisionMeta(sharedRevision) : false;
-                const sharedInfo = sharedMeta
-                    ? await collectRevisionDatabaseInfo(core, sharedMeta, false)
-                    : undefined;
+                const sharedInfo = sharedMeta ? await collectRevisionDatabaseInfo(core, sharedMeta, false) : undefined;
                 mergeBases.push({
                     winnerRevision: currentMeta._rev ?? "",
                     conflictRevision: revision,

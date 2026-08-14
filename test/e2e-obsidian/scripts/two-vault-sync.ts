@@ -688,10 +688,9 @@ async function runConflictTimeStorageOperations(
         showMergeDialogOnlyOnActive: true,
         handleFilenameCaseSensitive: false,
     };
-    const baseContent = Object.fromEntries(paths.map((path) => [path, `# Conflict operation\n\nBase for ${path}.\n`])) as Record<
-        (typeof paths)[number],
-        string
-    >;
+    const baseContent = Object.fromEntries(
+        paths.map((path) => [path, `# Conflict operation\n\nBase for ${path}.\n`])
+    ) as Record<(typeof paths)[number], string>;
     const leftContent = Object.fromEntries(
         paths.map((path) => [path, `${baseContent[path]}\nEdit made on Vault A.\n`])
     ) as Record<(typeof paths)[number], string>;
@@ -732,7 +731,9 @@ async function runConflictTimeStorageOperations(
     const initialBranchRevisions = new Map<string, Set<string>>();
     for (const path of paths) {
         const state = await waitForFileConflict(context.cliBinary, session.cliEnv, path);
-        const displayedBranch = state.branches.find((branch) => branch.content === rightContent[path] && !branch.deleted);
+        const displayedBranch = state.branches.find(
+            (branch) => branch.content === rightContent[path] && !branch.deleted
+        );
         if (!displayedBranch) {
             throw new Error(`Could not identify the branch displayed by Vault B: ${path}; ${JSON.stringify(state)}`);
         }
@@ -773,12 +774,7 @@ async function runConflictTimeStorageOperations(
         "A conflict-time deletion did not extend the displayed revision."
     );
 
-    await renameNoteViaObsidian(
-        context.cliBinary,
-        session.cliEnv,
-        conflictCaseFromPath,
-        conflictCaseToPath
-    );
+    await renameNoteViaObsidian(context.cliBinary, session.cliEnv, conflictCaseFromPath, conflictCaseToPath);
     const caseRenamedBranch = await waitForConflictBranch(
         context.cliBinary,
         session.cliEnv,
@@ -819,12 +815,7 @@ async function runConflictTimeStorageOperations(
         "A conflict-time case-only rename did not record the new displayed revision."
     );
 
-    await renameNoteViaObsidian(
-        context.cliBinary,
-        session.cliEnv,
-        conflictRenameFromPath,
-        conflictRenameToPath
-    );
+    await renameNoteViaObsidian(context.cliBinary, session.cliEnv, conflictRenameFromPath, conflictRenameToPath);
     const renamedTarget = await waitForLocalDatabaseEntry(context.cliBinary, session.cliEnv, conflictRenameToPath);
     const renamedSourceDeletion = await waitForConflictBranch(
         context.cliBinary,

@@ -10,7 +10,6 @@ import { ModuleObsidianEvents } from "./modules/essentialObsidian/ModuleObsidian
 import { ModuleDeviceName } from "./modules/essentialObsidian/ModuleDeviceName.ts";
 import { ModuleObsidianSettingDialogue } from "./modules/features/ModuleObsidianSettingTab.ts";
 import { ModuleObsidianDocumentHistory } from "./modules/features/ModuleObsidianDocumentHistory.ts";
-import { ModuleObsidianGlobalHistory } from "./modules/features/ModuleGlobalHistory.ts";
 import { LocalDatabaseMaintenance } from "./features/LocalDatabaseMainte/CmdLocalDatabaseMainte.ts";
 import { CmdRecovery } from "./features/Recovery/CmdRecovery.ts";
 import type { InjectableServiceHub } from "@vrtmrz/livesync-commonlib/compat/services/implements/injectable/InjectableServiceHub";
@@ -153,7 +152,6 @@ export default class ObsidianLiveSyncPlugin extends Plugin {
                     new ModuleLog(this, core),
                     new ModuleObsidianDocumentHistory(this, core),
                     new ModuleInteractiveConflictResolver(this, core),
-                    new ModuleObsidianGlobalHistory(this, core),
                     new SetupManager(core), // this should be moved to core?
                     new ModuleMigration(core, () => waitForCompatibilityReview()),
                 ];

@@ -197,7 +197,7 @@
 }
 
 .lsfsx-header-button {
-    margin-left: 2em;
+    margin-left: var(--size-4-8);
 }
 
 .lsfsx-hidden {
@@ -235,8 +235,8 @@ body {
     border-radius: 4px;
     display: flex;
     flex-direction: row;
-    padding: 0.5em 0.75em;
-    gap: 0.75em;
+    padding: var(--size-4-2) var(--size-4-3);
+    gap: var(--size-4-3);
     align-items: center;
 }
 
@@ -252,7 +252,7 @@ body {
 
 .lsfsx-plugins-tbl-buttons button {
     flex-grow: 0;
-    padding: 6px 10px;
+    padding: var(--size-2-3) var(--size-4-2);
 }
 
 .lsfsx-plugins-tbl-device-head {
@@ -322,8 +322,10 @@ body {
 
 .lsfsx-item-dirty {
     border-left: 2px solid var(--text-accent);
-    padding-left: 0.6em;
-    margin-left: -0.6em;
+    padding-left: var(--size-4-2);
+    /* Pulled back by exactly what the padding added, so the rule sits in the
+     * margin and the text below it stays aligned with every other row. */
+    margin-left: calc(var(--size-4-2) * -1);
 }
 
 .lsfsx-item-dirty-help::after {
@@ -395,7 +397,7 @@ body {
 }
 
 .lsfsx-review-harness .setting-item-control {
-    gap: 0.5rem;
+    gap: var(--size-4-2);
 }
 
 .lsfsx-review-harness button {
@@ -414,7 +416,7 @@ body {
 }
 
 .lsfsx-review-harness__result {
-    margin: 0 0 1rem;
+    margin: 0 0 var(--size-4-4);
 }
 
 .lsfsx-review-harness__warning,
@@ -573,7 +575,7 @@ body.is-mobile .livesync-compatibility-review-notice {
     /* A code is scanned from a screen, so it wants light behind it whatever
        theme the reader is using. */
     background: #fff;
-    padding: 8px;
+    padding: var(--size-4-2);
     border-radius: 6px;
 }
 
@@ -810,7 +812,7 @@ body.is-mobile .livesync-compatibility-review-notice {
     color: var(--text-error);
     font-size: var(--font-ui-smaller);
     line-height: 1.5;
-    padding: 0 0 0.5em;
+    padding: 0 0 var(--size-4-2);
     max-width: 60ch;
 }
 
@@ -832,7 +834,7 @@ body.is-mobile .livesync-compatibility-review-notice {
     flex-direction: column;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
-    margin: 0 0 0.75em;
+    margin: 0 0 var(--size-4-3);
     overflow: hidden;
 }
 
@@ -840,8 +842,8 @@ body.is-mobile .livesync-compatibility-review-notice {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5em;
-    padding: 0.45em 0.75em;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) var(--size-4-3);
     background: var(--background-secondary);
     font-size: var(--font-ui-smaller);
     color: var(--text-muted);
@@ -852,7 +854,7 @@ body.is-mobile .livesync-compatibility-review-notice {
 }
 
 .lsfsx-list__empty {
-    padding: 0.7em 0.75em;
+    padding: var(--size-4-3);
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
@@ -860,8 +862,8 @@ body.is-mobile .livesync-compatibility-review-notice {
 .lsfsx-list__row {
     display: flex;
     align-items: center;
-    gap: 0.5em;
-    padding: 0.4em 0.75em;
+    gap: var(--size-4-2);
+    padding: var(--size-2-3) var(--size-4-3);
     border-top: 1px solid var(--background-modifier-border);
 }
 
@@ -875,7 +877,7 @@ body.is-mobile .livesync-compatibility-review-notice {
     background: none;
     border: none;
     box-shadow: none;
-    padding: 0.15em;
+    padding: var(--size-2-1);
     cursor: pointer;
     color: var(--text-faint);
     display: inline-flex;
@@ -887,8 +889,8 @@ body.is-mobile .livesync-compatibility-review-notice {
 
 .lsfsx-list__add {
     display: flex;
-    gap: 0.5em;
-    padding: 0.5em 0.75em;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) var(--size-4-3);
     border-top: 1px solid var(--background-modifier-border);
 }
 
@@ -908,7 +910,7 @@ body.is-mobile .livesync-compatibility-review-notice {
  */
 .lsfsx-chip {
     display: inline-block;
-    padding: 0.1em 0.45em;
+    padding: var(--size-2-1) var(--size-4-2);
     border-radius: 4px;
     background: var(--background-modifier-hover);
     color: var(--text-normal);
@@ -920,7 +922,7 @@ body.is-mobile .livesync-compatibility-review-notice {
 
 .lsfsx-chip__joiner {
     display: inline-block;
-    margin: 0 0.4em;
+    margin: 0 var(--size-2-3);
     color: var(--text-faint);
 }
 
@@ -937,12 +939,12 @@ body.is-mobile .livesync-compatibility-review-notice {
     flex-direction: column;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
-    margin: 0 0 0.75em;
+    margin: 0 0 var(--size-4-3);
     overflow: hidden;
 }
 
 .lsfsx-plugins__empty {
-    padding: 0.7em 0.75em;
+    padding: var(--size-4-3);
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
 }
@@ -957,8 +959,16 @@ body.is-mobile .livesync-compatibility-review-notice {
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 0 0.4em;
-    margin-top: 0.4em;
+    gap: 0 var(--size-2-2);
+    /*
+     * Spaced away from the chips above and held close to what follows, so the
+     * line reads as belonging to the connection rather than floating between
+     * two rows.
+     *
+     * Obsidian's own scale, not hand-picked values: `--size-4-3` is 12px and
+     * `--size-2-1` is 2px, and both move with the app's density settings.
+     */
+    margin: var(--size-4-3) 0 var(--size-2-1);
     /* Smaller than the connection chips above it: where the vault syncs is the
      * heading, how it is getting on is the footnote. */
     font-size: var(--font-ui-smaller);
@@ -988,32 +998,22 @@ body.is-mobile .livesync-compatibility-review-notice {
     color: var(--text-error);
 }
 
+/*
+ * Only the box the bar sits in. The bar itself is Obsidian's
+ * `ProgressBarComponent`, which brings its own height, radius, colour and
+ * transition — this used to restate all four, and would have drifted from the
+ * app the first time any of them changed.
+ */
 .lsfsx-syncline__track {
     grid-column: 1 / -1;
-    height: 2px;
     max-width: 14em;
-    margin-top: 0.4em;
-    border-radius: 3px;
-    background: var(--background-modifier-border);
+    margin-top: var(--size-2-2);
     /* Reserved, not removed: see above. */
     visibility: hidden;
 }
 
 .lsfsx-syncline__track.is-visible {
     visibility: visible;
-}
-
-.lsfsx-syncline__fill {
-    height: 100%;
-    border-radius: 3px;
-    background: var(--interactive-accent);
-    transition: width 0.25s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .lsfsx-syncline__fill {
-        transition: none;
-    }
 }
 
 /*
@@ -1043,7 +1043,7 @@ body.is-mobile .livesync-compatibility-review-notice {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.4em;
+    gap: var(--size-2-3);
     /*
      * Inset to the same edge as the setting row above, and given the bottom
      * space that row's padding would have provided. Without it the chips sat
@@ -1056,7 +1056,7 @@ body.is-mobile .livesync-compatibility-review-notice {
 }
 
 .lsfsx-chip-button {
-    padding: 0.3em 0.8em;
+    padding: var(--size-2-2) var(--size-4-3);
     border-radius: 999px;
     border: 1px solid var(--background-modifier-border);
     background: var(--background-primary);
@@ -1083,7 +1083,7 @@ body.is-mobile .livesync-compatibility-review-notice {
 /* The "All plugins" row is a setting inside the frame, and heads the list. */
 .lsfsx-plugins > .setting-item {
     border-top: 1px solid var(--background-modifier-border);
-    padding: 0.5em 0.75em;
+    padding: var(--size-4-2) var(--size-4-3);
 }
 
 .lsfsx-plugins > .setting-item:first-child {
@@ -1092,3 +1092,136 @@ body.is-mobile .livesync-compatibility-review-notice {
 }
 
 
+
+/*
+ * The log pane.
+ *
+ * Always wrapped and always selectable: it exists to be read and copied out of,
+ * and a horizontal scrollbar under a stack trace helps nobody. The three
+ * checkboxes that used to offer wrap, auto-scroll and pause are gone with the
+ * Svelte component that held them.
+ */
+.lsfsx-log {
+    height: 100%;
+    overflow-y: auto;
+    user-select: text;
+    -webkit-user-select: text;
+    padding-bottom: var(--size-4-8);
+    font-size: var(--font-ui-smaller);
+}
+
+.lsfsx-log__line {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/*
+ * Choosing between two versions of a settings file.
+ *
+ * The choices are the same chips the size limit uses, so the one place in this
+ * plug-in where you pick between named options looks like the other.
+ */
+.lsfsx-merge__file {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    margin-bottom: var(--size-4-3);
+}
+
+.lsfsx-merge__choices {
+    justify-content: flex-start;
+    padding: 0 0 var(--size-4-3);
+    flex-wrap: wrap;
+}
+
+.lsfsx-merge__preview {
+    white-space: pre-wrap;
+    overflow: auto;
+    max-height: 50vh;
+    padding: var(--size-4-2);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.lsfsx-merge__preview .is-added {
+    background-color: var(--background-modifier-success);
+}
+
+.lsfsx-merge__preview .is-deleted {
+    background-color: var(--background-modifier-error);
+    text-decoration: line-through;
+}
+
+/*
+ * Dialogues.
+ *
+ * The wizard used to bring its own layout — a label column, its own button row,
+ * its own note styling — which is why it never looked like the settings page it
+ * leads to. What is left is the spacing between an explanation and the controls
+ * under it; the rows themselves are Obsidian's.
+ */
+.lsfsx-dialog__guidance {
+    color: var(--text-muted);
+    margin-bottom: var(--size-4-2);
+}
+
+.lsfsx-dialog__guidance p {
+    margin: 0 0 var(--size-4-2);
+}
+
+.lsfsx-dialog__guidance p:last-child {
+    margin-bottom: 0;
+}
+
+.lsfsx-dialog__steps {
+    color: var(--text-muted);
+    margin: 0 0 var(--size-4-3);
+    padding-left: var(--size-4-5);
+}
+
+.lsfsx-dialog__steps li {
+    margin-bottom: var(--size-2-2);
+}
+
+/*
+ * Hidden rather than absent, so a message appearing does not move the buttons
+ * out from under the reader's cursor.
+ */
+.lsfsx-dialog__note {
+    display: none;
+    margin: var(--size-4-2) 0;
+    padding: var(--size-4-2) var(--size-4-3);
+    border-left: 3px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    background: var(--background-secondary);
+    font-size: var(--font-ui-smaller);
+}
+
+.lsfsx-dialog__note.is-visible {
+    display: block;
+}
+
+.lsfsx-dialog__note.is-warning {
+    border-left-color: var(--text-warning);
+}
+
+.lsfsx-dialog__note.is-error {
+    border-left-color: var(--text-error);
+}
+
+.lsfsx-dialog__decisions {
+    border-top: none;
+    padding-bottom: 0;
+}
+
+.lsfsx-dialog__copyable {
+    width: 100%;
+    resize: none;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+}

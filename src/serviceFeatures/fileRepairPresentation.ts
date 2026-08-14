@@ -1,17 +1,7 @@
-import {
-    BASE_IS_NEW,
-    EVEN,
-    TARGET_IS_NEW,
-} from "@vrtmrz/livesync-commonlib/compat/common/models/shared.const.symbols";
-import {
-    compareMTime,
-    readAsBlob,
-} from "@vrtmrz/livesync-commonlib/compat/common/utils";
+import { BASE_IS_NEW, EVEN, TARGET_IS_NEW } from "@vrtmrz/livesync-commonlib/compat/common/models/shared.const.symbols";
+import { compareMTime, readAsBlob } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import { isPlainText } from "@vrtmrz/livesync-commonlib/compat/string_and_binary/path";
-import type {
-    FileRepairInspection,
-    FileRepairRevision,
-} from "./fileRepair";
+import type { FileRepairInspection, FileRepairRevision } from "./fileRepair";
 
 export type FileRepairRevisionActions = {
     compareWithVault: boolean;
@@ -24,11 +14,7 @@ export type FileRepairRevisionActions = {
     discardRevision: boolean;
 };
 
-export type FileRepairTimestampRelation =
-    | "vault-newer"
-    | "database-newer"
-    | "same-window"
-    | "unavailable";
+export type FileRepairTimestampRelation = "vault-newer" | "database-newer" | "same-window" | "unavailable";
 
 export type FileRepairRevisionComparison = {
     recordedSize: number;
@@ -49,9 +35,7 @@ export function getFileRepairRevisionActions(
     const storageExists = inspection.information.storage.exists;
     const hasRevision = revision.metadata.revision !== null;
     const readableFileRevision =
-        !revision.metadata.deleted &&
-        revision.contentReadable &&
-        revision.loadedEntry !== false;
+        !revision.metadata.deleted && revision.contentReadable && revision.loadedEntry !== false;
     const matchesVault = storageExists && revision.contentMatchesStorage === true;
     const hasConflictBranches = inspection.information.database.conflictCount > 0;
 
@@ -62,31 +46,13 @@ export function getFileRepairRevisionActions(
             revision.contentMatchesStorage === false &&
             isPlainText(inspection.information.path),
         applyRevisionToVault:
-            hasRevision &&
-            readableFileRevision &&
-            (!storageExists || revision.contentMatchesStorage !== true),
-        markAsVaultRevision:
-            hasRevision &&
-            readableFileRevision &&
-            matchesVault,
-        storeVaultOnBranch:
-            hasRevision &&
-            storageExists &&
-            revision.contentMatchesStorage !== true,
-        applyLogicalDeletionToVault:
-            hasRevision &&
-            revision.metadata.deleted &&
-            storageExists,
-        retryRevision:
-            hasRevision &&
-            !revision.metadata.deleted &&
-            !revision.contentReadable,
+            hasRevision && readableFileRevision && (!storageExists || revision.contentMatchesStorage !== true),
+        markAsVaultRevision: hasRevision && readableFileRevision && matchesVault,
+        storeVaultOnBranch: hasRevision && storageExists && revision.contentMatchesStorage !== true,
+        applyLogicalDeletionToVault: hasRevision && revision.metadata.deleted && storageExists,
+        retryRevision: hasRevision && !revision.metadata.deleted && !revision.contentReadable,
         discardBranch: hasRevision && hasConflictBranches,
-        discardRevision:
-            hasRevision &&
-            !hasConflictBranches &&
-            !revision.metadata.deleted &&
-            !revision.contentReadable,
+        discardRevision: hasRevision && !hasConflictBranches && !revision.metadata.deleted && !revision.contentReadable,
     };
 }
 
@@ -94,23 +60,12 @@ export function getFileRepairRevisionComparison(
     inspection: FileRepairInspection,
     revision: FileRepairRevision
 ): FileRepairRevisionComparison {
-    const decodedSize =
-        revision.loadedEntry === false
-            ? null
-            : readAsBlob(revision.loadedEntry).size;
-    const vaultSize =
-        inspection.information.storage.exists
-            ? (inspection.information.storage.size ?? null)
-            : null;
+    const decodedSize = revision.loadedEntry === false ? null : readAsBlob(revision.loadedEntry).size;
+    const vaultSize = inspection.information.storage.exists ? (inspection.information.storage.size ?? null) : null;
     const databaseMtime = revision.metadata.mtime;
-    const vaultMtime =
-        inspection.information.storage.exists
-            ? (inspection.information.storage.mtime ?? null)
-            : null;
+    const vaultMtime = inspection.information.storage.exists ? (inspection.information.storage.mtime ?? null) : null;
     const timestampDifferenceMs =
-        databaseMtime > 0 && vaultMtime !== null && vaultMtime > 0
-            ? vaultMtime - databaseMtime
-            : null;
+        databaseMtime > 0 && vaultMtime !== null && vaultMtime > 0 ? vaultMtime - databaseMtime : null;
     let timestampRelation: FileRepairTimestampRelation = "unavailable";
     if (timestampDifferenceMs !== null) {
         const comparison = compareMTime(vaultMtime!, databaseMtime);
@@ -127,15 +82,9 @@ export function getFileRepairRevisionComparison(
     return {
         recordedSize: revision.metadata.recordedSize,
         decodedSize,
-        recordedToDecodedSizeDifference:
-            decodedSize === null
-                ? null
-                : decodedSize - revision.metadata.recordedSize,
+        recordedToDecodedSizeDifference: decodedSize === null ? null : decodedSize - revision.metadata.recordedSize,
         vaultSize,
-        databaseToVaultSizeDifference:
-            decodedSize === null || vaultSize === null
-                ? null
-                : vaultSize - decodedSize,
+        databaseToVaultSizeDifference: decodedSize === null || vaultSize === null ? null : vaultSize - decodedSize,
         databaseMtime,
         vaultMtime,
         timestampDifferenceMs,

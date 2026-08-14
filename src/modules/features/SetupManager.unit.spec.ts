@@ -9,11 +9,6 @@ import { SettingService } from "@vrtmrz/livesync-commonlib/compat/services/base/
 import { ServiceContext } from "@vrtmrz/livesync-commonlib/context";
 import { createNewVaultSettings } from "@vrtmrz/livesync-commonlib/settings";
 
-vi.mock("./SetupWizard/dialogs/ScanQRCode.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/UseSetupURI.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SetupRemoteCouchDB.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/ConfirmSetupPlan.svelte", () => ({ default: {} }));
-vi.mock("./SetupWizard/dialogs/SetupRemoteE2EE.svelte", () => ({ default: {} }));
 
 vi.mock("@vrtmrz/livesync-commonlib/compat/API/processSetting", () => ({
     decodeSettingsFromQRCodeData: vi.fn(),
@@ -194,7 +189,6 @@ describe("SetupManager", () => {
         expect(setting.currentSettings().isConfigured).toBe(true);
     });
 
-
     it("reserves Fetch when compatible imported settings activate an unconfigured device", async () => {
         const { manager, setting, dialogManager, core, remoteStatus } = createSetupManager();
         setting.settings = { ...setting.currentSettings(), isConfigured: false };
@@ -265,9 +259,7 @@ describe("SetupManager", () => {
             },
             activeConfigurationId: "archive",
         } as ObsidianLiveSyncSettings;
-        dialogManager.openWithExplicitCancel
-            .mockResolvedValueOnce(imported)
-            .mockResolvedValueOnce("apply");
+        dialogManager.openWithExplicitCancel.mockResolvedValueOnce(imported).mockResolvedValueOnce("apply");
 
         await manager.onUseSetupURI(UserMode.Unknown, "mock-config://modern-settings");
 
@@ -360,9 +352,4 @@ describe("SetupManager", () => {
             });
         }
     );
-
-
-
-
-
 });

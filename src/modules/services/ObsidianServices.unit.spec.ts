@@ -9,17 +9,20 @@ function handler() {
 describe("ObsidianReplicatorService", () => {
     it("tracks local application activity without extending remote activity", async () => {
         const activity = promiseWithResolvers<void>();
-        const service = new ObsidianReplicatorService({ events: {}, translate: String } as never, {
-            settingService: { onRealiseSetting: handler() },
-            appLifecycleService: { onSuspending: handler(), getUnresolvedMessages: handler() },
-            databaseEventService: {
-                onResetDatabase: handler(),
-                onDatabaseInitialisation: handler(),
-                onDatabaseInitialised: handler(),
-                onDatabaseHasReady: handler(),
-            },
-            activityRunner: { run: vi.fn(async (task: () => Promise<void>) => await task()) },
-        } as never);
+        const service = new ObsidianReplicatorService(
+            { events: {}, translate: String } as never,
+            {
+                settingService: { onRealiseSetting: handler() },
+                appLifecycleService: { onSuspending: handler(), getUnresolvedMessages: handler() },
+                databaseEventService: {
+                    onResetDatabase: handler(),
+                    onDatabaseInitialisation: handler(),
+                    onDatabaseInitialised: handler(),
+                    onDatabaseHasReady: handler(),
+                },
+                activityRunner: { run: vi.fn(async (task: () => Promise<void>) => await task()) },
+            } as never
+        );
 
         const running = service.runBoundedLocalApplicationActivity(() => activity.promise);
 

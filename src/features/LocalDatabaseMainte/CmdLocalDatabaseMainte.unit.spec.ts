@@ -91,8 +91,6 @@ describe("LocalDatabaseMaintenance prerequisites", () => {
         expect(garbageCollect?.checkCallback?.(true)).toBe(false);
     });
 
-
-
     it("continues without asking when prerequisite settings already match", async () => {
         const { settings, askSelectStringDialogue, applyPartial } = createPrerequisites({
             doNotUseFixedRevisionForChunks: true,
@@ -131,7 +129,6 @@ describe("LocalDatabaseMaintenance prerequisites", () => {
         expect(askSelectStringDialogue).not.toHaveBeenCalled();
         expect(applyPartial).not.toHaveBeenCalled();
     });
-
 });
 
 describe("LocalDatabaseMaintenance Garbage Collection V3", () => {
@@ -158,10 +155,7 @@ describe("LocalDatabaseMaintenance Garbage Collection V3", () => {
         await maintenance.compactDatabase();
 
         expect(notice).toHaveBeenCalledWith("Compaction on remote database timed out.", "gc-compact");
-        expect(notice).not.toHaveBeenCalledWith(
-            "Compaction on remote database completed successfully.",
-            "gc-compact"
-        );
+        expect(notice).not.toHaveBeenCalledWith("Compaction on remote database completed successfully.", "gc-compact");
     });
 
     it.each([
@@ -232,9 +226,7 @@ describe("LocalDatabaseMaintenance Garbage Collection V3", () => {
 
         expect(allChunks).not.toHaveBeenCalled();
         expect(pushModes).toEqual(["sync"]);
-        expect(notice).toHaveBeenCalledWith(
-            "No connected device information found. Cancelling Garbage Collection."
-        );
+        expect(notice).toHaveBeenCalledWith("No connected device information found. Cancelling Garbage Collection.");
     });
 
     it("keeps chunks referenced by a live conflict revision and deletes only unreachable chunks", async () => {

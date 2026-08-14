@@ -571,11 +571,14 @@ async function runInitialisationNoticeGrouping(context: RunnerContext, vault: Te
         await withObsidianPage(port, async (page) => {
             const deadline = Date.now() + timeoutMs;
             while ((await page.locator(".notice:visible").count()) > 0 && Date.now() < deadline) {
-                await page.locator(".notice:visible").first().click({
-                    force: true,
-                    position: { x: 2, y: 2 },
-                    timeout: timeoutMs,
-                });
+                await page
+                    .locator(".notice:visible")
+                    .first()
+                    .click({
+                        force: true,
+                        position: { x: 2, y: 2 },
+                        timeout: timeoutMs,
+                    });
             }
             assertEqual(
                 await page.locator(".notice:visible").count(),
@@ -707,17 +710,15 @@ async function runInitialisationNoticeGrouping(context: RunnerContext, vault: Te
 
         const result = await withObsidianPage(port, async (page) => {
             await page.evaluate((stateKey) => {
-                const state = (globalThis as unknown as Record<
-                    string,
-                    { releasePreparation?: () => void } | undefined
-                >)[stateKey];
+                const state = (
+                    globalThis as unknown as Record<string, { releasePreparation?: () => void } | undefined>
+                )[stateKey];
                 state?.releasePreparation?.();
             }, hiddenFileInitialisationStateKey);
             await page.waitForFunction(
                 (stateKey) =>
-                    (globalThis as unknown as Record<string, { reachedInitialisation?: boolean } | undefined>)[
-                        stateKey
-                    ]?.reachedInitialisation === true,
+                    (globalThis as unknown as Record<string, { reachedInitialisation?: boolean } | undefined>)[stateKey]
+                        ?.reachedInitialisation === true,
                 hiddenFileInitialisationStateKey,
                 { timeout: timeoutMs }
             );

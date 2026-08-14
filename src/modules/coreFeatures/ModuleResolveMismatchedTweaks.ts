@@ -301,9 +301,9 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
                     const isToConditionMet = "to" in pattern ? pattern.to === preferred[key] : false;
                     // if either of them is true, it should require a rebuild, if the pattern is not a recommendation.
                     if (isFromConditionMet || isToConditionMet) {
-                    // A recommendation is not a requirement: only
-                    // changes the stored data cannot survive force a repair.
-                    if (!pattern.isRecommendation) rebuildRequired = true;
+                        // A recommendation is not a requirement: only
+                        // changes the stored data cannot survive force a repair.
+                        if (!pattern.isRecommendation) rebuildRequired = true;
                     }
                 }
             } else {
@@ -326,10 +326,7 @@ export class ModuleResolvingMismatchedTweaks extends AbstractModule {
         // Setup reads the server's settings so the new device matches it. That
         // is the only sensible outcome, so it is not offered as one of two
         // buttons over a table of internal setting names.
-        this._log(
-            `Taking ${differenceCount} setting(s) from the server so this device matches it.`,
-            LOG_LEVEL_INFO
-        );
+        this._log(`Taking ${differenceCount} setting(s) from the server so this device matches it.`, LOG_LEVEL_INFO);
         return { result: { ...trialSetting, ...preferred }, requireFetch: rebuildRequired };
     }
 

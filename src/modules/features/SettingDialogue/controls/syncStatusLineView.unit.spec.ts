@@ -18,7 +18,10 @@ describe("presentSyncStatusLine", () => {
     });
 
     it("says work is in flight, with how far along it is", () => {
-        const view = presentSyncStatusLine({ level: STATUS_SYNCING, message: "Downloading 40" }, { done: 10, total: 40 });
+        const view = presentSyncStatusLine(
+            { level: STATUS_SYNCING, message: "Downloading 40" },
+            { done: 10, total: 40 }
+        );
         expect(view.text).toBe("Syncing files…");
         expect(view.progress).toBeCloseTo(0.25);
     });

@@ -29,10 +29,7 @@ import { promiseWithResolvers, type PromiseWithResolvers } from "octagonal-wheel
 const KV_KEY_REPLICATION_RESULT_PROCESSOR_SNAPSHOT = "replicationResultProcessorSnapshot";
 const REPROCESS_BATCH_SIZE = 100;
 type LocalApplicationActivityOwner = {
-    runBoundedLocalApplicationActivity<T>(
-        task: () => T | PromiseLike<T>,
-        options?: { label?: string }
-    ): Promise<T>;
+    runBoundedLocalApplicationActivity<T>(task: () => T | PromiseLike<T>, options?: { label?: string }): Promise<T>;
 };
 type ReplicateResultProcessorState = {
     queued: PouchDB.Core.ExistingDocument<EntryDoc>[];
@@ -453,7 +450,10 @@ export class ReplicateResultProcessor {
                 releaser = await this._semaphore.acquire();
                 await this._applyToDatabase(doc);
             } catch (e) {
-                this.log(`Could not apply a received change: ${e instanceof Error ? e.message : String(e)}`, LOG_LEVEL_INFO);
+                this.log(
+                    `Could not apply a received change: ${e instanceof Error ? e.message : String(e)}`,
+                    LOG_LEVEL_INFO
+                );
                 this.logError(e);
             } finally {
                 // Remove from processing queue (To remove from "in-progress" list, and snapshot will not include it)

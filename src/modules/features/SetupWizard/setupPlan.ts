@@ -39,11 +39,7 @@ export const SETUP_JOIN = "join";
 /** Both sides already know each other: only the settings change. */
 export const SETUP_RECONNECT = "reconnect";
 
-export type SetupAction =
-    | typeof SETUP_UNREACHABLE
-    | typeof SETUP_SEED
-    | typeof SETUP_JOIN
-    | typeof SETUP_RECONNECT;
+export type SetupAction = typeof SETUP_UNREACHABLE | typeof SETUP_SEED | typeof SETUP_JOIN | typeof SETUP_RECONNECT;
 
 export interface SetupPlan {
     readonly action: SetupAction;
@@ -69,7 +65,9 @@ export interface SetupPlan {
  * tells someone setting up their first device that they are joining a vault
  * that does not exist.
  */
-export function isRemoteInitialised(status: false | { readonly doc_count?: number; readonly [key: string]: unknown }): boolean {
+export function isRemoteInitialised(
+    status: false | { readonly doc_count?: number; readonly [key: string]: unknown }
+): boolean {
     if (status === false) return false;
     return (status.doc_count ?? 0) > 0;
 }

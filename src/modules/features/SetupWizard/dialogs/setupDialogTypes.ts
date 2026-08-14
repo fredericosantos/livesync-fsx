@@ -65,10 +65,8 @@ export type RebuildEverythingResult =
 
 export type IntroResultType = typeof TYPE_NEW_USER | typeof TYPE_EXISTING_USER | typeof TYPE_CANCELLED;
 
-
 /** The answer to a setup plan: apply it, or do nothing. */
 export type SetupPlanResultType = typeof TYPE_APPLY | typeof TYPE_CANCELLED;
-
 
 export type SelectMethodNewUserResultType =
     | typeof TYPE_USE_SETUP_URI
@@ -86,7 +84,6 @@ export type SetupRemoteResultType = typeof TYPE_COUCHDB | typeof TYPE_CANCELLED;
 export type UseSetupURIResultType = typeof TYPE_CANCELLED | ObsidianLiveSyncSettings;
 
 export type SetupRemoteE2EEResultType = typeof TYPE_CANCELLED | EncryptionSettings;
-
 
 export type SetupRemoteCouchDBResultType = typeof TYPE_CANCELLED | CouchDBConnection;
 export type CouchDBSetupMode = "create-or-connect" | "connect-existing" | "settings";

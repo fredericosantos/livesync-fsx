@@ -204,7 +204,7 @@ describe("compatibility review controller", () => {
         const ui: CompatibilityReviewUi = {
             showSummary: vi.fn(),
             showDetails: vi.fn(),
-                clearReminder: vi.fn(),
+            clearReminder: vi.fn(),
         };
 
         useCompatibilityReview(core, ui);

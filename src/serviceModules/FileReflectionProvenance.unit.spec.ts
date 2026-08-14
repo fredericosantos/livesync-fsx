@@ -2,10 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SimpleStore } from "@vrtmrz/livesync-commonlib/compat/common/utils";
 import type { FileReflectionProvenanceRecord } from "@vrtmrz/livesync-commonlib/compat/interfaces/FileReflectionProvenance";
 import type { FilePathWithPrefix } from "@vrtmrz/livesync-commonlib/compat/common/types";
-import {
-    createFileReflectionProvenance,
-    FILE_REFLECTION_PROVENANCE_STORE,
-} from "./FileReflectionProvenance";
+import { createFileReflectionProvenance, FILE_REFLECTION_PROVENANCE_STORE } from "./FileReflectionProvenance";
 
 describe("createFileReflectionProvenance", () => {
     it("uses one reset-scoped host store for exact reflected revisions", async () => {

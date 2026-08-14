@@ -246,11 +246,7 @@ async function openRevisionActionMenu(page: Page, settings: Locator, revision: s
         width: window.innerWidth,
         height: window.innerHeight,
     }));
-    if (
-        box === null ||
-        box.y < 0 ||
-        box.y + box.height > viewport.height - 4
-    ) {
+    if (box === null || box.y < 0 || box.y + box.height > viewport.height - 4) {
         throw new Error(
             `Revision action menu is outside the viewport: ${JSON.stringify({
                 box,
@@ -385,9 +381,7 @@ async function main(): Promise<void> {
             }
             const winnerRevision = revisionCard(settings, fixture.winnerRevision);
             const brokenRevision = revisionCard(settings, fixture.conflictRevision);
-            await brokenRevision
-                .getByText(/🧩 Missing chunks: 1/u)
-                .waitFor({ state: "visible", timeout: uiTimeoutMs });
+            await brokenRevision.getByText(/🧩 Missing chunks: 1/u).waitFor({ state: "visible", timeout: uiTimeoutMs });
             await brokenRevision.getByText(fixture.missingChunkId, { exact: false }).waitFor({
                 state: "visible",
                 timeout: uiTimeoutMs,
@@ -454,9 +448,7 @@ async function main(): Promise<void> {
                 scrollWidth: element.scrollWidth,
             }));
             if (dimensions.scrollWidth > dimensions.clientWidth + 1) {
-                throw new Error(
-                    `Revision repair card overflowed at mobile width: ${JSON.stringify(dimensions)}`
-                );
+                throw new Error(`Revision repair card overflowed at mobile width: ${JSON.stringify(dimensions)}`);
             }
         });
         const mobileWidthScreenshot = await captureObsidianElement(

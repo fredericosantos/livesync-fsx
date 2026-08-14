@@ -69,7 +69,12 @@ describe("setupObsidian/qrCode", () => {
 
         expect(result).toBe("<svg/>");
         expect(translate).toHaveBeenCalledWith("Setup.QRCode", { qr_image: "<svg/>" });
-        expect(confirmWithMessage).toHaveBeenCalledWith("Scan this on the other device", "qr-message", ["Done"], "Done");
+        expect(confirmWithMessage).toHaveBeenCalledWith(
+            "Scan this on the other device",
+            "qr-message",
+            ["Done"],
+            "Done"
+        );
     });
 
     it("useSetupQRCodeFeature should register onLoaded handler that wires command and event", async () => {
