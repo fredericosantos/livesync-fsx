@@ -39,6 +39,24 @@ const NO_LIMIT = 0;
 /** The size to offer when the limit is switched on for the first time. */
 const DEFAULT_LIMIT_MB = 100;
 
+/** Whether a limit is set at all. */
+export function isSizeLimited(tab: ObsidianLiveSyncSettingTab): boolean {
+    return (tab.editingSettings.syncMaxSizeInMB ?? NO_LIMIT) > NO_LIMIT;
+}
+
+/** The switch. Turning it on adopts a sensible limit rather than asking twice. */
+export function renderSizeLimitToggle(tab: ObsidianLiveSyncSettingTab, toggleTo: (mb: number) => Promise<void>) {
+    return (value: boolean) => void toggleTo(value ? DEFAULT_LIMIT_MB : NO_LIMIT);
+}
+
+export function saveSizeLimit(tab: ObsidianLiveSyncSettingTab): (mb: number) => Promise<void> {
+    return async (mb: number) => {
+        tab.editingSettings.syncMaxSizeInMB = mb;
+        await tab.saveSettings(["syncMaxSizeInMB"]);
+        tab.update();
+    };
+}
+
 export function renderFileSizeLimit(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
     const container = el.createDiv();
 
@@ -52,13 +70,6 @@ export function renderFileSizeLimit(tab: ObsidianLiveSyncSettingTab, el: HTMLEle
             await tab.saveSettings(["syncMaxSizeInMB"]);
             draw();
         };
-
-        new Setting(container)
-            .setName("Do not sync files over a specified size")
-            .setDesc("Larger files stay on the device they are on. Nothing is deleted.")
-            .addToggle((toggle) =>
-                toggle.setValue(limited).onChange((value) => void save(value ? DEFAULT_LIMIT_MB : NO_LIMIT))
-            );
 
         if (!limited) return;
 

@@ -14,8 +14,14 @@ import type { ObsidianLiveSyncSettingTab } from "./ObsidianLiveSyncSettingTab.ts
 import type { SettingKey } from "./settingsCatalogue.ts";
 import { renderPassphrase } from "./controls/Passphrase.ts";
 import { renderIgnoreFileList } from "./controls/IgnoreFileList.ts";
-import { renderFileSizeLimit } from "./controls/FileSizeLimit.ts";
-import { renderConfigCategories } from "./controls/ConfigCategories.ts";
+import {
+    isSizeLimited,
+    renderFileSizeLimit,
+    renderSizeLimitToggle,
+    saveSizeLimit,
+} from "./controls/FileSizeLimit.ts";
+import { GROUPS, isGroupOn } from "./controls/ConfigCategories.ts";
+import { renderPluginSyncTable } from "./controls/PluginSyncTable.ts";
 import { renderSyncStatusLine } from "./controls/SyncStatusLine.ts";
 import { visibleOnly } from "./SettingPane.ts";
 import { $msg } from "@/common/translation";
@@ -39,28 +45,6 @@ import type { Setting, SettingGroup } from "obsidian";
 type KeyDefinition = (tab: ObsidianLiveSyncSettingTab) => SettingDefinitionRender;
 type ExtraDefinitions = (tab: ObsidianLiveSyncSettingTab) => SettingDefinitionRender[];
 
-/**
- * A row whose content is a block rather than a control.
- *
- * The `Setting` Obsidian created is emptied and hidden, and the renderer draws
- * into the group instead. The row still exists as a definition, which is what
- * keeps it in the search index.
- */
-function block(
-    name: string,
-    desc: string,
-    draw: (tab: ObsidianLiveSyncSettingTab, el: HTMLElement) => void,
-    tab: ObsidianLiveSyncSettingTab
-): SettingDefinitionRender {
-    return {
-        name,
-        desc,
-        render: (setting: Setting, group: SettingGroup) => {
-            setting.settingEl.addClass("lsfsx-hidden");
-            draw(tab, group.listEl);
-        },
-    };
-}
 
 async function leaveSettings(tab: ObsidianLiveSyncSettingTab): Promise<void> {
     tab.closeSetting();
@@ -192,18 +176,100 @@ const server: ExtraDefinitions = (tab) => [
     },
 ];
 
-const configCategories: ExtraDefinitions = (tab) => [
-    block(
-        "Sync app settings and plugins",
-        "Appearance, hotkeys, core plugins, app settings, and which community plugins travel between devices.",
-        renderConfigCategories,
-        tab
-    ),
-];
+/**
+ * One definition per row, rather than one row that draws many.
+ *
+ * The first attempt hid the row Obsidian supplied and painted the whole block
+ * into the group behind it. That produced an empty card under a heading: the
+ * host owns the group's contents, and anything appended to it from inside a
+ * row's own render does not survive.
+ *
+ * Declaring each row separately is also what the API is for — every category
+ * and every plug-in is now indexed by name, so Obsidian's settings search finds
+ * "Hotkeys" or a plug-in by name, which one opaque block could never offer.
+ */
+const configCategories: ExtraDefinitions = (tab) => {
+    const rows: SettingDefinitionRender[] = [
+        {
+            name: "Sync app settings and plugins",
+            desc: "Choose what travels below. Window layout always stays on the device it belongs to.",
+            render: (setting) => {
+                setting.addToggle((toggle) =>
+                    toggle.setValue(tab.editingSettings.syncInternalFiles === true).onChange(async (value) => {
+                        const hiddenFileSync = tab.core.addOns.find((addOn) => addOn instanceof HiddenFileSync);
+                        if (!hiddenFileSync) return;
+                        await hiddenFileSync.configureHiddenFileSync(value ? "MERGE" : "DISABLE_HIDDEN");
+                        tab.editingSettings.syncInternalFiles = tab.core.settings.syncInternalFiles;
+                        // Everything below this switch appears and disappears
+                        // with it, so the page is re-asked rather than nudged.
+                        tab.update();
+                    })
+                );
+            },
+        },
+    ];
+
+    for (const group of GROUPS) {
+        rows.push({
+            name: group.name,
+            desc: group.desc ?? "",
+            visible: () => tab.editingSettings.syncInternalFiles === true,
+            render: (setting) => {
+                setting.addToggle((toggle) =>
+                    toggle.setValue(isGroupOn(tab, group)).onChange(async (value) => {
+                        for (const key of group.keys) {
+                            (tab.editingSettings[key] as boolean) = value;
+                        }
+                        await tab.saveAllDirtySettings();
+                    })
+                );
+            },
+        });
+    }
+
+    rows.push({
+        name: "Plugins",
+        desc: "Which community plugins travel between devices.",
+        visible: () => tab.editingSettings.syncInternalFiles === true,
+        render: (setting, group) => {
+            // The list is genuinely a list — a variable number of rows, built
+            // from what the vault knows — so it is the one case that does draw
+            // into the group. It is the last row of the section, so nothing
+            // follows it to be displaced.
+            setting.settingEl.addClass("lsfsx-hidden");
+            renderPluginSyncTable(tab, group.listEl);
+        },
+    });
+
+    return rows;
+};
+
 
 const fileSizeLimit: ExtraDefinitions = (tab) => [
-    block("Do not sync files over a specified size", "Skip anything larger than the size you choose.", renderFileSizeLimit, tab),
+    {
+        name: "Do not sync files over a specified size",
+        desc: "Larger files stay on the device they are on. Nothing is deleted.",
+        render: (setting) => {
+            const save = saveSizeLimit(tab);
+            setting.addToggle((toggle) =>
+                toggle.setValue(isSizeLimited(tab)).onChange(renderSizeLimitToggle(tab, save))
+            );
+        },
+    },
+    {
+        name: "Size limit",
+        desc: "The largest file that will be synchronised.",
+        // Chips for a value that only exists once the switch above is on. The
+        // sizes are the last row of this section, so drawing them into the
+        // group displaces nothing.
+        visible: () => isSizeLimited(tab),
+        render: (setting, group) => {
+            setting.settingEl.addClass("lsfsx-hidden");
+            renderFileSizeLimit(tab, group.listEl);
+        },
+    },
 ];
+
 
 const replaceServer: ExtraDefinitions = (tab) => [
     {

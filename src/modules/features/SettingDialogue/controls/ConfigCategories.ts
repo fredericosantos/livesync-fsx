@@ -25,14 +25,14 @@ import { HiddenFileSync } from "@/features/HiddenFileSync/CmdHiddenFileSync.ts";
 
 type CategoryKey = keyof ObsidianLiveSyncSettings;
 
-interface CategoryGroup {
+export interface CategoryGroup {
     readonly name: string;
     readonly desc?: string;
     /** Every setting the row governs. All on, or all off. */
     readonly keys: readonly CategoryKey[];
 }
 
-const GROUPS: readonly CategoryGroup[] = [
+export const GROUPS: readonly CategoryGroup[] = [
     {
         name: "Appearance",
         desc: "Theme, snippets, and how the app looks.",
@@ -61,7 +61,7 @@ const GROUPS: readonly CategoryGroup[] = [
  * switch that does not describe its own state, so the first press of a
  * partially-on group turns the rest on rather than turning it off.
  */
-function isGroupOn(tab: ObsidianLiveSyncSettingTab, group: CategoryGroup): boolean {
+export function isGroupOn(tab: ObsidianLiveSyncSettingTab, group: CategoryGroup): boolean {
     return group.keys.every((key) => tab.editingSettings[key] === true);
 }
 
@@ -81,7 +81,7 @@ function isGroupOn(tab: ObsidianLiveSyncSettingTab, group: CategoryGroup): boole
  * settings, and the reader enabling a switch called "Sync app settings and
  * plugins" has not been told they are about to choose that.
  */
-function renderMasterSwitch(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
+export function renderMasterSwitch(tab: ObsidianLiveSyncSettingTab, el: HTMLElement): void {
     new Setting(el)
         .setName("Sync app settings and plugins")
         .setDesc("Choose what travels below. Window layout always stays on the device it belongs to.")

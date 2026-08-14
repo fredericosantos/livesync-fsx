@@ -191,12 +191,11 @@ export function presentStatus(input: StatusInput): StatusPresentation {
 
     // --- Grey. Not an error: the server may simply be unreachable. ---
     if (!input.connected) {
-        return {
-            level: STATUS_OFFLINE,
-            icon: ICON_OFFLINE,
-            text: "Not connected",
-            detail: "No connection to the remote server.",
-        };
+        // No detail. "Not connected" over "No connection to the remote
+        // server." is the same sentence twice, and a tooltip that restates its
+        // own heading teaches the reader that the second line is never worth
+        // reading — including on the states where it says something.
+        return { level: STATUS_OFFLINE, icon: ICON_OFFLINE, text: "Not connected" };
     }
 
     // --- Turning. Real work, once it has lasted long enough to read. ---

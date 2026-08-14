@@ -132,8 +132,11 @@ describe("presentStatus", () => {
     });
 
     it("always explains itself when it shows anything", () => {
+        // "Not connected" is deliberately excluded: its detail said "No
+        // connection to the remote server.", which is the same sentence twice,
+        // and a tooltip that restates its heading teaches the reader that the
+        // second line is never worth reading.
         for (const state of [
-            healthy({ connected: false }),
             healthy({ conflicts: 1 }),
             healthy({ problem: "Something failed" }),
             healthy({ sinceSyncedMs: 10 }),
