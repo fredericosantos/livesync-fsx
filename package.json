@@ -1,6 +1,6 @@
 {
     "name": "livesync-fsx",
-    "version": "1.6.3",
+    "version": "1.6.4",
     "description": "CouchDB-only fork of Self-hosted LiveSync, for a single self-hosted server.",
     "main": "main.js",
     "type": "module",

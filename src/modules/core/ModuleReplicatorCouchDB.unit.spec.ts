@@ -55,7 +55,9 @@ describe("ModuleReplicatorCouchDB resume replication activity", () => {
 
         await vi.waitFor(() => expect(openReplication).toHaveBeenCalledOnce());
         expect(runFiniteReplicationActivity).not.toHaveBeenCalled();
-        expect(openReplication).toHaveBeenCalledWith(expect.any(Object), true, false, false);
+        // `showResult` is true: a start-up refusal used to be invisible, and
+        // the point of reporting it is that the reader sees it.
+        expect(openReplication).toHaveBeenCalledWith(expect.any(Object), true, true, false);
     });
 
     it("opens nothing while replication is switched off", async () => {
@@ -74,5 +76,27 @@ describe("ModuleReplicatorCouchDB resume replication activity", () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         expect(openReplication).not.toHaveBeenCalled();
+    });
+});
+
+describe("ModuleReplicatorCouchDB failure reporting", () => {
+    it("records a rejection from openReplication instead of discarding it", async () => {
+        // The whole reason this file changed. `openReplication` awaits
+        // `initializeDatabaseForReplication()` before anything is logged, so a
+        // credential, a missing database or a refused certificate throws before
+        // the replicator has said a word. Called with `void`, that rejection
+        // went nowhere: no log line, no status change, and a vault stuck at
+        // "Not connected" with nothing to explain it.
+        const { module, openReplication } = createModule({ liveSync: true });
+        openReplication.mockRejectedValueOnce(new Error("Database not found"));
+        const logged: unknown[] = [];
+        // `_log` is the module's own reporting channel.
+        (module as unknown as { _log: (m: unknown) => void })._log = (message) => logged.push(message);
+
+        await module._everyAfterResumeProcess();
+
+        await vi.waitFor(() =>
+            expect(logged.some((line) => String(line).includes("Database not found"))).toBe(true)
+        );
     });
 });

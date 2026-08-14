@@ -1,5 +1,5 @@
 import { fireAndForget } from "octagonal-wheels/promises";
-import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE } from "@vrtmrz/livesync-commonlib/compat/common/types";
+import { LOG_LEVEL_INFO, LOG_LEVEL_NOTICE, LOG_LEVEL_VERBOSE } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { type RemoteDBSettings } from "@vrtmrz/livesync-commonlib/compat/common/types";
 import { LiveSyncCouchDBReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/couchdb/LiveSyncReplicator";
 import type { LiveSyncAbstractReplicator } from "@vrtmrz/livesync-commonlib/compat/replication/LiveSyncAbstractReplicator";
@@ -44,7 +44,24 @@ export class ModuleReplicatorCouchDB extends AbstractModule {
                     return;
                 }
                 this._log("Starting continuous replication.", LOG_LEVEL_INFO);
-                void this.core.replicator.openReplication(this.settings, true, false, false);
+                // Awaited, and its failure reported.
+                //
+                // This was `void openReplication(...)`. The first thing that
+                // method does is `await initializeDatabaseForReplication()`, so
+                // anything thrown while preparing the remote — a rejected
+                // credential, a missing database, a certificate the platform
+                // will not accept — became a discarded rejection: no log line,
+                // no status change, and a vault that sits at "Not connected"
+                // for the session with nothing anywhere to explain it.
+                try {
+                    await this.core.replicator.openReplication(this.settings, true, true, false);
+                } catch (ex) {
+                    this._log(
+                        `Could not start continuous replication: ${ex instanceof Error ? ex.message : String(ex)}`,
+                        LOG_LEVEL_NOTICE
+                    );
+                    this._log(ex, LOG_LEVEL_VERBOSE);
+                }
             });
         }
 
